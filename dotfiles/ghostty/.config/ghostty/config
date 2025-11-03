@@ -6,9 +6,11 @@ window-padding-balance = true
 background-blur = true
 background-opacity = 0.94
 background-blur-radius = 60
-#background = #1a1f26
-font-family = "JetbrainsMono Nerd Font"
-font-size = 14
+# background = #1a1f26
+font-family = "JetBrainsMono Nerd Font Propo"
+# font-family = "Monaspace Neon NF"
+font-size = 13
 # font-thicken = true
 # font-thicken-strength = 200
 macos-titlebar-style = "hidden"
+keybind = global:cmd+grave_accent=toggle_quick_terminal

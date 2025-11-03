@@ -11,7 +11,7 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias v="NVIM_APPNAME=nvim-pure nvim"
+alias vm="NVIM_APPNAME=nvim.minimal bob run nightly"
 alias vi="nvim"
 
 alias zc="vi ~/.zshrc"
@@ -24,6 +24,7 @@ alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
 alias wick="~/Documents/Coding/Projects/setthemacup/scripts/wick.sh"
 alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
 
+alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
 # starship
 eval "$(starship init zsh)"
 
@@ -62,3 +63,6 @@ esac
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+# opencode
+export PATH=/Users/mahi/.opencode/bin:$PATH

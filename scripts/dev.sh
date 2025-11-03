@@ -16,7 +16,7 @@ else
   cd "$WORK_DIR" || exit 1
 
   # Determine dev command based on lockfile; default to pnpm
-  if [ -f bun.lockb ]; then
+  if [ -f bun.lock ]; then
     DEV_CMD="bun dev"
   elif [ -f pnpm-lock.yaml ]; then
     DEV_CMD="pnpm dev"

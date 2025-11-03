@@ -192,4 +192,4 @@ set_mac_defaults() {
   defaults write NSGlobalDomain AppleKeyboardUIMode -int "2"
   defaults write com.apple.spaces "spans-displays" -bool "false" && killall SystemUIServer
 }
-set_mac_defaults
+set_apps
