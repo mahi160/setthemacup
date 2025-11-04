@@ -1,5 +1,9 @@
-require("config.options")
-require("config.keymap")
+--- Configs
+for file, _ in vim.fs.dir(vim.fn.stdpath("config") .. "/lua/config") do
+  if file:match("%.lua$") then
+    require("config." .. file:gsub("%.lua$", ""))
+  end
+end
 
 -- Plugins
 for file, _ in vim.fs.dir(vim.fn.stdpath("config") .. "/lua/plugins") do
@@ -8,5 +12,5 @@ for file, _ in vim.fs.dir(vim.fn.stdpath("config") .. "/lua/plugins") do
   end
 end
 
--- uncomment to enable automatic plugin updates
+-- Uncomment to enable automatic plugin updates
 -- vim.pack.update()

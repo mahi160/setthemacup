@@ -20,15 +20,10 @@ map("n", "<C-h>", "<C-w>h", opts("Window left"))
 map("n", "<C-j>", "<C-w>j", opts("Window down"))
 map("n", "<C-k>", "<C-w>k", opts("Window up"))
 map("n", "<C-l>", "<C-w>l", opts("Window right"))
+
 -- Buffer navigation
 map("n", "H", ":bprevious<CR>", opts("Previous buffer"))
 map("n", "L", ":bnext<CR>", opts("Next buffer"))
-
--- Toggle spellcheck
-map("n", "<leader>sc", function()
-  vim.opt.spell = not vim.opt.spell:get()
-end, opts("Toggle spell"))
-map("n", "<leader>ss", "z=", opts("Spelling suggestions"))
 
 -- Buffer close helpers
 map("n", "<leader>bd", ":bdelete<CR>", opts("Delete current buffer"))
