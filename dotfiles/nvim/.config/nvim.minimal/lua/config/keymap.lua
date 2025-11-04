@@ -24,12 +24,6 @@ map("n", "<C-l>", "<C-w>l", opts("Window right"))
 map("n", "H", ":bprevious<CR>", opts("Previous buffer"))
 map("n", "L", ":bnext<CR>", opts("Next buffer"))
 
-
--- Move selected lines in visual mode
-map("v", "K", ":m '<-2<CR>gv=gv", opts("Move selection up"))
-map("v", "J", ":m '>+1<CR>gv=gv", opts("Move selection down"))
-
-
 -- Toggle spellcheck
 map("n", "<leader>sc", function()
   vim.opt.spell = not vim.opt.spell:get()
