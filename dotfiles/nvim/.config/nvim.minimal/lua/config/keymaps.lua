@@ -52,8 +52,6 @@ map("n", "<leader>bd", function()
 	vim.cmd("bdelete #")
 end, opts("Delete current buffer"))
 
--- Go to last used buffer
-
 -- LivePreview commands
 map("n", "<leader>lp", "<cmd>LivePreview start<CR>", opts("Start HTML LivePreview"))
 map("n", "<leader>lc", "<cmd>LivePreview close<CR>", opts("Close HTML LivePreview"))

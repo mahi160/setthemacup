@@ -2,6 +2,8 @@ local lsp_servers = {
 	lua_ls = {
 		Lua = { workspace = { library = vim.api.nvim_get_runtime_file("lua", true) } },
 	},
+	vtsls = {}, -- faster TypeScript/JavaScript server
+	eslint = {}, -- JavaScript/TypeScript linting
 	harper_ls = {
 		settings = {
 			["harper-ls"] = {
