@@ -1,5 +1,3 @@
--- https://gist.github.com/smnatale/692ac4f256d5f19fbcbb78fe32c87604
-
 -- Highlight selection after yank
 vim.api.nvim_create_autocmd("TextYankPost", {
 	group = vim.api.nvim_create_augroup("highlight_yank", { clear = true }),
@@ -69,4 +67,22 @@ vim.api.nvim_create_autocmd("VimResized", {
 	group = vim.api.nvim_create_augroup("auto_resize_splits", { clear = true }),
 	desc = "Auto equalize window splits on resize",
 	command = "wincmd =",
+})
+
+-- Plugins sync command
+vim.api.nvim_create_user_command("Sync", function()
+	vim.notify("🔄 Syncing plugins...", vim.log.levels.INFO)
+
+	local start_time = vim.loop.hrtime()
+	local ok, result = pcall(vim.pack.update, { confirm = false })
+	local end_time = vim.loop.hrtime()
+	local duration = (end_time - start_time) / 1000000 -- Convert to ms
+
+	if ok then
+		vim.notify(string.format("✅ Plugins synced successfully! (%.2fms)", duration), vim.log.levels.INFO)
+	else
+		vim.notify("❌ Plugin sync failed: " .. tostring(result), vim.log.levels.ERROR)
+	end
+end, {
+	desc = "Sync (update) all plugins",
 })

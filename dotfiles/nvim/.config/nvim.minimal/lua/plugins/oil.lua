@@ -1,4 +1,4 @@
-vim.pack.add({ "https://github.com/stevearc/oil.nvim.git" }, { confirm = false })
+pack("stevearc/oil.nvim")
 require("oil").setup({
   default_file_explorer = true,
   delete_to_trash = true,

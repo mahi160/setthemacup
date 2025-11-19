@@ -1,11 +1,11 @@
-vim.pack.add({
-	"https://github.com/nvim-lua/plenary.nvim",
-	"https://github.com/nvim-telescope/telescope.nvim",
-	"https://github.com/nvim-telescope/telescope-fzf-native.nvim",
-	"https://github.com/nvim-telescope/telescope-ui-select.nvim",
-	"https://github.com/nvim-telescope/telescope-frecency.nvim",
-	"https://github.com/tami5/sqlite.lua", -- required for frecency
-}, { confirm = false })
+pack({
+	"nvim-lua/plenary.nvim",
+	"nvim-telescope/telescope.nvim",
+	"nvim-telescope/telescope-fzf-native.nvim",
+	"nvim-telescope/telescope-ui-select.nvim",
+	"nvim-telescope/telescope-frecency.nvim",
+	"tami5/sqlite.lua", -- required for frecency
+})
 
 local telescope = require("telescope")
 local actions = require("telescope.actions")
@@ -41,9 +41,9 @@ telescope.setup({
 		},
 
 		preview = {
-			filesize_limit = 0.1, -- 0.1 MB (Don't preview files larger than this)
-			timeout = 250, -- Timeout in ms
-			treesitter = false, -- Disable treesitter in preview (faster, less colorful)
+			filesize_limit = 0.1,
+			timeout = 250,
+			treesitter = false,
 		},
 
 		mappings = {

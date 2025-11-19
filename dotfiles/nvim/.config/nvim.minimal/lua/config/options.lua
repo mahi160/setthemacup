@@ -9,8 +9,8 @@ vim.opt.relativenumber = true -- Relative line numbers
 vim.opt.signcolumn = "yes" -- Always show sign column
 vim.opt.cursorline = true -- Highlight current line
 vim.opt.wrap = true -- Wrap long lines
--- vim.opt.list = true           -- Visualize invisible chars
--- vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
+vim.opt.list = true -- Visualize invisible chars
+vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
 vim.opt.winborder = "rounded" -- Rounded popup borders
 vim.opt.scrolloff = 12 -- Context lines above/below cursor
 
@@ -26,7 +26,7 @@ vim.opt.updatetime = 250 -- Faster diagnostics
 vim.opt.ignorecase = true -- Case-insensitive search...
 vim.opt.smartcase = true -- ...unless uppercase in pattern
 vim.opt.hlsearch = true -- Highlight search results
--- vim.opt.inccommand = "split"  -- Live substitution preview
+vim.opt.inccommand = "split" -- Live substitution preview
 
 -- Editing / Files
 vim.opt.clipboard = "unnamedplus" -- System clipboard
@@ -40,15 +40,3 @@ vim.opt.tabstop = 2 -- Tab width (display)
 vim.opt.shiftwidth = 2 -- Indent width
 vim.opt.expandtab = true -- Convert tabs to spaces
 vim.opt.textwidth = 80 -- Auto-wrap at 80 columns
-
--- Diagnostics
-vim.diagnostic.config({
-	signs = {
-		text = {
-			[vim.diagnostic.severity.ERROR] = " ",
-			[vim.diagnostic.severity.WARN] = " ",
-			[vim.diagnostic.severity.INFO] = " ",
-			[vim.diagnostic.severity.HINT] = " ",
-		},
-	},
-})

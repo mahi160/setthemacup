@@ -1,11 +1,11 @@
 -- Utility tools and external integrations
-vim.pack.add({
-	"https://github.com/wakatime/vim-wakatime", -- time tracking
-	"https://github.com/brianhuster/live-preview.nvim", -- markdown/html preview
-	"https://github.com/derektata/lorem.nvim", -- lorem ipsum generator
-	"https://github.com/folke/which-key.nvim", -- key binding helper
-	"https://github.com/windwp/nvim-ts-autotag", -- auto close html tags
-}, { confirm = false })
+pack({
+	"wakatime/vim-wakatime", -- time tracking
+	"brianhuster/live-preview.nvim", -- markdown/html preview
+	"derektata/lorem.nvim", -- lorem ipsum generator
+	"folke/which-key.nvim", -- key binding helper
+	"windwp/nvim-ts-autotag", -- auto close html tags
+})
 
 -- lorem ipsum: text placeholder generator
 require("lorem").opts({

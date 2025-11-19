@@ -1,9 +1,9 @@
-vim.pack.add({
-	"https://github.com/rafamadriz/friendly-snippets",
-	"https://github.com/fang2hou/blink-copilot",
-	"https://github.com/zbirenbaum/copilot.lua",
-	"https://github.com/saghen/blink.cmp",
-}, { confirm = false })
+pack({
+	"rafamadriz/friendly-snippets",
+	"fang2hou/blink-copilot",
+	"zbirenbaum/copilot.lua",
+	"saghen/blink.cmp",
+})
 
 require("copilot").setup({
 	suggestion = { enabled = false },
