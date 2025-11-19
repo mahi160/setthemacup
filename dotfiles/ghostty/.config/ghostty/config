@@ -1,16 +1,17 @@
-theme = Nord
+theme = Everforest Dark Hard
 window-height = 24
 window-width = 80
 window-padding-x = 2
 window-padding-balance = true
 background-blur = true
-background-opacity = 0.94
-background-blur-radius = 60
+background-opacity = 0.92
+background-blur-radius = 180
+# => === >=
 # background = #1a1f26
-# font-family = "JetBrainsMono Nerd Font Propo"
-font-family = "MonaspiceNe Nerd Font Propo"
+# font-family = "MonaspiceNe Nerd Font Propo"
 # font-family = BlexMono Nerd Font Mono
 # font-family = VictorMono Nerd Font Propo
+# font-family = Monaco
 font-size = 13
 # font-thicken = true
 # font-thicken-strength = 80
@@ -18,4 +19,4 @@ macos-titlebar-style = hidden
 keybind = global:cmd+grave_accent=toggle_quick_terminal
 title = " "
 window-save-state = always
-adjust-cell-height = 10%
+# adjust-cell-height = 10%

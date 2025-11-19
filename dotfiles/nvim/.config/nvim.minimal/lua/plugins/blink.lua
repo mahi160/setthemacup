@@ -1,32 +1,37 @@
-vim.pack.add({ "https://github.com/saghen/blink.cmp" }, { confirm = false })
+vim.pack.add({
+	"https://github.com/rafamadriz/friendly-snippets",
+	"https://github.com/fang2hou/blink-copilot",
+	"https://github.com/zbirenbaum/copilot.lua",
+	"https://github.com/saghen/blink.cmp",
+}, { confirm = false })
+
+require("copilot").setup({
+	suggestion = { enabled = false },
+	panel = { enabled = false },
+})
 
 require("blink.cmp").setup({
-	completion = {
-		documentation = {
-			auto_show = true,
+	fuzzy = { implementation = "lua" },
+	keymap = { preset = "super-tab" },
+
+	sources = {
+		default = { "lsp", "path", "buffer", "snippets", "copilot" },
+		providers = {
+			copilot = {
+				name = "copilot",
+				module = "blink-copilot",
+				score_offset = 100,
+				async = true,
+			},
 		},
 	},
-
-	keymap = {
-		["<C-n>"] = { "select_next", "fallback_to_mappings" },
-		["<C-p>"] = { "select_prev", "fallback_to_mappings" },
-		["<C-y>"] = { "select_and_accept", "fallback" },
-		["<C-e>"] = { "cancel", "fallback" },
-
-		["<Tab>"] = { "snippet_forward", "select_next", "fallback" },
-		["<S-Tab>"] = { "snippet_backward", "select_prev", "fallback" },
-		["<CR>"] = { "select_and_accept", "fallback" },
-		["<Esc>"] = { "cancel", "hide_documentation", "fallback" },
-
-		["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
-
-		["<C-b>"] = { "scroll_documentation_up", "fallback" },
-		["<C-f>"] = { "scroll_documentation_down", "fallback" },
-
-		["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
+	appearance = {
+		use_nvim_cmp_as_default = false,
+		nerd_font_variant = "mono",
 	},
 
-	fuzzy = {
-		implementation = "lua",
+	completion = {
+		documentation = { auto_show = true, auto_show_delay_ms = 200 },
+		ghost_text = { enabled = true },
 	},
 })
