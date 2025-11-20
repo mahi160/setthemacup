@@ -1,4 +1,4 @@
-pack({
+Pack({
 	"folke/flash.nvim", -- jump navigation
 	"max397574/better-escape.nvim", -- jj to escape
 	"sphamba/smear-cursor.nvim", -- smooth cursor animation

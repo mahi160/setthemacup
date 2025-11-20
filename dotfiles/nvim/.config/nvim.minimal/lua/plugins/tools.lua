@@ -1,5 +1,5 @@
 -- Utility tools and external integrations
-pack({
+Pack({
 	"wakatime/vim-wakatime", -- time tracking
 	"brianhuster/live-preview.nvim", -- markdown/html preview
 	"derektata/lorem.nvim", -- lorem ipsum generator
@@ -14,3 +14,4 @@ require("lorem").opts({
 
 -- autotag: automatically close html/xml tags
 require("nvim-ts-autotag").setup()
+

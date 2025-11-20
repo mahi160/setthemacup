@@ -1,4 +1,4 @@
-pack("stevearc/conform.nvim")
+Pack("stevearc/conform.nvim")
 
 require("conform").setup({
 	format_on_save = {

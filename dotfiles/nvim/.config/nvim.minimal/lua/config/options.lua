@@ -9,8 +9,6 @@ vim.opt.relativenumber = true -- Relative line numbers
 vim.opt.signcolumn = "yes" -- Always show sign column
 vim.opt.cursorline = true -- Highlight current line
 vim.opt.wrap = true -- Wrap long lines
-vim.opt.list = true -- Visualize invisible chars
-vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
 vim.opt.winborder = "rounded" -- Rounded popup borders
 vim.opt.scrolloff = 12 -- Context lines above/below cursor
 

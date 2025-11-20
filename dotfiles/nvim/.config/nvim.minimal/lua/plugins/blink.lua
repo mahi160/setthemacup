@@ -1,4 +1,4 @@
-pack({
+Pack({
 	"rafamadriz/friendly-snippets",
 	"fang2hou/blink-copilot",
 	"zbirenbaum/copilot.lua",

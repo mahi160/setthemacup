@@ -1,5 +1,5 @@
 -- UI diagnostics, quickfix, and visual feedback
-pack({
+Pack({
 	"rachartier/tiny-inline-diagnostic.nvim", -- inline diagnostic display
 	"folke/todo-comments.nvim", -- highlight TODO, FIXME comments
 	"stevearc/quicker.nvim", -- enhanced quickfix list
@@ -26,4 +26,3 @@ require("todo-comments").setup()
 
 -- quicker: improved quickfix experience
 require("quicker").setup()
-
