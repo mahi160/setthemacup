@@ -1,5 +1,13 @@
 {
   "plugins": {
+    "LuaSnip": {
+      "rev": "3732756",
+      "src": "https://github.com/L3MON4D3/LuaSnip"
+    },
+    "ascii.nvim": {
+      "rev": "70783fe",
+      "src": "https://github.com/MaximilianLloyd/ascii.nvim"
+    },
     "better-escape.nvim": [],
     "blink-copilot": {
       "rev": "7ad8209",
@@ -22,6 +30,10 @@
     "friendly-snippets": {
       "rev": "572f566",
       "src": "https://github.com/rafamadriz/friendly-snippets"
+    },
+    "lazydev.nvim": {
+      "rev": "5231c62",
+      "src": "https://github.com/folke/lazydev.nvim"
     },
     "live-preview.nvim": [],
     "lorem.nvim": {
@@ -47,6 +59,10 @@
       "src": "https://github.com/windwp/nvim-ts-autotag"
     },
     "oil.nvim": [],
+    "opencode.nvim": {
+      "rev": "add4f1d",
+      "src": "https://github.com/NickvanDyke/opencode.nvim"
+    },
     "plenary.nvim": [],
     "quicker.nvim": {
       "rev": "12a2291",

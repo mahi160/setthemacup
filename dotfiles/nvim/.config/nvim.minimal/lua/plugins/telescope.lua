@@ -1,3 +1,7 @@
+if true then
+	return {}
+end
+
 Pack({
 	"nvim-lua/plenary.nvim",
 	"nvim-telescope/telescope.nvim",

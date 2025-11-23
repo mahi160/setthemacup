@@ -52,10 +52,6 @@ map("n", "<leader>bd", function()
 	vim.cmd("bdelete #")
 end, opts("Delete current buffer"))
 
--- LivePreview commands
-map("n", "<leader>lp", "<cmd>LivePreview start<CR>", opts("Start HTML LivePreview"))
-map("n", "<leader>lc", "<cmd>LivePreview close<CR>", opts("Close HTML LivePreview"))
-
 -- Delete all other non-modified buffers
 map("n", "<leader>bo", function()
 	local current = vim.api.nvim_get_current_buf()

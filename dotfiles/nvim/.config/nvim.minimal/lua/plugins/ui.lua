@@ -1,11 +1,9 @@
--- UI diagnostics, quickfix, and visual feedback
 Pack({
-	"rachartier/tiny-inline-diagnostic.nvim", -- inline diagnostic display
-	"folke/todo-comments.nvim", -- highlight TODO, FIXME comments
-	"stevearc/quicker.nvim", -- enhanced quickfix list
+	"rachartier/tiny-inline-diagnostic.nvim",
+	"folke/todo-comments.nvim",
+	"stevearc/quicker.nvim",
 })
 
--- inline diagnostics: ghost-style error display
 require("tiny-inline-diagnostic").setup({
 	preset = "ghost",
 })
@@ -21,8 +19,28 @@ vim.diagnostic.config({
 	},
 })
 
--- todo comments: syntax highlighting for comments
 require("todo-comments").setup()
 
--- quicker: improved quickfix experience
-require("quicker").setup()
+require("quicker").setup({
+	keys = {
+		{
+			">",
+			function()
+				require("quicker").expand({ before = 2, after = 2, add_to_existing = true })
+			end,
+			desc = "Expand quickfix context",
+		},
+		{
+			"<",
+			function()
+				require("quicker").collapse()
+			end,
+			desc = "Collapse quickfix context",
+		},
+	},
+})
+vim.keymap.set("n", "<leader>xx", function()
+	require("quicker").toggle()
+end, {
+	desc = "Toggle quickfix",
+})

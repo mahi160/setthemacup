@@ -1,4 +1,5 @@
 Pack({
+	"L3MON4D3/LuaSnip",
 	"rafamadriz/friendly-snippets",
 	"fang2hou/blink-copilot",
 	"zbirenbaum/copilot.lua",
@@ -12,15 +13,15 @@ require("copilot").setup({
 
 require("blink.cmp").setup({
 	fuzzy = { implementation = "lua" },
-	keymap = { preset = "super-tab" },
+	keymap = { preset = "enter" },
+	snippets = { preset = "luasnip" },
 
 	sources = {
-		default = { "lsp", "path", "buffer", "snippets", "copilot" },
+		default = { "lsp", "path", "snippets", "buffer", "copilot" },
 		providers = {
 			copilot = {
 				name = "copilot",
 				module = "blink-copilot",
-				score_offset = 100,
 				async = true,
 			},
 		},
@@ -29,9 +30,17 @@ require("blink.cmp").setup({
 		use_nvim_cmp_as_default = false,
 		nerd_font_variant = "mono",
 	},
+	signature = { enabled = true },
 
 	completion = {
 		documentation = { auto_show = true, auto_show_delay_ms = 200 },
-		ghost_text = { enabled = true },
+		ghost_text = { enabled = false },
+		menu = {
+			auto_show = true,
+			draw = {
+				treesitter = { "lsp" },
+				columns = { { "kind_icon", "label", "label_description", gap = 1 }, { "kind" } },
+			},
+		},
 	},
 })

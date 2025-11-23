@@ -1,16 +1,11 @@
 Pack({
-	"folke/flash.nvim", -- jump navigation
-	"max397574/better-escape.nvim", -- jj to escape
-	"sphamba/smear-cursor.nvim", -- smooth cursor animation
+	"folke/flash.nvim",
+	"max397574/better-escape.nvim",
+	"sphamba/smear-cursor.nvim",
 })
 
--- better escape: jj to escape insert mode
 require("better_escape").setup()
-
--- flash: fast jump navigation
 require("flash").setup()
-
--- smear cursor: smooth cursor animation
 require("smear_cursor").setup({
 	opts = {
 		stiffness = 0.8,

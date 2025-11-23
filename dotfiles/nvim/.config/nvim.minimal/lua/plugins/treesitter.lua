@@ -1,4 +1,5 @@
 Pack("nvim-treesitter/nvim-treesitter")
+
 require("nvim-treesitter.install").update("all")
 require("nvim-treesitter.configs").setup({
 	sync_install = true,
@@ -9,7 +10,7 @@ require("nvim-treesitter.configs").setup({
 		"go",
 		"typescript",
 	},
-	auto_install = true, -- autoinstall languages that are not installed yet
+	auto_install = true,
 	highlight = {
 		enable = true,
 	},
