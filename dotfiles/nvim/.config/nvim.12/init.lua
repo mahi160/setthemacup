@@ -47,9 +47,12 @@ vim.keymap.set('v', '<D-s>', '<Esc><cmd>write<cr>', { desc = 'Save and exit visu
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*",
   callback = function()
-    local clients = vim.lsp.get_clients({ bufnr = 0 })
-    if #clients > 0 then
-      vim.lsp.buf.format({ async = false })
+    if vim.g.autoformat then
+      local bufnr = vim.api.nvim_get_current_buf()
+      local clients = vim.lsp.get_clients({ bufnr = bufnr })
+      if #clients > 0 then
+        vim.lsp.buf.format({ async = false, bufnr = bufnr })
+      end
     end
   end
 })
@@ -73,6 +76,9 @@ require("mason").setup()
 require("mason-lspconfig").setup()
 require("extras.lsp")
 
+-- Diagnostics
+require("extras.diagnostics")
+
 -- Statusline
 require("mini.statusline").setup()
 
@@ -88,18 +94,6 @@ require("oil").setup({
   view_options = {
     show_hidden = true,
   },
-})
-
--- Diagnostics
-vim.diagnostic.config({ virtual_text = false })
-require('tiny-inline-diagnostic').setup({
-  preset = "ghost",
-  options = {
-    show_source = true,
-    use_icons_from_diagnostic = true,
-    add_extmark_to_line = true,
-    virt_texts_linepos = 'right_align',
-  }
 })
 
 -- Colorscheme
