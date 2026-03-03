@@ -1,39 +1,37 @@
 -- Options
-vim.g.mapleader = " "                           -- Global leader key
-vim.g.maplocalleader = " "                      -- Local leader key
-vim.opt.number = true                           -- Show line numbers
-vim.opt.relativenumber = true                   -- Relative line numbers
-vim.opt.signcolumn = "yes"                      -- Always show sign column
-vim.opt.cursorline = true                       -- Highlight current line
-vim.opt.wrap = true                             -- Wrap long lines
-vim.opt.winborder = "rounded"                   -- Rounded popup borders
-vim.opt.scrolloff = 12                          -- Context lines above/below cursor
-vim.opt.showmode = false                        -- Hide mode indicator
-vim.opt.timeoutlen = 300                        -- Keymap timeout
-vim.opt.updatetime = 250                        -- Faster diagnostics
-vim.opt.ignorecase = true                       -- Case-insensitive search...
-vim.opt.smartcase = true                        -- ...unless uppercase in pattern
-vim.opt.inccommand = "split"                    -- Live preview (default: nosplit)
-vim.opt.clipboard = "unnamedplus"               -- System clipboard
-vim.opt.breakindent = true                      -- Preserve indent on wrapped lines
-vim.opt.swapfile = false                        -- Disable swap files
-vim.opt.autowrite = true                        -- Auto-save when switching buffers
-vim.g.autoformat = true                         -- Custom: enable auto-formatting
-vim.opt.tabstop = 2                             -- Tab width (display)
-vim.opt.shiftwidth = 2                          -- Indent width
-vim.opt.expandtab = true                        -- Convert tabs to spaces
-vim.opt.textwidth = 120                         -- Auto-wrap at 120 columns
-vim.opt.pumheight = 10                          -- Limit completion menu height
-vim.opt.shortmess:append("WIcC")                -- Reduce message clutter
-vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-continue comments
-vim.opt.spell = false                           -- Spelling disabled by default
-vim.opt.spelllang = "en_us"                     -- Spelling language
+vim.g.mapleader = " "                                                 -- Global leader key
+vim.g.maplocalleader = " "                                            -- Local leader key
+vim.opt.number = true                                                 -- Show line numbers
+vim.opt.relativenumber = true                                         -- Relative line numbers
+vim.opt.signcolumn = "yes"                                            -- Always show sign column
+vim.opt.cursorline = true                                             -- Highlight current line
+vim.opt.wrap = true                                                   -- Wrap long lines
+vim.opt.winborder = "rounded"                                         -- Rounded popup borders
+vim.opt.scrolloff = 12                                                -- Context lines above/below cursor
+vim.opt.showmode = false                                              -- Hide mode indicator
+vim.opt.timeoutlen = 300                                              -- Keymap timeout
+vim.opt.updatetime = 250                                              -- Faster diagnostics
+vim.opt.ignorecase = true                                             -- Case-insensitive search...
+vim.opt.smartcase = true                                              -- ...unless uppercase in pattern
+vim.opt.inccommand = "split"                                          -- Live preview (default: nosplit)
+vim.opt.clipboard = "unnamedplus"                                     -- System clipboard
+vim.opt.breakindent = true                                            -- Preserve indent on wrapped lines
+vim.opt.swapfile = false                                              -- Disable swap files
+vim.opt.autowrite = true                                              -- Auto-save when switching buffers
+vim.g.autoformat = true                                               -- Custom: enable auto-formatting
+vim.opt.tabstop = 2                                                   -- Tab width (display)
+vim.opt.shiftwidth = 2                                                -- Indent width
+vim.opt.expandtab = true                                              -- Convert tabs to spaces
+vim.opt.textwidth = 120                                               -- Auto-wrap at 120 columns
+vim.opt.pumheight = 10                                                -- Limit completion menu height
+vim.opt.shortmess:append("WIcC")                                      -- Reduce message clutter
+vim.opt.formatoptions:remove({ "c", "r", "o" })                       -- Don't auto-continue comments
+vim.opt.spell = false                                                 -- Spelling disabled by default
+vim.opt.spelllang = "en_us"                                           -- Spelling language
 vim.opt.spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" -- Custom words file
-
--- Folding (treesitter-based)
+vim.opt.foldlevelstart = 99                                           -- Start with all folds open
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-vim.opt.foldlevelstart = 99                     -- Start with all folds open
 
 -- Keybinds
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "[O]pen parent directory" })
@@ -68,8 +66,13 @@ vim.pack.add({
   "https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim",
   "https://github.com/rachartier/tiny-inline-diagnostic.nvim",
   "https://github.com/folke/snacks.nvim",
-  "https://github.com/nvim-treesitter/nvim-treesitter"
+  "https://github.com/nvim-treesitter/nvim-treesitter",
+  "https://github.com/L3MON4D3/LuaSnip",
+  "https://github.com/rafamadriz/friendly-snippets",
+  "https://github.com/zbirenbaum/copilot.lua",
+  "https://github.com/giuxtaposition/blink-cmp-copilot",
 })
+vim.pack.add({ { src = "https://github.com/saghen/blink.cmp", version = "1.*" } })
 
 -- Treesitter
 local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
@@ -79,15 +82,15 @@ if ts_ok then
       "lua", "typescript", "tsx", "javascript", "go",
       "html", "css", "json", "markdown", "vim", "vimdoc", "query"
     },
-    auto_install = true,                          -- Auto-install missing parsers
-    highlight = { enable = true },                -- Syntax highlighting
-    indent = { enable = true },                   -- Smart indentation
+    auto_install = true,           -- Auto-install missing parsers
+    highlight = { enable = true }, -- Syntax highlighting
+    indent = { enable = true },    -- Smart indentation
     incremental_selection = {
       enable = true,
       keymaps = {
-        init_selection = "<CR>",                  -- Start selection
-        scope_incremental = "<CR>",               -- Expand selection
-        node_decremental = "<BS>",                -- Shrink selection
+        init_selection = "<CR>",    -- Start selection
+        scope_incremental = "<CR>", -- Expand selection
+        node_decremental = "<BS>",  -- Shrink selection
       },
     },
   })
@@ -96,6 +99,20 @@ end
 -- LSP
 require("mason").setup()
 require("mason-lspconfig").setup()
+
+-- Completion
+local cmp_ok, blink = pcall(require, "blink.cmp")
+if cmp_ok then
+  blink.setup({
+    keymap = { preset = "default" },
+    sources = {
+      default = { "lsp", "path", "snippets", "buffer" },
+    },
+    snippets = {
+      preset = "luasnip",
+    },
+  })
+end
 
 -- Statusline
 require("mini.statusline").setup()
@@ -157,3 +174,5 @@ require("extras.options")
 require("extras.lsp")
 require("extras.diagnostics")
 require("extras.colorscheme")
+require("extras.completion")
+require("extras.ai")

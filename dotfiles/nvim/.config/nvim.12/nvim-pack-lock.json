@@ -11,7 +11,7 @@
     "blink.cmp": {
       "rev": "74afc2893efc031b771316e21b1ba97c9416ffce",
       "src": "https://github.com/saghen/blink.cmp",
-      "version": "'v0.*'"
+      "version": "'1.*'"
     },
     "copilot.lua": {
       "rev": "00446a63cba4cc59bb24fc1e210a555a3e4acdfb",
