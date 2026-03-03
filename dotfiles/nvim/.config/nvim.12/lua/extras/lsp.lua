@@ -52,10 +52,10 @@ local servers = {
 
 -- LSP keymaps
 local keymaps = {
-  { "n", "gd", vim.lsp.buf.definition, { desc = "Goto Definition" } },
-  { "n", "gr", vim.lsp.buf.references, { desc = "References" } },
+  { "n", "gd",         vim.lsp.buf.definition,  { desc = "Goto Definition" } },
+  { "n", "gr",         vim.lsp.buf.references,  { desc = "References" } },
   { "n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" } },
-  { "n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename" } },
+  { "n", "<leader>cr", vim.lsp.buf.rename,      { desc = "Rename" } },
   { "n", "<leader>ih", function()
     vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
   end, { desc = "Toggle Inlay Hints" } },
@@ -88,14 +88,3 @@ for server, config in pairs(servers) do
     end,
   })
 end
-
--- LSP UI improvements
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-  vim.lsp.handlers.hover,
-  { border = "rounded" }
-)
-
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
-  vim.lsp.handlers.signature_help,
-  { border = "rounded" }
-)

@@ -3,6 +3,7 @@ vim.g.mapleader = " "                           -- Global leader key
 vim.g.maplocalleader = " "                      -- Local leader key
 vim.opt.number = true                           -- Show line numbers
 vim.opt.relativenumber = true                   -- Relative line numbers
+vim.opt.signcolumn = "yes"                      -- Always show sign column
 vim.opt.cursorline = true                       -- Highlight current line
 vim.opt.wrap = true                             -- Wrap long lines
 vim.opt.winborder = "rounded"                   -- Rounded popup borders
