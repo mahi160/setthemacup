@@ -4,14 +4,21 @@
       "rev": "dae4f5aaa3574bd0c2b9dd20fb9542a02c10471c",
       "src": "https://github.com/L3MON4D3/LuaSnip"
     },
+    "better-escape.nvim": {
+      "rev": "19a38aab94961016430905ebec30d272a01e9742",
+      "src": "https://github.com/max397574/better-escape.nvim"
+    },
     "blink-cmp-copilot": {
       "rev": "439cff78780c033aa23cf061d7315314b347e3c1",
       "src": "https://github.com/giuxtaposition/blink-cmp-copilot"
     },
     "blink.cmp": {
       "rev": "74afc2893efc031b771316e21b1ba97c9416ffce",
-      "src": "https://github.com/saghen/blink.cmp",
-      "version": "'1.*'"
+      "src": "https://github.com/saghen/blink.cmp"
+    },
+    "conform.nvim": {
+      "rev": "40dcec5555f960b0a04340d76eabdf4efe78599d",
+      "src": "https://github.com/stevearc/conform.nvim"
     },
     "copilot.lua": {
       "rev": "00446a63cba4cc59bb24fc1e210a555a3e4acdfb",
