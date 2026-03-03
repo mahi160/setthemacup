@@ -26,11 +26,14 @@ vim.opt.textwidth = 120                         -- Auto-wrap at 120 columns
 vim.opt.pumheight = 10                          -- Limit completion menu height
 vim.opt.shortmess:append("WIcC")                -- Reduce message clutter
 vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-continue comments
+vim.opt.spell = false                           -- Spelling disabled by default
+vim.opt.spelllang = "en_us"                     -- Spelling language
+vim.opt.spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" -- Custom words file
 
--- Folding (uncomment when treesitter is added)
--- vim.opt.foldmethod = "expr"
--- vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
--- vim.opt.foldlevelstart = 99
+-- Folding (treesitter-based)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldlevelstart = 99                     -- Start with all folds open
 
 -- Keybinds
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "[O]pen parent directory" })
@@ -64,8 +67,31 @@ vim.pack.add({
   "https://github.com/mason-org/mason-lspconfig.nvim",
   "https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim",
   "https://github.com/rachartier/tiny-inline-diagnostic.nvim",
-  "https://github.com/folke/snacks.nvim"
+  "https://github.com/folke/snacks.nvim",
+  "https://github.com/nvim-treesitter/nvim-treesitter"
 })
+
+-- Treesitter
+local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+if ts_ok then
+  ts_configs.setup({
+    ensure_installed = {
+      "lua", "typescript", "tsx", "javascript", "go",
+      "html", "css", "json", "markdown", "vim", "vimdoc", "query"
+    },
+    auto_install = true,                          -- Auto-install missing parsers
+    highlight = { enable = true },                -- Syntax highlighting
+    indent = { enable = true },                   -- Smart indentation
+    incremental_selection = {
+      enable = true,
+      keymaps = {
+        init_selection = "<CR>",                  -- Start selection
+        scope_incremental = "<CR>",               -- Expand selection
+        node_decremental = "<BS>",                -- Shrink selection
+      },
+    },
+  })
+end
 
 -- LSP
 require("mason").setup()
@@ -73,6 +99,25 @@ require("mason-lspconfig").setup()
 
 -- Statusline
 require("mini.statusline").setup()
+
+-- Textobjects (treesitter-powered)
+local ai_ok, ai = pcall(require, "mini.ai")
+if ai_ok then
+  local ts_spec = ai.gen_spec.treesitter
+  ai.setup({
+    custom_textobjects = {
+      f = ts_spec({ a = "@function.outer", i = "@function.inner" }),
+      c = ts_spec({ a = "@class.outer", i = "@class.inner" }),
+      o = ts_spec({
+        a = { "@conditional.outer", "@loop.outer" },
+        i = { "@conditional.inner", "@loop.inner" },
+      }),
+      b = ts_spec({ a = "@block.outer", i = "@block.inner" }),
+      k = ts_spec({ a = "@call.outer", i = "@call.inner" }),
+      p = ts_spec({ a = "@parameter.outer", i = "@parameter.inner" }),
+    },
+  })
+end
 
 -- UI
 require("mini.animate").setup()
