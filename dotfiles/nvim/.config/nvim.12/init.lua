@@ -32,9 +32,6 @@ vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-continue comments
 -- vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 -- vim.opt.foldlevelstart = 99
 
--- Load experimental options (uncomment to enable)
-require("extras.options")
-
 -- Keybinds
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "[O]pen parent directory" })
 vim.keymap.set('i', 'jj', '<Esc>', { desc = "[E]scape to normal mode" })
@@ -67,18 +64,12 @@ vim.pack.add({
   "https://github.com/mason-org/mason-lspconfig.nvim",
   "https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim",
   "https://github.com/rachartier/tiny-inline-diagnostic.nvim",
-  "https://github.com/rebelot/kanagawa.nvim",
-  "https://github.com/EdenEast/nightfox.nvim",
   "https://github.com/folke/snacks.nvim"
 })
 
 -- LSP
 require("mason").setup()
 require("mason-lspconfig").setup()
-require("extras.lsp")
-
--- Diagnostics
-require("extras.diagnostics")
 
 -- Statusline
 require("mini.statusline").setup()
@@ -98,15 +89,7 @@ require("oil").setup({
 })
 
 -- Colorscheme
-require('nightfox').setup({
-  options = {
-    compile_path = vim.fn.stdpath("cache") .. "/nightfox",
-    compile_file_suffix = "_compiled", -- Compiled file suffix
-    transparent = false                -- Disable setting background
-  }
-})
-
-vim.cmd("colorscheme nightfox")
+vim.cmd("colorscheme habamax")
 
 -- Fuzzy finder
 require("snacks").setup({
@@ -123,3 +106,9 @@ vim.keymap.set("n", "<leader>fw", function() Snacks.picker.grep_word() end)
 vim.keymap.set("n", "<leader>fc", function()
   Snacks.picker.files({ cwd = vim.fn.stdpath("config") })
 end, { desc = "[F]ind [C]onfig File" })
+
+-- Extras
+require("extras.options")
+require("extras.lsp")
+require("extras.diagnostics")
+require("extras.colorscheme")
