@@ -1,3 +1,5 @@
+vim.cmd("colorscheme habamax")
+
 -- Options
 vim.g.mapleader = " "                                                 -- Global leader key
 vim.g.maplocalleader = " "                                            -- Local leader key
@@ -71,8 +73,8 @@ vim.pack.add({
   "https://github.com/rafamadriz/friendly-snippets",
   "https://github.com/zbirenbaum/copilot.lua",
   "https://github.com/giuxtaposition/blink-cmp-copilot",
+  "https://github.com/saghen/blink.cmp"
 })
-vim.pack.add({ { src = "https://github.com/saghen/blink.cmp", version = "1.*" } })
 
 -- Treesitter
 local ts_ok, ts_configs = pcall(require, "nvim-treesitter.configs")
@@ -111,6 +113,7 @@ if cmp_ok then
     snippets = {
       preset = "luasnip",
     },
+    fuzzy = { implementation = "lua" },
   })
 end
 
@@ -150,24 +153,13 @@ require("oil").setup({
   },
 })
 
--- Colorscheme
-vim.cmd("colorscheme habamax")
 
--- Fuzzy finder
+-- Fuzzy finder (minimal core, rest in extras/picker.lua)
 require("snacks").setup({
-  picker = {
-    enabled = true,
-    ui_select = true,
-  },
+  picker = { enabled = true, ui_select = true },
 })
-vim.keymap.set("n", "<leader><leader>", function() Snacks.picker.files() end)
-vim.keymap.set("n", "<leader>/", function() Snacks.picker.grep() end)
-vim.keymap.set("n", "<leader>fb", function() Snacks.picker.buffers() end)
-vim.keymap.set("n", "<leader>fr", function() Snacks.picker.recent() end)
-vim.keymap.set("n", "<leader>fw", function() Snacks.picker.grep_word() end)
-vim.keymap.set("n", "<leader>fc", function()
-  Snacks.picker.files({ cwd = vim.fn.stdpath("config") })
-end, { desc = "[F]ind [C]onfig File" })
+vim.keymap.set("n", "<leader><leader>", function() Snacks.picker.smart() end, { desc = "Smart Find" })
+vim.keymap.set("n", "<leader>/", function() Snacks.picker.grep() end, { desc = "Live Grep" })
 
 -- Extras
 require("extras.options")
@@ -176,3 +168,4 @@ require("extras.diagnostics")
 require("extras.colorscheme")
 require("extras.completion")
 require("extras.ai")
+require("extras.picker")
