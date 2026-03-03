@@ -1,38 +1,29 @@
 -- Options
-vim.g.mapleader = " "             -- Global leader key
-vim.g.maplocalleader = " "        -- Local leader key
-vim.opt.termguicolors = true      -- Enable 24-bit colors
-vim.opt.number = true             -- Show line numbers
-vim.opt.relativenumber = true     -- Relative line numbers
-vim.opt.signcolumn = "yes"        -- Always show sign column
-vim.opt.cursorline = true         -- Highlight current line
-vim.opt.wrap = true               -- Wrap long lines
-vim.opt.winborder = "rounded"     -- Rounded popup borders
-vim.opt.scrolloff = 12            -- Context lines above/below cursor
-vim.opt.mouse = "a"               -- Enable mouse support
-vim.opt.showmode = false          -- Hide mode indicator
-vim.opt.splitright = true         -- Vertical splits go right
-vim.opt.splitbelow = true         -- Horizontal splits go below
-vim.opt.timeoutlen = 300          -- Keymap timeout
-vim.opt.updatetime = 250          -- Faster diagnostics
-vim.opt.ignorecase = true         -- Case-insensitive search...
-vim.opt.smartcase = true          -- ...unless uppercase in pattern
-vim.opt.hlsearch = true           -- Highlight search results
-vim.opt.inccommand = "split"      -- Live substitution preview
-vim.opt.clipboard = "unnamedplus" -- System clipboard
-vim.opt.breakindent = true        -- Preserve indent on wrapped lines
-vim.opt.undofile = true           -- Persistent undo
-vim.opt.swapfile = false          -- Disable swap files
-vim.opt.autowrite = true          -- Auto-save when switching buffers
-vim.g.autoformat = true           -- Custom: enable auto-formatting
-vim.opt.tabstop = 2               -- Tab width (display)
-vim.opt.shiftwidth = 2            -- Indent width
-vim.opt.expandtab = true          -- Convert tabs to spaces
-vim.opt.textwidth = 120           -- Auto-wrap at 120 columns
-vim.opt.completeopt = { "menu", "menuone", "noselect" } -- Better completion
-vim.opt.pumheight = 10            -- Limit completion menu height
-vim.opt.smoothscroll = true       -- Smooth scrolling for wrapped lines
-vim.opt.shortmess:append("WIcC")  -- Reduce message clutter
+vim.g.mapleader = " "                           -- Global leader key
+vim.g.maplocalleader = " "                      -- Local leader key
+vim.opt.number = true                           -- Show line numbers
+vim.opt.relativenumber = true                   -- Relative line numbers
+vim.opt.cursorline = true                       -- Highlight current line
+vim.opt.wrap = true                             -- Wrap long lines
+vim.opt.winborder = "rounded"                   -- Rounded popup borders
+vim.opt.scrolloff = 12                          -- Context lines above/below cursor
+vim.opt.showmode = false                        -- Hide mode indicator
+vim.opt.timeoutlen = 300                        -- Keymap timeout
+vim.opt.updatetime = 250                        -- Faster diagnostics
+vim.opt.ignorecase = true                       -- Case-insensitive search...
+vim.opt.smartcase = true                        -- ...unless uppercase in pattern
+vim.opt.inccommand = "split"                    -- Live preview (default: nosplit)
+vim.opt.clipboard = "unnamedplus"               -- System clipboard
+vim.opt.breakindent = true                      -- Preserve indent on wrapped lines
+vim.opt.swapfile = false                        -- Disable swap files
+vim.opt.autowrite = true                        -- Auto-save when switching buffers
+vim.g.autoformat = true                         -- Custom: enable auto-formatting
+vim.opt.tabstop = 2                             -- Tab width (display)
+vim.opt.shiftwidth = 2                          -- Indent width
+vim.opt.expandtab = true                        -- Convert tabs to spaces
+vim.opt.textwidth = 120                         -- Auto-wrap at 120 columns
+vim.opt.pumheight = 10                          -- Limit completion menu height
+vim.opt.shortmess:append("WIcC")                -- Reduce message clutter
 vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-continue comments
 
 -- Folding (uncomment when treesitter is added)
@@ -41,7 +32,7 @@ vim.opt.formatoptions:remove({ "c", "r", "o" }) -- Don't auto-continue comments
 -- vim.opt.foldlevelstart = 99
 
 -- Load experimental options (uncomment to enable)
--- require("extras.options")
+require("extras.options")
 
 -- Keybinds
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "[O]pen parent directory" })
