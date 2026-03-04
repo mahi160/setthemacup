@@ -1,0 +1,52 @@
+{
+  "Setup Plugin": {
+    "prefix": "setup",
+    "body": [
+      "require('${1:plugin}').setup({",
+      "  $0",
+      "})"
+    ],
+    "description": "Setup a Neovim plugin"
+  },
+  "Protected Call": {
+    "prefix": "pcall",
+    "body": [
+      "local ok, ${1:module} = pcall(require, '${2:module-name}')",
+      "if not ok then",
+      "  return",
+      "end",
+      "$0"
+    ],
+    "description": "Protected call for requiring modules"
+  },
+  "Autocommand": {
+    "prefix": "autocmd",
+    "body": [
+      "vim.api.nvim_create_autocmd('${1:event}', {",
+      "  group = vim.api.nvim_create_augroup('${2:group-name}', { clear = true }),",
+      "  pattern = '${3:*}',",
+      "  callback = function()",
+      "    $0",
+      "  end,",
+      "  desc = '${4:description}',",
+      "})"
+    ],
+    "description": "Create Neovim autocommand"
+  },
+  "Keymap": {
+    "prefix": "keymap",
+    "body": [
+      "vim.keymap.set('${1:n}', '${2:<leader>}', function()",
+      "  $0",
+      "end, { desc = '${3:description}' })"
+    ],
+    "description": "Create Neovim keymap"
+  },
+  "Local Variable": {
+    "prefix": "local",
+    "body": [
+      "local ${1:name} = ${0:value}"
+    ],
+    "description": "Create local variable"
+  }
+}

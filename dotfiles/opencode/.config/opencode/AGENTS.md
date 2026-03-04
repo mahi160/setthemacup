@@ -110,3 +110,53 @@ These instructions apply to all OpenCode agents across all projects.
 - Keep dependencies up to date
 - Document why dependencies are needed
 - Remove unused dependencies
+
+## OpenCode Configuration
+
+When modifying `opencode.jsonc`, always refer to the official schema: https://opencode.ai/config.json
+
+### Correct Field Names
+
+- ✅ `model` and `small_model` (NOT `models` object)
+- ✅ `permission` (singular, NOT `permissions` plural)
+- ✅ `formatter` (singular, NOT `formatters` plural)
+- ✅ `instructions` (array of paths)
+- ✅ `default_agent` (NOT `defaultAgent`)
+
+### Permission Syntax
+
+Permissions use simple string values, not nested objects:
+
+```jsonc
+"permission": {
+  "bash": "ask",      // ask, allow, or deny
+  "edit": "allow",
+  "write": "ask"
+}
+```
+
+### Formatter Syntax
+
+Formatters use the singular `formatter` key with proper structure:
+
+```jsonc
+"formatter": {
+  "prettier": {
+    "extensions": [".js", ".ts", ".json"],
+    "command": ["prettier", "--write", "$FILE"]
+  },
+  "stylua": {
+    "extensions": [".lua"],
+    "command": ["stylua", "$FILE"]
+  }
+}
+```
+
+### Common Mistakes to Avoid
+
+1. **DO NOT** use `models: { main: "...", small: "..." }` - Use `model` and `small_model` directly
+2. **DO NOT** use `permissions` (plural) - Use `permission` (singular)
+3. **DO NOT** use `formatters` (plural) - Use `formatter` (singular)
+4. **DO NOT** use camelCase for keys like `defaultAgent` - Use snake_case like `default_agent`
+5. **DO NOT** nest permission values - Use simple strings: `"bash": "ask"`
+

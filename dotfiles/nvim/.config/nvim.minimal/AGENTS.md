@@ -67,8 +67,10 @@ A modular, minimal Neovim configuration for Neovim 0.12+ nightly that leverages 
 - Keymaps: [d/]d (navigate), \<leader>cd (toggle)
 - Rounded float borders
 
-**Options** (lua/config/options.lua) - Only ~20 additional options beyond mini.basics:
+**Options** (lua/config/options.lua) - Only ~27 additional options beyond mini.basics:
 - relativenumber=true (mini.basics only sets number)
+- **Tab settings: tabstop/shiftwidth/softtabstop=4, expandtab=true**
+- **showcmd=false (don't persist command messages)**
 - wrap=true, winborder=rounded, scrolloff=12
 - inccommand=split (live preview)
 - clipboard=unnamedplus (system clipboard)

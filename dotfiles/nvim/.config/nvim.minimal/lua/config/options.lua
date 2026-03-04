@@ -20,3 +20,13 @@ vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.conceallevel = 2
 
 vim.g.autoformat = true
+
+-- Tab settings (4 spaces, convert tabs to spaces)
+vim.opt.tabstop = 4        -- Width of tab character
+vim.opt.shiftwidth = 4     -- Width for autoindent
+vim.opt.softtabstop = 4    -- Backspace deletes this many spaces
+vim.opt.expandtab = true   -- Convert tabs to spaces
+
+-- Command line behavior (show but don't persist messages)
+vim.opt.showcmd = false    -- Don't show partial commands (prevents persistence)
+
