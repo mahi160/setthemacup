@@ -1,7 +1,18 @@
-# theme = Everforest Dark Hard
-theme = Nord
-theme = Gruvbox Material Dark
+# Eye-comfort themes (choose one)
+theme = Everforest Dark Hard
+# theme = Kanagawa Wave
+# theme = Kanagawa Dragon
+# theme = Gruvbox Material Dark
+# theme = Nord
 # theme = TokyoNight
+
+# Available Everforest variants:
+# - Everforest Dark Hard
+# - Everforest Light Med
+
+# Available Kanagawa variants:
+# - Kanagawa Wave (default, warm)
+# - Kanagawa Dragon (darker for late-night)
 window-height = 24
 window-width = 80
 window-padding-x = 2

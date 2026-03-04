@@ -112,17 +112,26 @@ Enable/disable extras by commenting the `pcall(require, "extras.X")` line in ini
 
 ---
 
-### extras.colorscheme (Gruvbox Material)
-**Plugins**: gruvbox-material
+### extras.colorscheme (Everforest, Kanagawa, Gruvbox Material)
+**Plugins**: everforest, kanagawa.nvim, gruvbox-material
 
 **Adds**:
-- Gruvbox Material colorscheme
-- Medium background, material foreground
-- Italics enabled, bold enabled
-- Transparency level 2
-- High UI contrast, bright floats
+- **Everforest** (default): Designed for eye protection with soft contrast, warm green tones
+  - Soft variant for gentlest eye comfort
+  - Works well with redshift/f.lux
+  - Full italic support for comments and keywords
+- **Kanagawa**: WCAG 2.1 Level AA certified (4.5:1 contrast ratio)
+  - Wave variant (warm, heart-warming)
+  - Dragon variant (darker for late-night)
+  - Lotus variant (light theme)
+  - Full italic support
+- **Gruvbox Material**: Warm retro groove colors
+  - Medium background, material foreground
+  - High UI contrast, bright floats
 
-**Use Case**: Beautiful, warm color scheme (replaces default habamax).
+**Use Case**: Three eye-comfort optimized themes with excellent italic support. Switch between themes with `:colorscheme everforest`, `:colorscheme kanagawa-wave`, `:colorscheme kanagawa-dragon`, `:colorscheme kanagawa-lotus`, or `:colorscheme gruvbox-material`.
+
+**Post-Setup**: Optionally run `:KanagawaCompile` after first load for faster Kanagawa startup.
 
 ---
 
@@ -344,7 +353,7 @@ nvim.minimal/
 │   │   └── treesitter.lua     # Syntax highlighting
 │   └── extras/                # Optional enhancements
 │       ├── ai.lua             # Copilot
-│       ├── colorscheme.lua    # Gruvbox Material
+│       ├── colorscheme.lua    # Everforest, Kanagawa, Gruvbox Material
 │       ├── conform.lua        # Formatting
 │       ├── dev.lua            # Lua development
 │       ├── diagnostics.lua    # Inline diagnostics
@@ -374,9 +383,11 @@ nvim.minimal/
 - rafamadriz/friendly-snippets
 - saghen/blink.cmp
 
-### Extra Plugins (16, all optional)
+### Extra Plugins (18, all optional)
 - zbirenbaum/copilot.lua (ai)
 - giuxtaposition/blink-cmp-copilot (ai)
+- sainnhe/everforest (colorscheme)
+- rebelot/kanagawa.nvim (colorscheme)
 - sainnhe/gruvbox-material (colorscheme)
 - stevearc/conform.nvim (conform)
 - folke/lazydev.nvim (dev)
@@ -391,7 +402,7 @@ nvim.minimal/
 - sphamba/smear-cursor.nvim (ui)
 - folke/todo-comments.nvim (ui)
 
-**Total**: 27 plugins (11 core + 16 extras)
+**Total**: 29 plugins (11 core + 18 extras)
 
 ## Key Insights for AI Agents
 
@@ -449,8 +460,16 @@ map("n", "<leader>fn", picker("something"), { desc = "Find Something" })
 **Change colorscheme**:
 ```lua
 -- lua/extras/colorscheme.lua
-vim.pack.add({ "user/theme" })
-vim.cmd("colorscheme theme-name")
+-- Switch default colorscheme:
+vim.cmd("colorscheme everforest")      -- Eye-comfort focused (default)
+vim.cmd("colorscheme kanagawa-wave")   -- WCAG AA certified
+vim.cmd("colorscheme kanagawa-dragon") -- Darker variant
+vim.cmd("colorscheme kanagawa-lotus")  -- Light variant
+vim.cmd("colorscheme gruvbox-material") -- Warm retro
+
+-- Or manually in Neovim:
+:colorscheme everforest
+:colorscheme kanagawa-wave
 ```
 
 ### Testing Changes
