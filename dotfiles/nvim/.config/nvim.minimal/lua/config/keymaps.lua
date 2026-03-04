@@ -34,23 +34,23 @@ map("n", "J", function()
 	end
 end, opts("Switch to last open buffer"))
 
--- Close current buffer safely
-map("n", "<leader>bd", function()
-	-- If only one buffer, just wipe it
-	if #vim.fn.getbufinfo({ buflisted = 1 }) == 1 then
-		vim.cmd("bdelete")
-		return
-	end
-
-	-- Go to alternate buffer before closing
-	local alt = vim.fn.bufnr("#")
-	if alt > 0 and vim.api.nvim_buf_is_valid(alt) then
-		vim.cmd("buffer #")
-	else
-		vim.cmd("bnext")
-	end
-	vim.cmd("bdelete #")
-end, opts("Delete current buffer"))
+-- -- Close current buffer safely
+-- map("n", "<leader>bd", function()
+-- 	-- If only one buffer, just wipe it
+-- 	if #vim.fn.getbufinfo({ buflisted = 1 }) == 1 then
+-- 		vim.cmd("bdelete")
+-- 		return
+-- 	end
+--
+-- 	-- Go to alternate buffer before closing
+-- 	local alt = vim.fn.bufnr("#")
+-- 	if alt > 0 and vim.api.nvim_buf_is_valid(alt) then
+-- 		vim.cmd("buffer #")
+-- 	else
+-- 		vim.cmd("bnext")
+-- 	end
+-- 	vim.cmd("bdelete #")
+-- end, opts("Delete current buffer"))
 
 -- Delete all other non-modified buffers
 map("n", "<leader>bo", function()

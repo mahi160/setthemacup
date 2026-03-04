@@ -12,6 +12,8 @@ source $ZSH/oh-my-zsh.sh
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
 alias vm="NVIM_APPNAME=nvim.minimal bob run nightly"
+alias vc="NVIM_APPNAME=nvim-chad nvim"
+alias vv="NVIM_APPNAME=nvim.12 bob run nightly"
 alias vi="nvim"
 
 alias zc="vi ~/.zshrc"

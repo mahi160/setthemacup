@@ -1,49 +1,53 @@
 Pack("folke/snacks.nvim")
-local get_custom_layout = function(height)
-	return {
-		reverse = true,
-		layout = {
-			box = "vertical",
-			backdrop = false,
-			row = -1,
-			width = 0,
-			height = height or 0.4,
-			border = "none",
-			{
-				box = "horizontal",
-				{ win = "list", title = "{title}", title_pos = "center", border = "rounded" },
-				{ win = "preview", title = "{preview}", width = 0.6, border = "rounded" },
-			},
-			{ win = "input", height = 1, border = "none" },
-		},
-	}
+
+local function get_project_root()
+	local root_markers = { ".git", "package.json", "Cargo.toml", "pyproject.toml", "Makefile" }
+	local start_path = vim.api.nvim_buf_get_name(0)
+	local root = vim.fs.find(root_markers, {
+		up = true,
+		stop = vim.loop.os_homedir(),
+		path = start_path,
+	})[1]
+
+	if root then
+		return vim.fs.dirname(root)
+	else
+		return vim.fn.getcwd()
+	end
 end
 
 require("snacks").setup({
 	opts = {
+		bigfiles = {
+			enabled = true,
+		},
 		pcikers = {
 			matcher = {
 				frecency = true,
-			},
-			layout = "custom",
-			layouts = {
-				custom = get_custom_layout(),
-				select = {
-					hidden = { "preview" },
-					layout = get_custom_layout().layout,
-				},
 			},
 		},
 	},
 })
 
-local p = Snacks.picker
-vim.keymap.set("n", "<leader><space>", function()
-	p.buffers()
-end, { desc = "[S]mart [F]ile" })
-vim.keymap.set("n", "<leader>/", function()
-	p.grep()
-end, { desc = "[G]rep" })
+local p = require("snacks").picker
+
+local function find_files_in_root()
+	local root_dir = get_project_root()
+	p.files({
+		cwd = root_dir,
+	})
+end
+
+local function grep_in_root()
+	local root_dir = get_project_root()
+	p.grep({
+		cwd = root_dir,
+	})
+end
+
+vim.keymap.set("n", "<leader><space>", find_files_in_root, { desc = "[S]mart [F]ile (Root)" })
+vim.keymap.set("n", "<leader>ff", find_files_in_root, { desc = "[F]ind [F]iles (Root)" })
+vim.keymap.set("n", "<leader>/", grep_in_root, { desc = "[G]rep (Root)" })
 vim.keymap.set("n", "<leader>n", function()
 	p.notifications()
 end, { desc = "[N]otification History" })
@@ -59,9 +63,6 @@ end, { desc = "[F]ind [B]uffers" })
 vim.keymap.set("n", "<leader>fc", function()
 	p.files({ cwd = vim.fn.stdpath("config") })
 end, { desc = "[F]ind [C]onfig File" })
-vim.keymap.set("n", "<leader>ff", function()
-	p.files()
-end, { desc = "[F]ind [F]iles" })
 vim.keymap.set("n", "<leader>fg", function()
 	p.git_files()
 end, { desc = "[F]ind [G]it Files" })

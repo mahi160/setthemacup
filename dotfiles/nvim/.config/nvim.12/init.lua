@@ -83,9 +83,9 @@ require("mason-lspconfig").setup({ automatic_installation = true })
 local servers = { "lua_ls", "vtsls" }
 
 local lsp_keymaps = {
-  { "n", "K", vim.lsp.buf.hover, { desc = "Hover" } },
+  { "n", "K",          vim.lsp.buf.hover,       { desc = "Hover" } },
   { "n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" } },
-  { "n", "<leader>cr", vim.lsp.buf.rename, { desc = "Rename" } },
+  { "n", "<leader>cr", vim.lsp.buf.rename,      { desc = "Rename" } },
 }
 
 local function setup_lsp_keymaps(bufnr)
@@ -211,4 +211,4 @@ pcall(require, "extras.completion")
 pcall(require, "extras.lsp")
 pcall(require, "extras.diagnostics")
 pcall(require, "extras.options")
-pcall(require, "extras.better-escape")
+pcall(require, "extras.misc")

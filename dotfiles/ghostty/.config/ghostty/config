@@ -1,18 +1,22 @@
-theme = Everforest Dark Hard
+# theme = Everforest Dark Hard
+theme = Nord
+theme = Gruvbox Material Dark
+# theme = TokyoNight
 window-height = 24
 window-width = 80
 window-padding-x = 2
 window-padding-balance = true
 background-blur = true
-background-opacity = 0.92
-background-blur-radius = 180
+background-opacity = 0.94
+background-blur-radius = 140
 # => === >=
 # background = #1a1f26
-# font-family = "MonaspiceNe Nerd Font Propo"
+# font-family = MonaspiceRn Nerd Font Propo
 # font-family = BlexMono Nerd Font Mono
 # font-family = VictorMono Nerd Font Propo
 # font-family = Monaco
-font-size = 13
+font-family = Maple Mono NF
+font-size = 14
 # font-thicken = true
 # font-thicken-strength = 80
 macos-titlebar-style = hidden
@@ -22,3 +26,6 @@ window-save-state = always
 # adjust-cell-height = 10%
 keybind = alt+left=unbind
 keybind = alt+right=unbind
+background-image = ~/Pictures/tbg.png
+background-image-opacity = 0.15
+background-image-position = bottom-right

@@ -13,7 +13,7 @@ require("copilot").setup({
 
 require("blink.cmp").setup({
 	fuzzy = { implementation = "lua" },
-	keymap = { preset = "enter" },
+	keymap = { preset = "default" },
 	snippets = { preset = "luasnip" },
 
 	sources = {

@@ -69,12 +69,53 @@ vim.api.nvim_create_autocmd("VimResized", {
 	command = "wincmd =",
 })
 
+local function update_plugins()
+	-- 1. Get all packages and create an iterator
+	local names = vim.iter(vim.pack.get())
+		:filter(function(pkg)
+			-- Check 1: Must have a 'spec' table
+			if not pkg.spec then
+				return false
+			end
+
+			-- Check 2: Must have a name
+			if not pkg.spec.name then
+				return false
+			end
+
+			-- Check 3: THE FIX. Must have a 'url' or 'src' to be updateable.
+			-- This filters out local plugins that would cause the crash.
+			if not pkg.spec.url and not pkg.spec.src then
+				return false
+			end
+
+			return true
+		end)
+		:map(function(pkg)
+			-- Extract just the name for the update function
+			return pkg.spec.name
+		end)
+		:totable()
+
+	-- 2. Safety check: Is the list empty after filtering?
+	if #names == 0 then
+		vim.notify("⚠️ No updateable plugins found (checked " .. #vim.pack.get() .. " items).", vim.log.levels.WARN)
+		return
+	end
+
+	table.sort(names)
+
+	-- 3. Run the update
+	vim.notify("🔄 Updating " .. #names .. " plugins...", vim.log.levels.INFO)
+	vim.pack.update(names, { async = true })
+end
+
 -- Plugins sync command
 vim.api.nvim_create_user_command("Packsync", function()
 	vim.notify("🔄 Syncing plugins...", vim.log.levels.INFO)
 
 	local start_time = vim.loop.hrtime()
-	local ok, result = pcall(vim.pack.update)
+	local ok, result = pcall(update_plugins)
 	local end_time = vim.loop.hrtime()
 	local duration = (end_time - start_time) / 1000000 -- Convert to ms
 

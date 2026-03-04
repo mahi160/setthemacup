@@ -48,6 +48,14 @@
     "mason-tool-installer.nvim": [],
     "mason.nvim": [],
     "mini.nvim": [],
+    "nord.nvim": {
+      "rev": "80c1e53",
+      "src": "https://github.com/shaunsingh/nord.nvim"
+    },
+    "nvim": {
+      "rev": "da33755",
+      "src": "https://github.com/catppuccin/nvim"
+    },
     "nvim-lspconfig": [],
     "nvim-treesitter": [],
     "nvim-treesitter-textobjects": {

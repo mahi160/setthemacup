@@ -24,11 +24,11 @@ else
 
   # Window 2: Left - tests, Right - two panes (top: pnpm dev, bottom: focused)
   tmux new-window -t wick -n dev
-  tmux send-keys -t wick:dev 'cd ./wick-ui-lib && pnpm test:ui' C-m
+  tmux send-keys -t wick:dev 'opencode' C-m
   sleep 0.1
 
   # Split window into two columns (left 50%, right 50%)
-  tmux split-window -h -t wick:dev
+  tmux split-window -h -l 15% -t wick:dev
   tmux send-keys -t wick:dev.2 'pnpm i && cd ./wick-ui-lib && pnpm dev' C-m
   sleep 0.1
 
@@ -44,8 +44,8 @@ else
   sleep 0.1
 
   # Window 4: opencode
-  tmux new-window -t wick -n ai
-  tmux send-keys -t wick:ai 'opencode' C-m
+  tmux new-window -t wick -n test
+  tmux send-keys -t wick:test 'cd ./wick-ui-lib && pnpm test:ui' C-m
   sleep 0.1
 
   # Select the first window as starting point
