@@ -1,42 +1,104 @@
-# Eye-comfort themes (choose one)
+# ============================================================================
+# THEME CONFIGURATION
+# ============================================================================
 theme = Everforest Dark Hard
 # theme = Kanagawa Wave
 # theme = Kanagawa Dragon
 # theme = Gruvbox Material Dark
-# theme = Nord
-# theme = TokyoNight
 
-# Available Everforest variants:
-# - Everforest Dark Hard
-# - Everforest Light Med
 
-# Available Kanagawa variants:
-# - Kanagawa Wave (default, warm)
-# - Kanagawa Dragon (darker for late-night)
+# ============================================================================
+# FONT CONFIGURATION
+# ============================================================================
+
+# Primary font with ligatures enabled
+font-family = Maple Mono NF
+font-size = 14
+font-feature = +liga +calt +ss01 +ss02 +ss03
+
+# Quick-switch font alternatives (uncomment to try):
+# font-family = MonaspiceRn Nerd Font Propo  # => === >=
+# font-family = BlexMono Nerd Font Mono
+# font-family = VictorMono Nerd Font Propo
+# font-family = Monaco
+
+# Optional font adjustments:
+# font-thicken = true
+# font-thicken-strength = 80
+# adjust-cell-height = 10%
+
+# ============================================================================
+# WINDOW APPEARANCE
+# ============================================================================
+
+# Window dimensions
 window-height = 24
 window-width = 80
 window-padding-x = 2
 window-padding-balance = true
+
+# Visual effects
 background-blur = true
 background-opacity = 0.94
 background-blur-radius = 140
-# => === >=
-# background = #1a1f26
-# font-family = MonaspiceRn Nerd Font Propo
-# font-family = BlexMono Nerd Font Mono
-# font-family = VictorMono Nerd Font Propo
-# font-family = Monaco
-font-family = Maple Mono NF
-font-size = 14
-# font-thicken = true
-# font-thicken-strength = 80
-macos-titlebar-style = hidden
-keybind = global:cmd+grave_accent=toggle_quick_terminal
-title = " "
-window-save-state = always
-# adjust-cell-height = 10%
-keybind = alt+left=unbind
-keybind = alt+right=unbind
 background-image = ~/Pictures/tbg.png
 background-image-opacity = 0.15
 background-image-position = bottom-right
+
+# Titlebar
+macos-titlebar-style = hidden
+title = " "
+
+# ============================================================================
+# WINDOW BEHAVIOR
+# ============================================================================
+
+window-save-state = always
+
+# ============================================================================
+# SHELL INTEGRATION
+# ============================================================================
+
+shell-integration = detect
+shell-integration-features = cursor,sudo,title
+auto-update = check
+
+# ============================================================================
+# PERFORMANCE & RENDERING
+# ============================================================================
+
+macos-option-as-alt = true
+
+# ============================================================================
+# MOUSE & CURSOR
+# ============================================================================
+
+# Cursor appearance
+cursor-style = block
+cursor-style-blink = true
+
+# Mouse behavior
+mouse-hide-while-typing = true
+mouse-scroll-multiplier = 3
+
+# Click behavior
+copy-on-select = clipboard
+
+# ============================================================================
+# CLIPBOARD & SELECTION
+# ============================================================================
+
+# Enable OSC 52 for remote clipboard support
+clipboard-read = allow
+clipboard-write = allow
+
+# ============================================================================
+# KEYBINDINGS
+# ============================================================================
+
+# Quick terminal toggle
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+
+# Disable conflicting keybinds
+keybind = alt+left=unbind
+keybind = alt+right=unbind
