@@ -9,7 +9,9 @@ vim.opt.cursorline = true -- Highlight current line
 vim.opt.winborder = "rounded" -- Rounded popup borders
 vim.opt.scrolloff = 12 -- Context lines above/below cursor
 
--- vim.opt.mouse = "a" -- Enable mouse support
+-- Mouse and smooth scrolling
+vim.opt.mouse = "a" -- Enable mouse support
+vim.opt.mousescroll = "ver:3,hor:0" -- Smooth vertical scroll (3 lines per tick), disable horizontal
 vim.opt.showmode = false -- Hide mode indicator
 vim.opt.splitright = true -- Vertical splits go right
 vim.opt.splitbelow = true -- Horizontal splits go below
