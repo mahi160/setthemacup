@@ -9,7 +9,7 @@
   "autoupdate": "notify",
   
   // Default agent
-  "default_agent": "build",
+  "default_agent": "plan",
   
   // File watcher configuration
   "watcher": {
@@ -32,7 +32,7 @@
     ]
   },
   
-  // Permissions (always ask for bash operations)
+  // Permissions (ask for dangerous bash operations, allow edit)
   "permission": {
     "bash": "ask",
     "edit": "allow"
