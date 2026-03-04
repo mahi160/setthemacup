@@ -1,10 +1,86 @@
 {
   "$schema": "https://opencode.ai/config.json",
+
+  // Model Configuration
+  "models": {
+    "main": "github-copilot/claude-sonnet-4.5",
+    "small": "github-copilot/claude-haiku-4.5"
+  },
+
+  // Auto-update settings
+  "autoUpdate": "notify",
+
+  // Default agent for code analysis and building
+  "defaultAgent": "build",
+
+  // Context compaction settings
+  "compaction": {
+    "reservedTokens": 15000
+  },
+
+  // File watcher configuration
+  "watcher": {
+    "ignore": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/.nuxt/**",
+      "**/coverage/**",
+      "**/.git/**",
+      "**/*.log",
+      "**/tmp/**",
+      "**/temp/**",
+      "**/.cache/**",
+      "**/.DS_Store",
+      "**/package-lock.json",
+      "**/yarn.lock",
+      "**/pnpm-lock.yaml"
+    ]
+  },
+
+  // Formatter configuration
+  "formatters": {
+    "typescript": {
+      "command": "prettier",
+      "args": ["--write", "${file}"]
+    },
+    "javascript": {
+      "command": "prettier",
+      "args": ["--write", "${file}"]
+    },
+    "json": {
+      "command": "prettier",
+      "args": ["--write", "${file}"]
+    },
+    "markdown": {
+      "command": "prettier",
+      "args": ["--write", "${file}"]
+    },
+    "lua": {
+      "command": "stylua",
+      "args": ["${file}"]
+    }
+  },
+
+  // Permission settings (ask before potentially destructive operations)
+  "permissions": {
+    "bash": "ask",
+    "edit": "allow",
+    "write": "ask"
+  },
+
+  // Custom instructions
+  "instructions": [
+    "AGENTS.md"
+  ],
+
+  // MCP Configuration
   "mcp": {
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "enabled": false,
-    },
-  },
+      "enabled": false
+    }
+  }
 }
