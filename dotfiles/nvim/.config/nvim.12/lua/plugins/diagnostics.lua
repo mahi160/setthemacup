@@ -3,9 +3,6 @@ Pack({
   "stevearc/quicker.nvim",
 })
 
-require("tiny-inline-diagnostic").setup({
-  preset = "ghost",
-})
 vim.diagnostic.config({
   virtual_text = false,
   signs = {
@@ -16,6 +13,9 @@ vim.diagnostic.config({
       [vim.diagnostic.severity.HINT] = " ",
     },
   },
+})
+require("tiny-inline-diagnostic").setup({
+  preset = "ghost",
 })
 
 
