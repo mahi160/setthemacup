@@ -1,4 +1,4 @@
-vim.pack.add("https://github.com/rachartier/tiny-inline-diagnostic.nvim")
+vim.pack.add({ "https://github.com/rachartier/tiny-inline-diagnostic.nvim" })
 
 local ok, tiny = pcall(require, "tiny-inline-diagnostic")
 if ok then

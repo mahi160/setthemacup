@@ -1,4 +1,4 @@
-vim.pack.add("https://github.com/stevearc/conform.nvim")
+vim.pack.add({ "https://github.com/stevearc/conform.nvim" })
 
 local conform_ok, conform = pcall(require, "conform")
 if not conform_ok then return end
