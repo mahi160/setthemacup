@@ -1,6 +1,6 @@
 Pack("nvim-treesitter/nvim-treesitter")
 
-require("nvim-treesitter.configs").setup({
+require("nvim-treesitter").setup({
   sync_install = true,
   modules = {},
   ignore_install = {},
