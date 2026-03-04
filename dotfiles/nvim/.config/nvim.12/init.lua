@@ -138,6 +138,7 @@ vim.diagnostic.config({
 
 if blink_ok then
   blink.setup({
+    fuzzy = { implementation = "lua" },
     keymap = { preset = "default" },
     sources = {
       default = { "lsp", "path", "snippets", "buffer" },
