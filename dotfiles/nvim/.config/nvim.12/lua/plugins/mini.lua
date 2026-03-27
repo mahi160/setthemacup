@@ -12,9 +12,10 @@ require("mini.ai").setup({
     C = require("mini.ai").gen_spec.treesitter({ a = "@comment.outer", i = "@comment.inner" }),
   },
 })
+
 require("mini.animate").setup({
   scroll = {
-    enable = false, -- Disable scroll animation to prevent stuttering with mouse/trackpad
+    enable = true, -- Disable scroll animation to prevent stuttering with mouse/trackpad
   },
 })
 require("mini.basics").setup()

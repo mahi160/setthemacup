@@ -88,6 +88,10 @@
       "rev": "2d3f3276eab9352c7b212821c218aca986929f62",
       "src": "https://github.com/stevearc/quicker.nvim"
     },
+    "render-markdown.nvim": {
+      "rev": "1641b434bda26e0f4e3610985b3357fc213cf834",
+      "src": "https://github.com/MeanderingProgrammer/render-markdown.nvim"
+    },
     "smear-cursor.nvim": {
       "rev": "c85bdbb25db096fbcf616bc4e1357bd61fe2c199",
       "src": "https://github.com/sphamba/smear-cursor.nvim"

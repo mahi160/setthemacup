@@ -27,6 +27,7 @@ vim.opt.shiftwidth = 2              -- Indent width
 vim.opt.expandtab = true            -- Convert tabs to spaces
 vim.opt.textwidth = 120             -- Auto-wrap at 80 columns
 vim.opt.foldenable = false          -- Start with all folds open
+vim.opt.wrap = true                 -- Disable line wrapping
 vim.opt.foldlevel = 99              -- Keep folds open by default
 vim.opt.foldmethod = "expr"
 vim.opt.foldexpr = "nvim_treesitter#foldexpr()"

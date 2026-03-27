@@ -11,7 +11,9 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias vi="NVIM_APPNAME=nvim.12 bob run nightly"
+alias vv="NVIM_APPNAME=nvim.12 bob run nightly"
+alias vm="NVIM_APPNAME=mini nvim"
+alias vi="nvim"
 
 alias zc="vi ~/.zshrc"
 alias zs="source ~/.zshrc"
@@ -24,6 +26,7 @@ alias wick="~/Documents/Coding/Projects/setthemacup/scripts/wick.sh"
 alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
 
 alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
+alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
 # starship
 eval "$(starship init zsh)"
 
@@ -65,3 +68,6 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 
 # opencode
 export PATH=/Users/mahi/.opencode/bin:$PATH
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"

@@ -1,7 +1,17 @@
 ---
-description: Commit with proper commit message
-agent: build
-model: github-copilot/gpt-5-mini
+name: commit
+description: Generate strict Conventional Commits from staged diffs.
 ---
 
-Look for staged changes in the git repository and create a proper commit message for them. Then create a commit with that message. Make sure to follow convensional commit guidelines when creating the commit message.
+Role: Tech Lead. Output ONLY the raw commit message. NO markdown formatting, NO conversational text.
+
+Rules:
+
+1. Analyze the staged diff.
+2. Strictly follow the Conventional Commits specification (`type(scope): subject`).
+3. Types allowed: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+4. Subject line: Imperative mood, lowercase, no period at the end, max 50 characters.
+5. Body (if needed): Wrap at 72 characters. Explain _why_, not _how_.
+6. Footer: Flag breaking changes with `BREAKING CHANGE:`.
+
+[Output the raw string ONLY]

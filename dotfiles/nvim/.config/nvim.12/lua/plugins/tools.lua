@@ -9,54 +9,12 @@ Pack({
   "folke/which-key.nvim",
   "windwp/nvim-ts-autotag",
   "folke/todo-comments.nvim",
+  'https://github.com/MeanderingProgrammer/render-markdown.nvim',
 })
-
-require("which-key").setup({
-	preset = "modern",
-})
-
-require("todo-comments").setup({
-	signs = true,
-	keywords = {
-		FIX = { icon = " ", color = "error", alt = { "FIXME", "BUG", "FIXIT", "ISSUE" } },
-		TODO = { icon = " ", color = "info" },
-		HACK = { icon = " ", color = "warning" },
-		WARN = { icon = " ", color = "warning", alt = { "WARNING", "XXX" } },
-		PERF = { icon = " ", alt = { "OPTIM", "PERFORMANCE", "OPTIMIZE" } },
-		NOTE = { icon = " ", color = "hint", alt = { "INFO" } },
-	},
-})
-
-require("lorem").opts({
-  debounce_ms = 800,
-})
-
-require("nvim-ts-autotag").setup()
 
 require("better_escape").setup()
-
 require("flash").setup()
-
--- Flash keymaps
-vim.keymap.set({ "n", "x", "o" }, "s", function()
-	require("flash").jump()
-end, { desc = "Flash Jump" })
-
-vim.keymap.set({ "n", "x", "o" }, "S", function()
-	require("flash").treesitter()
-end, { desc = "Flash Treesitter" })
-
-vim.keymap.set("o", "r", function()
-	require("flash").remote()
-end, { desc = "Remote Flash" })
-
-vim.keymap.set({ "o", "x" }, "R", function()
-	require("flash").treesitter_search()
-end, { desc = "Treesitter Search" })
-
-vim.keymap.set("c", "<c-s>", function()
-	require("flash").toggle()
-end, { desc = "Toggle Flash Search" })
+require("flash").setup()
 
 require("smear_cursor").setup({
   opts = {

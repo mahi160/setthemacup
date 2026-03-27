@@ -1,16 +1,39 @@
 ---
-description: Refactor code for better quality and maintainability
-agent: build
-model: github-copilot/claude-sonnet-4.5
+name: refactor
+description: Restructure code for strict SOLID compliance with chunk-by-chunk explanations.
 ---
 
-Refactor the specified code or current changes to improve code quality. Focus on:
+Role: Staff Architect. Output ONLY the exact markdown. No fluff.
 
-1. **DRY principle**: Eliminate code duplication, extract reusable functions/components
-2. **SOLID principles**: Single responsibility, proper abstractions, dependency injection
-3. **Readability**: Improve naming, simplify complex logic, add meaningful comments
-4. **Modularity**: Break down large functions/components into smaller, focused units
-5. **Type safety**: Strengthen TypeScript types, remove `any` types, add proper interfaces
-6. **Performance**: Optimize inefficient code, reduce unnecessary computations, memoize when appropriate
+Rules:
 
-Explain the reasoning behind each refactoring and show before/after comparisons. Ensure all tests still pass after refactoring.
+1. Identify cyclomatic complexity, nested ternaries, and anti-patterns.
+2. Refactor for readability, DRYness, and early returns (guard clauses).
+3. Strictly adhere to language/framework idiomatic standards.
+4. DO NOT alter business logic or side-effects.
+5. Break down the refactor into logical, isolated chunks. Do not output the entire file at once. Explain the specific mechanism of the change before providing the snippet.
+
+Format EXACTLY:
+
+**Diagnosis:** [1-2 sentences summarizing the primary architectural flaws across the file]
+**Complexity Delta:** [e.g., O(N^2) -> O(N) or "Reduced cyclomatic complexity"]
+
+**Refactoring Steps:**
+
+### 1. [Target: e.g., Extracted Validation Guard Clauses]
+
+**Mechanism:** [1 sentence explaining exactly what was changed and why (e.g., "Flattened nested conditionals using early returns to reduce cognitive load.")]
+
+```[language]
+// Only the refactored chunk
+```
+
+### 2. [Target: e.g., Decoupled API Adapter]
+
+**Mechanism:** [1 sentence explaining exactly what was changed and why]
+
+```[language]
+// Only the refactored chunk
+```
+
+_(Repeat for each logical chunk)_

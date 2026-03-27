@@ -1,17 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  
-  // Model Configuration
+
   "model": "github-copilot/claude-sonnet-4.5",
   "small_model": "github-copilot/claude-haiku-4.5",
-  
-  // Auto-update settings
-  "autoupdate": "notify",
-  
-  // Default agent
   "default_agent": "plan",
-  
-  // File watcher configuration
   "watcher": {
     "ignore": [
       "**/node_modules/**",
@@ -28,28 +20,7 @@
       "**/.DS_Store",
       "**/package-lock.json",
       "**/yarn.lock",
-      "**/pnpm-lock.yaml"
-    ]
+      "**/pnpm-lock.yaml",
+    ],
   },
-  
-  // Permissions (ask for dangerous bash operations, allow edit)
-  "permission": {
-    "bash": "ask",
-    "edit": "allow"
-  },
-  
-  // Custom instructions
-  "instructions": ["AGENTS.md"],
-  
-  // Code formatters (sensible defaults for common file types)
-  "formatter": {
-    "prettier": {
-      "extensions": [".js", ".ts", ".jsx", ".tsx", ".json", ".jsonc", ".md", ".yaml", ".yml", ".html", ".css"],
-      "command": ["prettier", "--write", "$FILE"]
-    },
-    "stylua": {
-      "extensions": [".lua"],
-      "command": ["stylua", "$FILE"]
-    }
-  }
 }
