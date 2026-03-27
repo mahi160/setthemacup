@@ -7,6 +7,9 @@ end
 -- Clear search highlights with <Esc>
 map("n", "<Esc>", "<cmd>nohlsearch<CR>", opts("Clear search highlights"))
 
+-- Quit all
+map("n", "<leader>qq", "<cmd>qa<CR>", opts("Quit all"))
+
 -- Escape to normal mode
 map("i", "jj", "<Esc>", opts("Escape to normal mode"))
 
