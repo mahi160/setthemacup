@@ -11,9 +11,11 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias vv="NVIM_APPNAME=nvim.12 bob run nightly"
+alias v2="NVIM_APPNAME=nvim.12 bob run nightly"
+alias vv="NVIM_APPNAME=micro nvim"
 alias vm="NVIM_APPNAME=mini nvim"
 alias vi="nvim"
+alias clc="curl -s isclaude2x.com/short"
 
 alias zc="vi ~/.zshrc"
 alias zs="source ~/.zshrc"
@@ -71,3 +73,4 @@ export PATH=/Users/mahi/.opencode/bin:$PATH
 
 # Vite+ bin (https://viteplus.dev)
 . "$HOME/.vite-plus/env"
+export PATH="$HOME/.local/bin:$PATH"

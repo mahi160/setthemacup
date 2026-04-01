@@ -5,6 +5,7 @@ theme = Everforest Dark Hard
 # theme = Kanagawa Wave
 # theme = Kanagawa Dragon
 # theme = Gruvbox Material Dark
+# theme = TokyoNight Night
 
 
 # ============================================================================
@@ -39,9 +40,9 @@ window-padding-balance = true
 
 # Visual effects
 background-blur = true
-background-opacity = 0.94
-background-blur-radius = 140
-background-image = ~/Pictures/tbg.png
+background-opacity = 0.96
+background-blur-radius = 24
+# background-image = ~/Pictures/tbg.png
 background-image-opacity = 0.15
 background-image-position = bottom-right
 
