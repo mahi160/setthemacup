@@ -1,11 +1,18 @@
-vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "[O]pen parent directory" })
-vim.keymap.set("i", "jj", "<Esc>", { desc = "Escape to Normal mode" })
+-- Core Keymaps
+local map = vim.keymap.set
 
-vim.keymap.set("n", "H", "<cmd>:bn<cr>", { desc = "[N]ext [B]uffer" })
-vim.keymap.set("n", "L", "<cmd>:bp<cr>", { desc = "[P]revious [B]uffer" })
-vim.keymap.set("n", "J", function()
-  local last = vim.fn.bufnr("#")
-  if last > 0 and vim.api.nvim_buf_is_loaded(last) and vim.bo[last].buflisted then
-    vim.cmd("buffer " .. last)
-  end
-end, { desc = "[P]revious [B]uffer" })
+-- File explorer
+map("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory with Oil" })
+
+-- Escape insert mode
+map("i", "jj", "<Esc>", { desc = "Escape to Normal mode" })
+
+-- Buffer navigation
+map("n", "H", "<cmd>:bn<cr>", { desc = "Next buffer" })
+map("n", "L", "<cmd>:bp<cr>", { desc = "Previous buffer" })
+map("n", "J", function()
+	local last = vim.fn.bufnr("#")
+	if last > 0 and vim.api.nvim_buf_is_loaded(last) and vim.bo[last].buflisted then
+		vim.cmd("buffer " .. last)
+	end
+end, { desc = "Toggle last buffer" })

@@ -1,4 +1,8 @@
-Pack({ "nvim-mini/mini.nvim" })
+-- Mini.nvim Configuration
+-- Collection of minimal, independent plugins
+-- Reference: :help mini
+
+vim.pack.add({ "nvim-mini/mini.nvim" }, { confirm = false })
 
 require("mini.basics").setup()
 require("mini.icons").setup()

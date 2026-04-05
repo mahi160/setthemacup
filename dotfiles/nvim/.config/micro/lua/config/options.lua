@@ -1,11 +1,19 @@
+-- Leaders
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
-vim.o.relativenumber = true
-vim.o.expandtab = true
-vim.o.shiftwidth = 2
-vim.o.number = true
-vim.o.signcolumn = "yes:1"
-vim.o.confirm = true
-vim.o.wrap = true
+-- Editor UI
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.signcolumn = "yes:1"
+vim.opt.wrap = true
+vim.opt.confirm = true
+
+-- Indentation
+vim.opt.expandtab = true
+vim.opt.shiftwidth = 2
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
+
+-- Spell checking
 vim.opt.spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
