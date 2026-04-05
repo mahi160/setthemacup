@@ -1,4 +1,5 @@
 fastfetch
+
 # Add deno completions to search path
 # if [[ ":$FPATH:" != *":/home/mahi/.zsh/completions:"* ]]; then export FPATH="/home/mahi/.zsh/completions:$FPATH"; fi
 export ZSH="$HOME/.oh-my-zsh"
@@ -11,8 +12,7 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias vl="NVIM_APPNAME=micro nvim"
-alias vm="NVIM_APPNAME=mini nvim"
+alias vm="NVIM_APPNAME=pi.nvim nvim"
 alias vi="nvim"
 alias clc="curl -s isclaude2x.com/short"
 
