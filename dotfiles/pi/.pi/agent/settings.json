@@ -1,0 +1,20 @@
+{
+  "lastChangelogVersion": "0.65.0",
+  "packages": ["npm:oh-pi", "npm:pi-btw"],
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-haiku-4-5",
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-6",
+    "github-copilot/gpt-5-mini",
+    "github-copilot/gpt-4.1",
+    "anthropic/claude-haiku-4-5"
+  ],
+  "theme": "oh-p-dark",
+  "editorPaddingX": 2,
+  "hideThinkingBlock": false,
+  "quietStartup": true,
+  "treeFilterMode": "default"
+}
+

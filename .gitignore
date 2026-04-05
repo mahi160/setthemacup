@@ -1,2 +1,4 @@
 .DS_Store
 node_modules/
+dotfiles/pi/.pi/*/sessions/*
+dotfiles/pi/.pi/*/auth*
