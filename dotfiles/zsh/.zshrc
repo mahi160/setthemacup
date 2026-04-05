@@ -11,8 +11,7 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias v2="NVIM_APPNAME=nvim.12 bob run nightly"
-alias vv="NVIM_APPNAME=micro nvim"
+alias vl="NVIM_APPNAME=micro nvim"
 alias vm="NVIM_APPNAME=mini nvim"
 alias vi="nvim"
 alias clc="curl -s isclaude2x.com/short"
@@ -26,6 +25,15 @@ alias setup="vi ~/Documents/Coding/Projects/setthemacup/"
 alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
 alias wick="~/Documents/Coding/Projects/setthemacup/scripts/wick.sh"
 alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
+alias pokemon-bg="~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh"
+
+# Alt+P: change Pokemon background from anywhere in the terminal
+_pokemon_bg_widget() {
+  ~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh
+  zle reset-prompt
+}
+zle -N _pokemon_bg_widget
+bindkey '\ep' _pokemon_bg_widget
 
 alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
 alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""

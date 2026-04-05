@@ -42,9 +42,11 @@ window-padding-balance = true
 background-blur = true
 background-opacity = 0.96
 background-blur-radius = 24
-# background-image = ~/Pictures/tbg.png
+background-image = /Users/mahi/Pictures/pokemon_bg/240.png
+# managed by scripts/pokemon-bg.sh — run it once to activate
 background-image-opacity = 0.15
-background-image-position = bottom-right
+background-image-fit = none
+background-image-position = center-right
 
 # Titlebar
 macos-titlebar-style = hidden
