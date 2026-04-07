@@ -50,7 +50,7 @@ export class StatusWidget {
       dirty: this.gitDirty.get(),
       tool: [...this.toolCounts.entries()]
         .map(([name, count]) => formatTool(name, count))
-        .join(" "),
+        .join(""),
     };
   }
 
