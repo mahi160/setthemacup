@@ -1,37 +1,38 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { ToolWidget } from "./tools.js";
 import { StatusWidget } from "./widget.js";
 
 export default function (pi: ExtensionAPI) {
-  let widget: StatusWidget | undefined;
+  let status: StatusWidget | undefined;
+  let tools: ToolWidget | undefined;
 
   pi.on("session_start", (_, ctx: ExtensionContext) => {
     ctx.ui.setFooter(() => ({ render: () => [], invalidate() {} }));
 
-    if (ctx.model) {
-      widget = new StatusWidget(pi, ctx, ctx.model);
-      widget.update();
-    }
+    status = ctx.model ? new StatusWidget(pi, ctx, ctx.model) : undefined;
+    tools = new ToolWidget(ctx);
+    status?.update();
   });
 
   pi.on("model_select", (event) => {
-    if (!widget) return;
-    widget.model = event.model;
-    widget.update();
+    if (!status) return;
+    status.model = event.model;
+    status.update();
   });
 
   pi.on("tool_execution_start", (event) => {
-    widget?.startTool(event.toolName);
+    tools?.start(event.toolName);
   });
 
   pi.on("tool_execution_end", (event) => {
-    widget?.endTool(event.toolName);
+    tools?.end(event.toolName);
   });
 
   pi.on("agent_end", () => {
-    widget?.clearActive();
+    tools?.clearActive();
   });
 
   pi.on("turn_end", () => {
-    widget?.update();
+    status?.update();
   });
 }
