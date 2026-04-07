@@ -30,10 +30,10 @@ function stripAnsi(str: string): string {
 
 export function buildBottomLine(left: string, right: string): string {
   if (!right) return left;
-  const width = process.stdout.columns ?? 80;
+  const width = (process.stdout.columns ?? 80) - 1;
   const pad = Math.max(
     1,
     width - stripAnsi(left).length - stripAnsi(right).length,
   );
-  return left + " ".repeat(pad) + right;
+  return left + " ".repeat(10) + right;
 }
