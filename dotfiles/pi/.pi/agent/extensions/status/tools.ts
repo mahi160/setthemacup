@@ -1,10 +1,10 @@
 import process from "node:process";
 
 const BG: Record<string, string> = {
-  bash:  "\x1b[48;5;99m",  // indigo
-  read:  "\x1b[48;5;37m",  // teal
-  write: "\x1b[48;5;203m", // coral
-  edit:  "\x1b[48;5;214m", // amber
+  bash:  "\x1b[48;5;140m", // muted violet
+  read:  "\x1b[48;5;73m",  // dusty teal
+  write: "\x1b[48;5;174m", // dusty rose
+  edit:  "\x1b[48;5;179m", // warm gold
 };
 
 export function formatTool(name: string, count: number): string {
