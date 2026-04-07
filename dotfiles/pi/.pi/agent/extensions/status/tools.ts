@@ -1,5 +1,3 @@
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-
 const TEXT: Record<string, string> = {
   bash:  "\x1b[32m", // green text
   read:  "\x1b[34m", // blue text
@@ -24,47 +22,9 @@ function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-function rightAlign(text: string): string {
+export function buildBottomLine(left: string, right: string): string {
+  if (!right) return left;
   const width = process.stdout.columns ?? 80;
-  const visible = stripAnsi(text).length;
-  return " ".repeat(Math.max(0, width - visible)) + text;
-}
-
-export class ToolWidget {
-  private ctx: ExtensionContext;
-  private counts = new Map<string, number>();
-  private active = new Set<string>();
-
-  constructor(ctx: ExtensionContext) {
-    this.ctx = ctx;
-  }
-
-  start(name: string): void {
-    this.counts.set(name, (this.counts.get(name) ?? 0) + 1);
-    this.active.add(name);
-    this.render();
-  }
-
-  end(name: string): void {
-    this.active.delete(name);
-    this.render();
-  }
-
-  clearActive(): void {
-    this.active.clear();
-    this.render();
-  }
-
-  private render(): void {
-    if (this.counts.size === 0) {
-      this.ctx.ui.setWidget("tool-calls", undefined, { placement: "belowEditor" });
-      return;
-    }
-
-    const text = [...this.counts.entries()]
-      .map(([name, count]) => formatTool(name, count, this.active.has(name)))
-      .join("  ");
-
-    this.ctx.ui.setWidget("tool-calls", [rightAlign(text)], { placement: "belowEditor" });
-  }
+  const pad = Math.max(1, width - stripAnsi(left).length - stripAnsi(right).length);
+  return left + " ".repeat(pad) + right;
 }
