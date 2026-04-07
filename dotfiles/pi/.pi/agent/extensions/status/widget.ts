@@ -18,7 +18,6 @@ export class StatusWidget {
   private gitDirty = new GitDirtyTracker();
   private lastRenderKey = "";
   private toolCounts = new Map<string, number>();
-  private activeTools = new Set<string>();
 
   constructor(pi: ExtensionAPI, ctx: ExtensionContext, model?: PiModel) {
     this.pi = pi;
@@ -29,17 +28,6 @@ export class StatusWidget {
 
   startTool(name: string): void {
     this.toolCounts.set(name, (this.toolCounts.get(name) ?? 0) + 1);
-    this.activeTools.add(name);
-    this.update();
-  }
-
-  endTool(name: string): void {
-    this.activeTools.delete(name);
-    this.update();
-  }
-
-  clearActive(): void {
-    this.activeTools.clear();
     this.update();
   }
 
@@ -55,14 +43,14 @@ export class StatusWidget {
       provider,
       modelName: MODELS[id] ?? id,
       thinking: this.pi.getThinkingLevel(),
-      tokens: `${Math.round(((usage?.tokens ?? 0) as number) / 1000)}k`,
-      percent: `${Math.round((usage?.percent ?? 0) as number)}%`,
+      tokens: `${Math.round((usage?.tokens ?? 0) / 1000)}k`,
+      percent: `${Math.round(usage?.percent ?? 0)}%`,
       project: this.ctx.cwd?.split("/").pop() ?? "root",
       git: this.gitBranch,
       dirty: this.gitDirty.get(),
       tool: [...this.toolCounts.entries()]
-        .map(([name, count]) => formatTool(name, count, this.activeTools.has(name)))
-        .join("  "),
+        .map(([name, count]) => formatTool(name, count))
+        .join(" "),
     };
   }
 
