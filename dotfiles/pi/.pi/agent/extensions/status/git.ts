@@ -2,7 +2,9 @@ import { execSync } from "node:child_process";
 
 export function getGitBranch(): string {
   try {
-    return execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+    return execSync("git rev-parse --abbrev-ref HEAD", {
+      encoding: "utf8",
+    }).trim();
   } catch {
     return "no-git";
   }
@@ -18,7 +20,9 @@ export class GitDirtyTracker {
 
     this.last = now;
     try {
-      const out = execSync("git status --porcelain", { encoding: "utf8" }).trim();
+      const out = execSync("git status --porcelain", {
+        encoding: "utf8",
+      }).trim();
       this.dirty = out ? "*" : "";
     } catch {
       this.dirty = "";

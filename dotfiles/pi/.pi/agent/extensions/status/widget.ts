@@ -1,4 +1,7 @@
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { MODELS, PROVIDERS } from "./constants.js";
 import { getGitBranch, GitDirtyTracker } from "./git.js";
 import { formatTool } from "./tools.js";
@@ -15,7 +18,7 @@ export class StatusWidget {
   private gitDirty = new GitDirtyTracker();
   private lastRenderKey = "";
   private toolCounts = new Map<string, number>();
-  private lastTool = "";
+  private activeTools = new Set<string>();
 
   constructor(pi: ExtensionAPI, ctx: ExtensionContext, model?: PiModel) {
     this.pi = pi;
@@ -24,15 +27,19 @@ export class StatusWidget {
     this.gitBranch = getGitBranch();
   }
 
-  setTool(name: string): void {
-    this.lastTool = name;
+  startTool(name: string): void {
     this.toolCounts.set(name, (this.toolCounts.get(name) ?? 0) + 1);
+    this.activeTools.add(name);
     this.update();
   }
 
-  clearTools(): void {
-    this.lastTool = "";
-    this.toolCounts.clear();
+  endTool(name: string): void {
+    this.activeTools.delete(name);
+    this.update();
+  }
+
+  clearActive(): void {
+    this.activeTools.clear();
     this.update();
   }
 
@@ -53,14 +60,24 @@ export class StatusWidget {
       project: this.ctx.cwd?.split("/").pop() ?? "root",
       git: this.gitBranch,
       dirty: this.gitDirty.get(),
-      tool: this.lastTool
-        ? formatTool(this.lastTool, this.toolCounts.get(this.lastTool) ?? 1)
-        : "",
+      tool: [...this.toolCounts.entries()]
+        .map(([name, count]) => formatTool(name, count, this.activeTools.has(name)))
+        .join("  "),
     };
   }
 
   private render(data: WidgetData): RenderOutput {
-    const { provider, modelName, thinking, tokens, percent, project, git, dirty, tool } = data;
+    const {
+      provider,
+      modelName,
+      thinking,
+      tokens,
+      percent,
+      project,
+      git,
+      dirty,
+      tool,
+    } = data;
 
     const top = modelName
       ? `${provider.color}${provider.icon} ${provider.name}\x1b[0m | ${modelName} (${thinking}) | ${tokens} (${percent})`
@@ -82,6 +99,8 @@ export class StatusWidget {
 
     const { top, bottom } = this.render(data);
     this.ctx.ui.setWidget("status-top", top, { placement: "aboveEditor" });
-    this.ctx.ui.setWidget("status-bottom", bottom, { placement: "belowEditor" });
+    this.ctx.ui.setWidget("status-bottom", bottom, {
+      placement: "belowEditor",
+    });
   }
 }
