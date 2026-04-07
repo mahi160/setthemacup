@@ -22,6 +22,14 @@ export default function (pi: ExtensionAPI) {
     widget.update();
   });
 
+  pi.on("tool_execution_start", (event) => {
+    widget?.setTool(event.toolName);
+  });
+
+  pi.on("agent_end", () => {
+    widget?.clearTools();
+  });
+
   pi.on("turn_end", () => {
     widget?.update();
   });

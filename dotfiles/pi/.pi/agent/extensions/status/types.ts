@@ -13,7 +13,7 @@ export type WidgetData = {
   project: string;
   git: string;
   dirty: string;
-  test: string;
+  tool: string;
 };
 
 export type RenderOutput = {

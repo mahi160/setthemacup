@@ -27,6 +27,8 @@ export class StatusWidget {
   private lastDirtyCheck = 0;
   private gitDirty = "";
   private lastRenderKey = "";
+  private toolCounts = new Map<string, number>();
+  private lastTool = "";
 
   constructor(pi: ExtensionAPI, ctx: ExtensionContext, model?: PiModel) {
     this.pi = pi;
@@ -58,6 +60,18 @@ export class StatusWidget {
     return this.gitDirty;
   }
 
+  setTool(name: string): void {
+    this.lastTool = name;
+    this.toolCounts.set(name, (this.toolCounts.get(name) ?? 0) + 1);
+    this.update();
+  }
+
+  clearTools(): void {
+    this.lastTool = "";
+    this.toolCounts.clear();
+    this.update();
+  }
+
   private compute(): WidgetData {
     const id = this.model?.id?.toLowerCase() ?? "";
     const provider: Provider =
@@ -77,7 +91,9 @@ export class StatusWidget {
       project: this.ctx.cwd?.split("/").pop() ?? "root",
       git: this.gitBranch,
       dirty: this.getGitDirty(),
-      test: JSON.stringify(this.ctx.ui),
+      tool: this.lastTool
+        ? `${this.lastTool}${(this.toolCounts.get(this.lastTool) ?? 1) > 1 ? ` ×${this.toolCounts.get(this.lastTool)}` : ""}`
+        : "",
     };
   }
 
@@ -91,14 +107,14 @@ export class StatusWidget {
       project,
       git,
       dirty,
-      test,
+      tool,
     } = data;
 
     const top = modelName
       ? `${provider.color}${provider.icon} ${provider.name}\x1b[0m | ${modelName} (${thinking}) | ${tokens} (${percent})`
       : "";
 
-    const bottom = `${project} | ${git}${dirty} | 🔧 | ${test}`;
+    const bottom = `${project} | ${git}${dirty}${tool ? ` | 🔧 ${tool}` : ""}`;
 
     return {
       top: top ? [top] : [],
