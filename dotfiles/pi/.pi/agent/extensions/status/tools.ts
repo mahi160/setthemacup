@@ -8,10 +8,10 @@ const TEXT: Record<string, string> = {
 };
 
 const BG: Record<string, string> = {
-  bash: "\x1b[42m", // green bg
-  read: "\x1b[44m", // blue bg
-  write: "\x1b[41m", // red bg
-  edit: "\x1b[43m", // yellow bg
+  bash:  "\x1b[48;5;99m",  // indigo
+  read:  "\x1b[48;5;37m",  // teal
+  write: "\x1b[48;5;203m", // coral
+  edit:  "\x1b[48;5;214m", // amber
 };
 
 export function formatTool(
