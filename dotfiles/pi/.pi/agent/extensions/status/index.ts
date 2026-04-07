@@ -2,12 +2,12 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { StatusWidget } from "./utils.js";
+import { StatusWidget } from "./widget.js";
 
 export default function (pi: ExtensionAPI) {
   let widget: StatusWidget | undefined;
 
-  pi.on("session_start", (_, ctx: ExtensionContext) => {
+  pi.on("session_start", (_: any, ctx: ExtensionContext) => {
     ctx.ui.setFooter(() => ({ render: () => [], invalidate() {} }));
 
     if (ctx.model) {
@@ -16,13 +16,13 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  pi.on("model_select", (event) => {
+  pi.on("model_select", (event: { model: any }) => {
     if (!widget) return;
     widget.model = event.model;
     widget.update();
   });
 
-  pi.on("tool_execution_start", (event) => {
+  pi.on("tool_execution_start", (event: { toolName: string }) => {
     widget?.setTool(event.toolName);
   });
 

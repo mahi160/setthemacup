@@ -1,35 +1,10 @@
-import { execSync } from "node:child_process";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { MODELS, PROVIDERS } from "./constants.js";
-import { Provider, RenderOutput, WidgetData } from "./types.js";
+import { getGitBranch, GitDirtyTracker } from "./git.js";
+import { formatTool } from "./tools.js";
+import type { Provider, RenderOutput, WidgetData } from "./types.js";
 
 type PiModel = NonNullable<ExtensionContext["model"]>;
-
-function getGitBranch(): string {
-  try {
-    return execSync("git rev-parse --abbrev-ref HEAD", {
-      encoding: "utf8",
-    }).trim();
-  } catch {
-    return "no-git";
-  }
-}
-
-const TOOL_COLORS: Record<string, string> = {
-  bash:  "\x1b[42m",  // green bg
-  read:  "\x1b[44m",  // blue bg
-  write: "\x1b[41m",  // red bg
-  edit:  "\x1b[41m",  // red bg (mutates files like write)
-};
-
-function formatTool(name: string, count: number): string {
-  const color = TOOL_COLORS[name] ?? "\x1b[47m";
-  const label = count > 1 ? `${name} \u00d7${count}` : name;
-  return `${color} ${label} \x1b[0m`;
-}
 
 export class StatusWidget {
   private pi: ExtensionAPI;
@@ -37,8 +12,7 @@ export class StatusWidget {
   model?: PiModel;
 
   private gitBranch: string;
-  private lastDirtyCheck = 0;
-  private gitDirty = "";
+  private gitDirty = new GitDirtyTracker();
   private lastRenderKey = "";
   private toolCounts = new Map<string, number>();
   private lastTool = "";
@@ -47,30 +21,7 @@ export class StatusWidget {
     this.pi = pi;
     this.ctx = ctx;
     this.model = model;
-
     this.gitBranch = getGitBranch();
-  }
-
-  private getGitDirty(): string {
-    const now = Date.now();
-
-    if (now - this.lastDirtyCheck < 1500) {
-      return this.gitDirty;
-    }
-
-    this.lastDirtyCheck = now;
-
-    try {
-      const out = execSync("git status --porcelain", {
-        encoding: "utf8",
-      }).trim();
-
-      this.gitDirty = out ? "*" : "";
-    } catch {
-      this.gitDirty = "";
-    }
-
-    return this.gitDirty;
   }
 
   setTool(name: string): void {
@@ -91,19 +42,17 @@ export class StatusWidget {
       PROVIDERS[this.model?.provider as keyof typeof PROVIDERS] ??
       ({ name: "", icon: "", color: "" } as Provider);
 
-    const modelName = MODELS[id] ?? id;
-
     const usage = this.ctx.getContextUsage();
 
     return {
       provider,
-      modelName,
+      modelName: MODELS[id] ?? id,
       thinking: this.pi.getThinkingLevel(),
       tokens: `${Math.round(((usage?.tokens ?? 0) as number) / 1000)}k`,
       percent: `${Math.round((usage?.percent ?? 0) as number)}%`,
       project: this.ctx.cwd?.split("/").pop() ?? "root",
       git: this.gitBranch,
-      dirty: this.getGitDirty(),
+      dirty: this.gitDirty.get(),
       tool: this.lastTool
         ? formatTool(this.lastTool, this.toolCounts.get(this.lastTool) ?? 1)
         : "",
@@ -111,17 +60,7 @@ export class StatusWidget {
   }
 
   private render(data: WidgetData): RenderOutput {
-    const {
-      provider,
-      modelName,
-      thinking,
-      tokens,
-      percent,
-      project,
-      git,
-      dirty,
-      tool,
-    } = data;
+    const { provider, modelName, thinking, tokens, percent, project, git, dirty, tool } = data;
 
     const top = modelName
       ? `${provider.color}${provider.icon} ${provider.name}\x1b[0m | ${modelName} (${thinking}) | ${tokens} (${percent})`
@@ -138,19 +77,11 @@ export class StatusWidget {
   update(): void {
     const data = this.compute();
     const key = JSON.stringify(data);
-
     if (key === this.lastRenderKey) return;
-
     this.lastRenderKey = key;
 
     const { top, bottom } = this.render(data);
-
-    this.ctx.ui.setWidget("status-top", top, {
-      placement: "aboveEditor",
-    });
-
-    this.ctx.ui.setWidget("status-bottom", bottom, {
-      placement: "belowEditor",
-    });
+    this.ctx.ui.setWidget("status-top", top, { placement: "aboveEditor" });
+    this.ctx.ui.setWidget("status-bottom", bottom, { placement: "belowEditor" });
   }
 }
