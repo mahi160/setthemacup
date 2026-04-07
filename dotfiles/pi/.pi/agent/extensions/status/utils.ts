@@ -18,6 +18,19 @@ function getGitBranch(): string {
   }
 }
 
+const TOOL_COLORS: Record<string, string> = {
+  bash:  "\x1b[42m",  // green bg
+  read:  "\x1b[44m",  // blue bg
+  write: "\x1b[41m",  // red bg
+  edit:  "\x1b[41m",  // red bg (mutates files like write)
+};
+
+function formatTool(name: string, count: number): string {
+  const color = TOOL_COLORS[name] ?? "\x1b[47m";
+  const label = count > 1 ? `${name} \u00d7${count}` : name;
+  return `${color} ${label} \x1b[0m`;
+}
+
 export class StatusWidget {
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
@@ -92,7 +105,7 @@ export class StatusWidget {
       git: this.gitBranch,
       dirty: this.getGitDirty(),
       tool: this.lastTool
-        ? `${this.lastTool}${(this.toolCounts.get(this.lastTool) ?? 1) > 1 ? ` ×${this.toolCounts.get(this.lastTool)}` : ""}`
+        ? formatTool(this.lastTool, this.toolCounts.get(this.lastTool) ?? 1)
         : "",
     };
   }
@@ -114,7 +127,7 @@ export class StatusWidget {
       ? `${provider.color}${provider.icon} ${provider.name}\x1b[0m | ${modelName} (${thinking}) | ${tokens} (${percent})`
       : "";
 
-    const bottom = `${project} | ${git}${dirty}${tool ? ` | 🔧 ${tool}` : ""}`;
+    const bottom = `${project} | ${git}${dirty}${tool ? ` | ${tool}` : ""}`;
 
     return {
       top: top ? [top] : [],
