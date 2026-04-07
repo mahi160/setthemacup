@@ -1,9 +1,9 @@
 import type {
   ExtensionAPI,
   ExtensionContext,
-  ExtensionEvent,
 } from "@mariozechner/pi-coding-agent";
 import { StatusWidget } from "./utils.js";
+
 export default function (pi: ExtensionAPI) {
   let widget: StatusWidget | undefined;
 
@@ -16,7 +16,7 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  pi.on("model_select", (event: ExtensionEvent) => {
+  pi.on("model_select", (event) => {
     if (!widget) return;
     widget.model = event.model;
     widget.update();

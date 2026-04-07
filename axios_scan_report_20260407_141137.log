@@ -1,0 +1,35 @@
+======================================================
+  Axios Supply Chain Scanner & Remediation Tool v2.0  
+  Compromised: axios 1.14.1 / 0.30.4                 
+  Dropper pkg:  plain-crypto-js                       
+======================================================
+
+Scan root:  /Users/mahi/Documents/Coding/Projects/setthemacup
+Report:     axios_scan_report_20260407_141137.log
+Timestamp:  Tue Apr  7 14:11:37 +06 2026
+
+═══ PHASE 1: System-level IOC Scan ═══
+
+[1/3] Checking for suspicious processes...
+  ✅ No known RAT processes detected.
+[2/3] Checking for suspicious network connections...
+  ✅ No suspicious network connections to known C2 indicators.
+[3/3] Checking filesystem for RAT artifacts...
+  ✅ No RAT filesystem artifacts found.
+
+
+═══ PHASE 2: Project Dependency Scan ═══
+
+
+═══ SCAN SUMMARY ═══
+
+Projects scanned:          0
+Projects compromised:      0
+Projects safe:             0
+System-level IOCs found:   0
+
+Full report saved to: axios_scan_report_20260407_141137.log
+
+✅ No compromise indicators found. Your projects appear clean.
+
+Scan complete.

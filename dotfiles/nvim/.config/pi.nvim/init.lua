@@ -1,5 +1,3 @@
--- pi.nvim - Minimal, Single-File Neovim Configuration
-
 -------- OPTIONS --------
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
@@ -20,14 +18,9 @@ vim.fn.mkdir(vim.fn.stdpath("config") .. "/spell", "p")
 
 -------- KEYMAPS --------
 local map = vim.keymap.set
-
--- File explorer (Oil.nvim)
 map("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory with Oil" })
-
--- Escape insert mode
 map("i", "jj", "<Esc>", { desc = "Escape to Normal mode" })
-
--- Buffer navigation
+map("n", "<leader>qq", ":qa!<cr>", { desc = "Quit all" })
 map("n", "H", "<cmd>:bn<cr>", { desc = "Next buffer" })
 map("n", "L", "<cmd>:bp<cr>", { desc = "Previous buffer" })
 map("n", "J", function()
@@ -36,27 +29,15 @@ map("n", "J", function()
     vim.cmd("buffer " .. last)
   end
 end, { desc = "Toggle last buffer" })
-
--- Clipboard (system clipboard via leader y/p, keeps default register clean)
 map({ "n", "v" }, "<leader>y", '"+y', { desc = "Yank to clipboard" })
 map({ "n", "v" }, "<leader>p", '"+p', { desc = "Paste from clipboard" })
-
--- Delete without clobbering register
 map({ "n", "v" }, "<leader>d", '"_d', { desc = "Delete to void register" })
-
--- Keep cursor centered when scrolling/searching
 map("n", "<C-d>", "<C-d>zz", { desc = "Scroll down centered" })
 map("n", "<C-u>", "<C-u>zz", { desc = "Scroll up centered" })
 map("n", "n", "nzzzv", { desc = "Next search centered" })
 map("n", "N", "Nzzzv", { desc = "Prev search centered" })
-
--- Clear search highlight
 map("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
-
--- Select all
 map("n", "<leader>a", "ggVG", { desc = "Select all" })
-
--- Better indent in visual mode (stay in visual)
 map("v", "<", "<gv", { desc = "Indent left" })
 map("v", ">", ">gv", { desc = "Indent right" })
 
@@ -342,33 +323,7 @@ end, { desc = "Search Neovim config" })
 -- Treesitter
 vim.pack.add({ "https://github.com/nvim-treesitter/nvim-treesitter" }, { confirm = false })
 require("nvim-treesitter").setup({
-  ensure_installed = {
-    -- Web tech
-    "javascript",
-    "typescript",
-    "tsx",
-    "jsx",
-    "html",
-    "css",
-    "scss",
-    "json",
-    "yaml",
-    "toml",
-    "markdown",
-    "markdown_inline",
-    -- Go
-    "go",
-    "gomod",
-    "gosum",
-    "gowork",
-    -- Lua & config
-    "lua",
-    "vim",
-    "vimdoc",
-    -- Utilities
-    "bash",
-    "regex",
-  },
+  ensure_installed = {},
   sync_install = false,
   auto_install = true,
   modules = {},

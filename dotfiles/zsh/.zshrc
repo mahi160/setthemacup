@@ -33,7 +33,7 @@ _pokemon_bg_widget() {
   zle reset-prompt
 }
 zle -N _pokemon_bg_widget
-bindkey '\ep' _pokemon_bg_widget
+bindkey '\eq' _pokemon_bg_widget
 
 alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
 alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
