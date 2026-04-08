@@ -70,19 +70,19 @@ export class StatusWidget {
     // \uF005 = nf-fa-star  \uF2DB = nf-fa-microchip  \uF0E7 = nf-fa-bolt
     // \uF07B = nf-fa-folder  \uE0A0 = nf-pl-branch
 
-    // Top: provider | model | thinking | tokens | context %
-    const top = modelName
+    // Top left: provider | model | thinking | tokens | context %
+    // Top right: project | branch
+    const topLeft = modelName
       ? `${provider.color}${provider.icon} ${provider.name}\x1b[0m  \x1b[1;38;5;117m\uF005 ${modelName}\x1b[0m  \x1b[38;5;246m(${thinking})\x1b[0m  \x1b[38;5;114m\uF2DB ${tokens}\x1b[0m  \x1b[38;5;216m\uF0E7 ${percent}\x1b[0m`
       : "";
+    const topRight = `\x1b[38;5;179m\uF07B ${project}\x1b[0m  \x1b[38;5;208m\uE0A0 ${git}${dirty}\x1b[0m`;
+    const topLine = topLeft ? buildBottomLine(topLeft, topRight) : "";
 
-    // Bottom: folder + git branch
-    const projectSection = `\x1b[38;5;179m\uF07B ${project}\x1b[0m`;
-    const gitSection = `\x1b[38;5;208m\uE0A0 ${git}${dirty}\x1b[0m`;
-    const bottomLeft = `${projectSection}  ${gitSection}`;
-    const bottomLine = buildBottomLine(bottomLeft, tool);
+    // Bottom: tools only, right-aligned
+    const bottomLine = buildBottomLine("", tool);
 
     return {
-      top: top ? [top] : [],
+      top: topLine ? [topLine] : [],
       bottom: [bottomLine],
     };
   }
