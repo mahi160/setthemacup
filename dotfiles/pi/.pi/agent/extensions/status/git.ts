@@ -1,33 +1,31 @@
 import { execSync } from "node:child_process";
 
+const GIT_OPTS = { encoding: "utf8" as const };
+
 export function getGitBranch(): string {
   try {
-    return execSync("git rev-parse --abbrev-ref HEAD", {
-      encoding: "utf8",
-    }).trim();
+    return execSync("git rev-parse --abbrev-ref HEAD", GIT_OPTS).trim();
   } catch {
     return "no-git";
   }
 }
 
 export class GitDirtyTracker {
-  private last = 0;
-  private dirty = "";
+  private cached = "";
+  private lastCheck = 0;
+  private readonly ttlMs = 1500;
 
   get(): string {
     const now = Date.now();
-    if (now - this.last < 1500) return this.dirty;
-
-    this.last = now;
+    if (now - this.lastCheck < this.ttlMs) return this.cached;
+    this.lastCheck = now;
     try {
-      const out = execSync("git status --porcelain", {
-        encoding: "utf8",
-      }).trim();
-      this.dirty = out ? "*" : "";
+      this.cached = execSync("git status --porcelain", GIT_OPTS).trim()
+        ? "*"
+        : "";
     } catch {
-      this.dirty = "";
+      this.cached = "";
     }
-
-    return this.dirty;
+    return this.cached;
   }
 }
