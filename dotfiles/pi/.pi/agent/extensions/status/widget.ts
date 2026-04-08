@@ -1,9 +1,6 @@
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { MODELS, PROVIDERS, EMPTY_PROVIDER } from "./constants.js";
-import { getGitBranch, GitDirtyTracker } from "./git.js";
+import { GitBranchTracker, GitDirtyTracker } from "./git.js";
 import { buildLine, formatTool } from "./tools.js";
 import type { WidgetData } from "./types.js";
 
@@ -22,7 +19,8 @@ export class StatusWidget {
   private ctx: ExtensionContext;
   model?: PiModel;
 
-  private branch: string;
+  // #7: branch now re-checks on each update via cached tracker (3s TTL)
+  private branch = new GitBranchTracker();
   private dirty = new GitDirtyTracker();
   private toolCounts = new Map<string, number>();
   private renderKey = "";
@@ -31,7 +29,6 @@ export class StatusWidget {
     this.pi = pi;
     this.ctx = ctx;
     this.model = model;
-    this.branch = getGitBranch();
   }
 
   startTool(name: string): void {
@@ -47,15 +44,12 @@ export class StatusWidget {
 
     const { top, bottom } = this.render(data);
     this.ctx.ui.setWidget("status-top", top, { placement: "aboveEditor" });
-    this.ctx.ui.setWidget("status-bottom", bottom, {
-      placement: "belowEditor",
-    });
+    this.ctx.ui.setWidget("status-bottom", bottom, { placement: "belowEditor" });
   }
 
   private compute(): WidgetData {
     const id = this.model?.id?.toLowerCase() ?? "";
-    const provider =
-      PROVIDERS[this.model?.provider as string] ?? EMPTY_PROVIDER;
+    const provider = PROVIDERS[this.model?.provider as string] ?? EMPTY_PROVIDER;
     const usage = this.ctx.getContextUsage();
 
     return {
@@ -65,11 +59,9 @@ export class StatusWidget {
       tokens: `${Math.round((usage?.tokens ?? 0) / 1000)}k`,
       percent: `${Math.round(usage?.percent ?? 0)}%`,
       project: this.ctx.cwd?.split("/").pop() ?? "root",
-      branch: this.branch,
+      branch: this.branch.get(),
       dirty: this.dirty.get(),
-      tools: [...this.toolCounts.entries()]
-        .map(([n, c]) => formatTool(n, c))
-        .join(""),
+      tools: [...this.toolCounts.entries()].map(([n, c]) => formatTool(n, c)).join(""),
     };
   }
 

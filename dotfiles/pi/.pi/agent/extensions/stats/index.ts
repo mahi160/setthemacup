@@ -1,7 +1,4 @@
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { matchesKey } from "@mariozechner/pi-tui";
 import { randomUUID } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -9,17 +6,10 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  createInputRecord,
-  finalizeInputRecord,
-  finalizeSession,
-  getDailyStats,
-  getOverallStats,
-  getRecentSessions,
-  getTopModelsByInputs,
-  getTopProjects,
-  getTopToolsByInputs,
-  getWeeklyStats,
-  upsertSession,
+  createInputRecord, finalizeInputRecord, finalizeSession,
+  getDailyStats, getDurationHistogram, getModelEfficiency, getOverallStats,
+  getRecentSessions, getStreak, getTodayStats, getTokenWaste, getToollessInputCount,
+  getTopModelsByInputs, getTopProjects, getTopToolsByInputs, getWeeklyStats, upsertSession,
 } from "./db.js";
 import { buildHtmlDashboard } from "./html.js";
 import { renderStats, STATS_CONFIG } from "./render.js";
@@ -44,6 +34,7 @@ interface InputState {
   startTokens: number;
   provider: string;
   modelId: string;
+  // #1: separate input/output cost rates for accurate cost tracking
   costPerMTokenIn: number;
   costPerMTokenOut: number;
   tools: Map<string, number>;
@@ -62,10 +53,7 @@ function weekRange(): { start: number; end: number } {
   return { start: end - STATS_CONFIG.weekDays * 86_400_000, end };
 }
 
-function parseInputPrefix(text: string): {
-  skills: Map<string, number>;
-  commands: Map<string, number>;
-} {
+function parseInputPrefix(text: string): { skills: Map<string, number>; commands: Map<string, number> } {
   const skills = new Map<string, number>();
   const commands = new Map<string, number>();
   const trimmed = text.trim();
@@ -91,21 +79,10 @@ export default function (pi: ExtensionAPI) {
     const id = ctx.sessionManager.getSessionFile() ?? randomUUID();
     const now = Date.now();
     session = {
-      id,
-      startedAt: now,
-      turns: 0,
-      tokens: 0,
-      tools: new Map(),
-      commands: new Map(),
-      skills: new Map(),
+      id, startedAt: now, turns: 0, tokens: 0,
+      tools: new Map(), commands: new Map(), skills: new Map(),
       models: ctx.model
-        ? [
-            {
-              provider: ctx.model.provider,
-              modelId: ctx.model.id,
-              selectedAt: now,
-            },
-          ]
+        ? [{ provider: ctx.model.provider, modelId: ctx.model.id, selectedAt: now }]
         : [],
     };
     upsertSession(id, now, ctx.cwd ?? "");
@@ -168,18 +145,18 @@ export default function (pi: ExtensionAPI) {
     const endedAt = Date.now();
     const timeMs = endedAt - currentInput.startedAt;
     const tokenDelta = Math.max(0, session.tokens - currentInput.startTokens);
-    const avgCost =
-      (currentInput.costPerMTokenIn + currentInput.costPerMTokenOut) / 2;
+
+    // #1: weighted cost estimate — coding agents typically have ~30% input / ~70% output tokens
+    const inputTokens = Math.round(tokenDelta * 0.3);
+    const outputTokens = tokenDelta - inputTokens;
+    const costUsd =
+      (inputTokens / 1_000_000) * currentInput.costPerMTokenIn +
+      (outputTokens / 1_000_000) * currentInput.costPerMTokenOut;
 
     finalizeInputRecord(
-      currentInput.id,
-      endedAt,
-      timeMs,
-      tokenDelta,
-      currentInput.tools,
-      currentInput.commands,
-      currentInput.skills,
-      (tokenDelta / 1_000_000) * avgCost,
+      currentInput.id, endedAt, timeMs, tokenDelta,
+      currentInput.tools, currentInput.commands, currentInput.skills,
+      costUsd,
     );
     currentInput = null;
   });
@@ -198,28 +175,14 @@ export default function (pi: ExtensionAPI) {
 
   /* ── session shutdown ───────────────────────────────────────────────────── */
 
-  pi.on("session_shutdown", (_, ctx: ExtensionContext) => {
+  // #5: session cost now computed from SUM(cost_usd) inside finalizeSession
+  pi.on("session_shutdown", () => {
     if (!session) return;
     currentInput = null;
 
-    const lastModel = session.models.at(-1);
-    let cost = 0;
-    if (lastModel && ctx.model) {
-      cost =
-        (session.tokens / 1_000_000) *
-        ((ctx.model.cost.input + ctx.model.cost.output) / 2);
-    }
-
     finalizeSession(
-      session.id,
-      Date.now(),
-      session.turns,
-      session.tokens,
-      cost,
-      session.tools,
-      session.commands,
-      session.skills,
-      session.models,
+      session.id, Date.now(), session.turns, session.tokens,
+      session.tools, session.commands, session.skills, session.models,
     );
     session = null;
   });
@@ -230,25 +193,26 @@ export default function (pi: ExtensionAPI) {
     description: "Show usage statistics dashboard (enter to open in browser)",
     handler: async (_, ctx: ExtensionContext) => {
       const { start, end } = weekRange();
-      const overall = getOverallStats();
-      const weekly = getWeeklyStats(start, end);
-      const tools = getTopToolsByInputs(start, STATS_CONFIG.topToolsLimit);
-      const models = getTopModelsByInputs(STATS_CONFIG.topModelsLimit);
-      const projects = getTopProjects(STATS_CONFIG.topProjectsLimit);
-      const daily = getDailyStats(STATS_CONFIG.tokenGraphDays);
-      const recent = getRecentSessions(STATS_CONFIG.recentSessionsLimit);
 
-      const html = buildHtmlDashboard(
-        overall,
-        weekly,
-        tools,
-        models,
-        projects,
-        daily,
-        recent,
+      const data = {
+        overall: getOverallStats(),
+        weekly: getWeeklyStats(start, end),
+        today: getTodayStats(),
+        tools: getTopToolsByInputs(start, STATS_CONFIG.topToolsLimit),
+        models: getTopModelsByInputs(STATS_CONFIG.topModelsLimit),
+        efficiency: getModelEfficiency(),
+        projects: getTopProjects(STATS_CONFIG.topProjectsLimit),
+        daily: getDailyStats(STATS_CONFIG.tokenGraphDays),
+        recent: getRecentSessions(STATS_CONFIG.recentSessionsLimit),
+        toolless: getToollessInputCount(start),
+        streak: getStreak(),
+        histogram: getDurationHistogram(),
+        waste: getTokenWaste(),
         start,
         end,
-      );
+      };
+
+      const html = buildHtmlDashboard(data);
 
       await ctx.ui.custom((_, __, ___, done) => {
         let cache: { width: number; lines: string[] } | null = null;
@@ -256,34 +220,19 @@ export default function (pi: ExtensionAPI) {
         return {
           render(width: number): string[] {
             if (cache?.width === width) return cache.lines;
-            const lines = renderStats(
-              overall,
-              weekly,
-              tools,
-              models,
-              projects,
-              daily,
-              recent,
-              width,
-              start,
-            );
+            const lines = renderStats(data, width);
             cache = { width, lines };
             return lines;
           },
-          invalidate() {
-            cache = null;
-          },
-          handleInput(data: string) {
-            if (matchesKey(data, "escape") || data === "q")
-              return done(undefined);
-            if (matchesKey(data, "enter")) {
+          invalidate() { cache = null; },
+          handleInput(input: string) {
+            if (matchesKey(input, "escape") || input === "q") return done(undefined);
+            if (matchesKey(input, "enter")) {
               try {
                 const path = join(tmpdir(), "pi-stats.html");
                 writeFileSync(path, html, "utf8");
                 execSync(`open "${path}"`, { stdio: "ignore" });
-              } catch {
-                /* ignore open errors */
-              }
+              } catch { /* ignore */ }
               done(undefined);
             }
           },

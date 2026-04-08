@@ -1,12 +1,14 @@
 {
   "lastChangelogVersion": "0.65.2",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
-  "defaultThinkingLevel": "medium",
+  "defaultModel": "claude-haiku-4-5",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
     "anthropic/claude-sonnet-4-6",
     "anthropic/claude-opus-4-6",
-    "anthropic/claude-haiku-4-5"
+    "anthropic/claude-haiku-4-5",
+    "ollama/gemma4"
   ],
-  "quietStartup": true
+  "quietStartup": true,
+  "hideThinkingBlock": true
 }
