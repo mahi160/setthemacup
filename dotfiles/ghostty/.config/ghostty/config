@@ -42,7 +42,7 @@ window-padding-balance = true
 background-blur = true
 background-opacity = 0.96
 background-blur-radius = 24
-background-image = /Users/mahi/Pictures/pokemon_bg/5.png
+background-image = /Users/mahi/Pictures/pokemon_bg/100.png
 # managed by scripts/pokemon-bg.sh — run it once to activate
 background-image-opacity = 0.15
 background-image-fit = none

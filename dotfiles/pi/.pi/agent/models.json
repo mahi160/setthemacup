@@ -1,0 +1,18 @@
+{
+  "providers": {
+    "ollama": {
+      "baseUrl": "http://192.168.0.103:11434/v1",
+      "api": "openai-completions",
+      "apiKey": "ollama",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        {
+          "id": "qwen2.5-coder"
+        }
+      ]
+    }
+  }
+}

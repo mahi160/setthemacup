@@ -24,11 +24,11 @@ else
 
   # Window 2: Left - tests, Right - two panes (top: pnpm dev, bottom: focused)
   tmux new-window -t wick -n dev
-  tmux send-keys -t wick:dev 'claude' C-m
+  tmux send-keys -t wick:dev 'pi' C-m
   sleep 0.1
 
-  # Split window into two columns (left 50%, right 50%)
-  tmux split-window -h -l 15% -t wick:dev
+  # Split window into two columns (left 80%, right 20%)
+  tmux split-window -h -l 20% -t wick:dev
   tmux send-keys -t wick:dev.2 'pnpm i && cd ./wick-ui-lib && pnpm dev' C-m
   sleep 0.1
 
