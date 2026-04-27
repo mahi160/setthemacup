@@ -12,9 +12,10 @@ source $ZSH/oh-my-zsh.sh
 
 # aliases
 # alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
-alias vm="NVIM_APPNAME=pi.nvim nvim"
+alias vm="NVIM_APPNAME=nvim.12 nvim"
 alias vi="nvim"
 alias clc="curl -s isclaude2x.com/short"
+alias cc="claude"
 
 alias zc="vi ~/.zshrc"
 alias zs="source ~/.zshrc"
