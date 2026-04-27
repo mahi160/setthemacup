@@ -24,7 +24,7 @@ else
 
   # Window 2: Left - tests, Right - two panes (top: pnpm dev, bottom: focused)
   tmux new-window -t wick -n dev
-  tmux send-keys -t wick:dev 'pi' C-m
+  tmux send-keys -t wick:dev 'cc' C-m
   sleep 0.1
 
   # Split window into two columns (left 80%, right 20%)
