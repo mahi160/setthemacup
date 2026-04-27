@@ -1,4 +1,7 @@
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { MODELS, PROVIDERS, EMPTY_PROVIDER } from "./constants.js";
 import { GitBranchTracker, GitDirtyTracker } from "./git.js";
 import { buildLine, formatTool } from "./tools.js";
@@ -44,12 +47,18 @@ export class StatusWidget {
 
     const { top, bottom } = this.render(data);
     this.ctx.ui.setWidget("status-top", top, { placement: "aboveEditor" });
-    this.ctx.ui.setWidget("status-bottom", bottom, { placement: "belowEditor" });
+    this.ctx.ui.setWidget("status-bottom", bottom, {
+      placement: "belowEditor",
+    });
   }
 
   private compute(): WidgetData {
     const id = this.model?.id?.toLowerCase() ?? "";
-    const provider = PROVIDERS[this.model?.provider as string] ?? EMPTY_PROVIDER;
+    const provider = PROVIDERS[this.model?.provider as string] ?? {
+      name: this.model?.provider ?? "",
+      icon: "",
+      color: "",
+    };
     const usage = this.ctx.getContextUsage();
 
     return {
@@ -61,7 +70,9 @@ export class StatusWidget {
       project: this.ctx.cwd?.split("/").pop() ?? "root",
       branch: this.branch.get(),
       dirty: this.dirty.get(),
-      tools: [...this.toolCounts.entries()].map(([n, c]) => formatTool(n, c)).join(""),
+      tools: [...this.toolCounts.entries()]
+        .map(([n, c]) => formatTool(n, c))
+        .join(""),
     };
   }
 

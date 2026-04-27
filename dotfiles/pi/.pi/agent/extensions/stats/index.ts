@@ -35,11 +35,12 @@ interface InputState {
   provider: string;
   modelId: string;
   // #1: separate input/output cost rates for accurate cost tracking
-  costPerMTokenIn: number;
-  costPerMTokenOut: number;
+  costConfig: { input: number; output: number; cacheRead?: number; cacheWrite?: number };
   tools: Map<string, number>;
   commands: Map<string, number>;
   skills: Map<string, number>;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
@@ -103,16 +104,22 @@ export default function (pi: ExtensionAPI) {
     currentInput = null;
 
     const { skills, commands } = parseInputPrefix(event.prompt ?? "");
+    const model = ctx.model;
 
     currentInput = {
       id: randomUUID(),
       sessionId: session.id,
       startedAt: Date.now(),
-      startTokens: session.tokens,
-      provider: ctx.model?.provider ?? "unknown",
-      modelId: ctx.model?.id ?? "unknown",
-      costPerMTokenIn: ctx.model?.cost.input ?? 0,
-      costPerMTokenOut: ctx.model?.cost.output ?? 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      provider: model?.provider ?? "unknown",
+      modelId: model?.id ?? "unknown",
+      costConfig: {
+        input: model?.cost.input ?? 0,
+        output: model?.cost.output ?? 0,
+        cacheRead: model?.cost.cacheRead ?? 0,
+        cacheWrite: model?.cost.cacheWrite ?? 0,
+      },
       tools: new Map(),
       commands,
       skills,
@@ -125,6 +132,16 @@ export default function (pi: ExtensionAPI) {
       provider: currentInput.provider,
       modelId: currentInput.modelId,
     });
+  });
+
+  pi.on("message_end", (event) => {
+    if (event.message.role === "assistant" && currentInput) {
+      const usage = (event.message as any).usage;
+      if (usage) {
+        currentInput.inputTokens = (usage.input_tokens || usage.input) ?? 0;
+        currentInput.outputTokens = (usage.output_tokens || usage.output) ?? 0;
+      }
+    }
   });
 
   pi.on("tool_execution_start", (event) => {
@@ -144,17 +161,13 @@ export default function (pi: ExtensionAPI) {
 
     const endedAt = Date.now();
     const timeMs = endedAt - currentInput.startedAt;
-    const tokenDelta = Math.max(0, session.tokens - currentInput.startTokens);
 
-    // #1: weighted cost estimate — coding agents typically have ~30% input / ~70% output tokens
-    const inputTokens = Math.round(tokenDelta * 0.3);
-    const outputTokens = tokenDelta - inputTokens;
     const costUsd =
-      (inputTokens / 1_000_000) * currentInput.costPerMTokenIn +
-      (outputTokens / 1_000_000) * currentInput.costPerMTokenOut;
+      (currentInput.inputTokens / 1_000_000) * currentInput.costConfig.input +
+      (currentInput.outputTokens / 1_000_000) * currentInput.costConfig.output;
 
     finalizeInputRecord(
-      currentInput.id, endedAt, timeMs, tokenDelta,
+      currentInput.id, endedAt, timeMs, currentInput.inputTokens + currentInput.outputTokens,
       currentInput.tools, currentInput.commands, currentInput.skills,
       costUsd,
     );
