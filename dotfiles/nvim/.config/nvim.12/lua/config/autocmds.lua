@@ -11,22 +11,6 @@ vim.api.nvim_create_autocmd("CmdlineLeave", {
   end,
 })
 
--- Restore cursor position to last known location
-vim.api.nvim_create_autocmd("BufReadPost", {
-	group = vim.api.nvim_create_augroup("restore_cursor", { clear = true }),
-	desc = "Restore last cursor position",
-	callback = function(args)
-		local mark = vim.api.nvim_buf_get_mark(args.buf, '"')
-		local line_count = vim.api.nvim_buf_line_count(args.buf)
-		if mark[1] > 0 and mark[1] <= line_count then
-			vim.api.nvim_win_set_cursor(0, mark)
-			vim.schedule(function()
-				vim.cmd("normal! zz")
-			end)
-		end
-	end,
-})
-
 -- Disable automatic comment continuation
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("no_auto_comment", { clear = true }),
@@ -42,13 +26,6 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "help",
   desc = "Open help in a vertical split",
   command = "wincmd L",
-})
-
--- Automatically resize splits when terminal window is resized
-vim.api.nvim_create_autocmd("VimResized", {
-  group = vim.api.nvim_create_augroup("auto_resize_splits", { clear = true }),
-  desc = "Auto equalize window splits on resize",
-  command = "wincmd =",
 })
 
 -- Plugins sync command

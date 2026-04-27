@@ -1,4 +1,4 @@
-Pack("echasnovski/mini.nvim")
+vim.pack.add{"https://github.com/echasnovski/mini.nvim"}
 
 require("mini.ai").setup({
   custom_textobjects = {
@@ -13,11 +13,6 @@ require("mini.ai").setup({
   },
 })
 
-require("mini.animate").setup({
-  scroll = {
-    enable = true, -- Disable scroll animation to prevent stuttering with mouse/trackpad
-  },
-})
 require("mini.basics").setup()
 require("mini.cursorword").setup()
 require("mini.indentscope").setup()
@@ -43,6 +38,3 @@ require("mini.diff").setup({
   }
 })
 require("mini.icons").mock_nvim_web_devicons()
-require("mini.starter").setup({
-  autoopen = true,
-})

@@ -1,6 +1,6 @@
-Pack({
-  "rachartier/tiny-inline-diagnostic.nvim",
-  "stevearc/quicker.nvim",
+vim.pack.add({
+  "https://github.com/rachartier/tiny-inline-diagnostic.nvim",
+  "https://github.com/stevearc/quicker.nvim",
 })
 
 vim.diagnostic.config({

@@ -1,10 +1,10 @@
-Pack({
-	"nvim-lua/plenary.nvim",
-	"nvim-telescope/telescope.nvim",
-	"nvim-telescope/telescope-fzf-native.nvim",
-	"nvim-telescope/telescope-ui-select.nvim",
-	"nvim-telescope/telescope-frecency.nvim",
-	"tami5/sqlite.lua", -- required for frecency
+vim.pack.add({
+	"https://github.com/nvim-lua/plenary.nvim",
+	"https://github.com/nvim-telescope/telescope.nvim",
+	"https://github.com/nvim-telescope/telescope-fzf-native.nvim",
+	"https://github.com/nvim-telescope/telescope-ui-select.nvim",
+	"https://github.com/nvim-telescope/telescope-frecency.nvim",
+	"https://github.com/tami5/sqlite.lua", -- required for frecency
 })
 
 local telescope = require("telescope")
@@ -89,7 +89,7 @@ if not fzf_loaded then
 		vim.log.levels.WARN
 	)
 	-- run below code to compile fzf-native.nvim
-	-- cd /Users/mahi/.local/share/nvim.minimal/site/pack/core/opt/telescope-fzf-native.nvim && make
+	-- cd /Users/mahi/.local/share/nvim.12/site/pack/core/opt/telescope-fzf-native.nvim && make
 end
 
 -- Smart git-aware file search
