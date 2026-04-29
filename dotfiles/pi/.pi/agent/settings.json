@@ -1,21 +1,19 @@
 {
-  "defaultModel": "gemini-3.1-flash-lite-preview",
+  "lastChangelogVersion": "0.70.6",
   "defaultProvider": "google-gemini-cli",
+  "defaultModel": "gemini-3.1-flash-lite-preview",
   "defaultThinkingLevel": "medium",
   "enabledModels": [
-    "github-copilot/claude-haiku-4.5",
+    "openai-codex/gpt-5.5",
     "google-gemini-cli/gemini-3.1-flash-lite-preview",
-    "openai-codex/gpt-5.4"
+    "anthropic/claude-sonnet-4-6"
   ],
-  "lastChangelogVersion": "0.70.2",
-  "packages": [
-    "npm:@ollama/pi-web-search"
-  ],
+  "packages": ["npm:@ollama/pi-web-search"],
   "showHardwareCursor": true,
   "terminal": {
     "showTerminalProgress": true
   },
   "collapseChangelog": true,
-  "quietStartup": true,
-  "theme": "dark"
+  "quietStartup": true
 }
+

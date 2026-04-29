@@ -1,34 +1,29 @@
 fastfetch
-
-# Add deno completions to search path
-# if [[ ":$FPATH:" != *":/home/mahi/.zsh/completions:"* ]]; then export FPATH="/home/mahi/.zsh/completions:$FPATH"; fi
 export ZSH="$HOME/.oh-my-zsh"
 
 # Plugins
 DISABLE_UNTRACKED_FILES_DIRTY="true"
 plugins=(git z zsh-autosuggestions zsh-syntax-highlighting)
-# fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
 
 # aliases
-# alias vi="~/Documents/Coding/Projects/shikorux/scripts/vi.sh"
 alias vm="NVIM_APPNAME=nvim.12 nvim"
 alias vi="nvim"
-alias clc="curl -s isclaude2x.com/short"
-alias cc="claude"
-
+alias ai="claude"
 alias zc="vi ~/.zshrc"
 alias zs="source ~/.zshrc"
 alias ls="eza"
 alias ll="eza -la"
-
 alias setup="vi ~/Documents/Coding/Projects/setthemacup/"
 alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
 alias wick="~/Documents/Coding/Projects/setthemacup/scripts/wick.sh"
 alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
 alias pokemon-bg="~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh"
 
-# Alt+P: change Pokemon background from anywhere in the terminal
+alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
+alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
+
+# Alt+Q: change Pokemon background from anywhere in the terminal
 _pokemon_bg_widget() {
   ~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh
   zle reset-prompt
@@ -36,8 +31,6 @@ _pokemon_bg_widget() {
 zle -N _pokemon_bg_widget
 bindkey '\eq' _pokemon_bg_widget
 
-alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gamil.com\""
-alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
 # starship
 eval "$(starship init zsh)"
 
@@ -57,9 +50,6 @@ setopt histignorespace
 setopt histignoredups
 setopt histreduceblanks
 
-# Initialize zsh completions (added by deno install script)
-# autoload -Uz compinit
-# compinit
 eval "$(fnm env --use-on-cd --shell zsh)"
 
 # pnpm
@@ -70,16 +60,11 @@ case ":$PATH:" in
 esac
 # pnpm end
 
-# bun completions
-[ -s "/Users/mahi/.bun/_bun" ] && source "/Users/mahi/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
-
-# opencode
-export PATH=/Users/mahi/.opencode/bin:$PATH
+[ -s "/Users/mahi/.bun/_bun" ] && source "/Users/mahi/.bun/_bun"
 
 # Vite+ bin (https://viteplus.dev)
 . "$HOME/.vite-plus/env"
-export PATH="$HOME/.local/bin:$PATH"
