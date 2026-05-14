@@ -32,36 +32,6 @@ function registerFastCommand(
   description: string,
   buildPrompt: (args: string) => string,
 ) {
-  let inProgress = false;
-  let previousModel: Model | undefined;
-
-  pi.on("agent_end", async (event, ctx) => {
-    if (!inProgress) return;
-    inProgress = false;
-
-    // Check for errors before restoring
-    const errMsg = (event.messages as AssistantMessage[])
-      .filter(m => m.role === "assistant")
-      .find(m => m.stopReason === "error" || m.stopReason === "aborted");
-
-    if (errMsg) {
-      ctx.ui.notify(
-        `/${name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
-        "error",
-      );
-    }
-
-    // Restore original model regardless
-    if (previousModel) {
-      const restored = previousModel;
-      previousModel = undefined;
-      const success = await pi.setModel(restored);
-      if (success) {
-        ctx.ui.notify(`↩ Restored model: ${restored.id}`, "info");
-      }
-    }
-  });
-
   pi.registerCommand(name, {
     description: `${description} (haiku → gemini fallback)`,
     handler: async (args: string, ctx: ExtensionCommandContext) => {
@@ -91,9 +61,32 @@ function registerFastCommand(
         return;
       }
 
-      previousModel = ctx.model;
+      const previousModel = ctx.model;
       ctx.ui.notify(`⚡ Switched to ${fastModelId} for /${name}`, "info");
-      inProgress = true;
+
+      // Register one-time listener to restore after agent completes
+      const handleRestore = async (event: any, restoreCtx: any) => {
+        pi.off("agent_end", handleRestore);
+        
+        // Check for errors before restoring
+        const errMsg = (event.messages as AssistantMessage[])
+          .filter(m => m.role === "assistant")
+          .find(m => m.stopReason === "error" || m.stopReason === "aborted");
+
+        if (errMsg) {
+          restoreCtx.ui.notify(
+            `/${name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
+            "error",
+          );
+        }
+
+        // Restore original model
+        const success = await pi.setModel(previousModel);
+        if (success) {
+          restoreCtx.ui.notify(`↩ Restored model: ${previousModel.id}`, "info");
+        }
+      };
+      pi.on("agent_end", handleRestore);
 
       pi.sendUserMessage(buildPrompt(args));
     },
