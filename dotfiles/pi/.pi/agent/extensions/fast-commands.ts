@@ -32,10 +32,39 @@ function registerFastCommand(
   description: string,
   buildPrompt: (args: string) => string,
 ) {
+  // Captured once per invocation; cleared after restore.
+  // Persistent listener checks this — no pi.off() needed.
+  let modelToRestore: Model | undefined;
+
+  pi.on("agent_end", async (event, ctx) => {
+    if (!modelToRestore) return;
+    const target = modelToRestore;
+    modelToRestore = undefined;
+
+    const errMsg = (event.messages as AssistantMessage[])
+      .filter(m => m.role === "assistant")
+      .find(m => m.stopReason === "error" || m.stopReason === "aborted");
+
+    if (errMsg) {
+      ctx.ui.notify(
+        `/${name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
+        "error",
+      );
+    }
+
+    const success = await pi.setModel(target);
+    if (success) {
+      ctx.ui.notify(`↩ Restored model: ${target.id}`, "info");
+    }
+  });
+
   pi.registerCommand(name, {
     description: `${description} (haiku → gemini fallback)`,
     handler: async (args: string, ctx: ExtensionCommandContext) => {
       await ctx.waitForIdle();
+
+      // Capture BEFORE any setModel call — ctx.model is a live reference
+      const originalModel = ctx.model;
 
       // Try each fast model in order
       let fastModel: Model | undefined;
@@ -61,33 +90,8 @@ function registerFastCommand(
         return;
       }
 
-      const previousModel = ctx.model;
       ctx.ui.notify(`⚡ Switched to ${fastModelId} for /${name}`, "info");
-
-      // Register one-time listener to restore after agent completes
-      const handleRestore = async (event: any, restoreCtx: any) => {
-        pi.off("agent_end", handleRestore);
-        
-        // Check for errors before restoring
-        const errMsg = (event.messages as AssistantMessage[])
-          .filter(m => m.role === "assistant")
-          .find(m => m.stopReason === "error" || m.stopReason === "aborted");
-
-        if (errMsg) {
-          restoreCtx.ui.notify(
-            `/${name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
-            "error",
-          );
-        }
-
-        // Restore original model
-        const success = await pi.setModel(previousModel);
-        if (success) {
-          restoreCtx.ui.notify(`↩ Restored model: ${previousModel.id}`, "info");
-        }
-      };
-      pi.on("agent_end", handleRestore);
-
+      modelToRestore = originalModel;
       pi.sendUserMessage(buildPrompt(args));
     },
   });
