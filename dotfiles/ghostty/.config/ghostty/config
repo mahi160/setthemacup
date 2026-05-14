@@ -46,7 +46,7 @@ background-blur = true
 background-opacity = 0.96
 background = #282828
 background-blur-radius = 120
-background-image = /Users/mahi/Pictures/pokemon_bg/183.png
+background-image = /Users/mahi/Pictures/pokemon_bg/215.png
 # managed by scripts/pokemon-bg.sh — run it once to activate
 background-image-opacity = 0.15
 background-image-fit = none
