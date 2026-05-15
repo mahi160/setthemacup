@@ -16,7 +16,7 @@
   "editorPaddingX": 1,
   "terminal": {
     "clearOnShrink": false,
-    "showTerminalProgress": false
+    "showTerminalProgress": true
   },
   "hideThinkingBlock": false,
   "quietStartup": true,

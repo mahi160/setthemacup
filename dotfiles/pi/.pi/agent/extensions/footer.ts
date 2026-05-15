@@ -6,8 +6,24 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { execSync } from "node:child_process";
 import { basename } from "node:path";
 
+// ── Gruvbox Material palette (24-bit) ───────────────────────────────────────
 const R = "\x1b[0m";
 const c = (code: string, text: string) => `${code}${text}${R}`;
+
+// fg helpers
+const GRV = {
+  yellow: "\x1b[38;2;216;166;87m",   // #d8a657
+  orange: "\x1b[38;2;231;138;78m",    // #e78a4e
+  red:    "\x1b[38;2;234;105;98m",    // #ea6962
+  green:  "\x1b[38;2;169;182;101m",   // #a9b665
+  aqua:   "\x1b[38;2;137;180;130m",   // #89b482
+  blue:   "\x1b[38;2;125;174;163m",   // #7daea3
+  purple: "\x1b[38;2;211;134;155m",   // #d3869b
+  gray:   "\x1b[38;2;146;131;116m",   // #928374
+  fg:     "\x1b[38;2;212;190;152m",   // #d4be98
+  bg4:    "\x1b[38;2;124;111;100m",   // #7c6f64
+  bg3:    "\x1b[38;2;102;92;84m",     // #665c54
+} as const;
 
 const FMT = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -42,18 +58,18 @@ function buildLine(left: string, right: string): string {
 
 const PROVIDERS: Record<string, { name: string; icon: string; color: string }> =
   {
-    anthropic: { name: "Anthropic", icon: "󰚩", color: "\x1b[38;5;208m" },
-    "openai-codex": { name: "OpenAI", icon: "󰚩", color: "\x1b[38;5;142m" },
-    google: { name: "Google", icon: "󰊭", color: "\x1b[38;5;109m" },
-    "github-copilot": { name: "Copilot", icon: "󰊤", color: "\x1b[38;5;175m" },
+    anthropic:       { name: "Anthropic", icon: "󰚩", color: GRV.orange  },
+    "openai-codex":  { name: "OpenAI",    icon: "󰚩", color: GRV.green   },
+    google:          { name: "Google",    icon: "󰊭", color: GRV.blue    },
+    "github-copilot":{ name: "Copilot",   icon: "󰊤", color: GRV.purple  },
   };
 
 const MODELS: Record<string, string> = {
-  "claude-opus-4-6": "Opus 4.6",
-  "claude-sonnet-4-6": "Sonnet 4.6",
-  "claude-haiku-4-5": "Haiku 4.5",
-  "gpt-5.5": "GPT 5.5",
-  "gemini-3.1-flash-lite-preview": "Gemini 3.1 FL",
+  "claude-opus-4-6":                  "Opus 4.6",
+  "claude-sonnet-4-6":                "Sonnet 4.6",
+  "claude-haiku-4-5":                 "Haiku 4.5",
+  "gpt-5.5":                          "GPT 5.5",
+  "gemini-3.1-flash-lite-preview":    "Gemini 3.1 FL",
 };
 
 let isGitRepo: boolean | undefined = undefined;
@@ -98,8 +114,8 @@ function parseGitStatus(s: string): string {
     if (y !== " ") unstaged++;
   }
   const parts: string[] = [];
-  if (staged)   parts.push(`\uF067${staged}`);   // nf  staged
-  if (unstaged) parts.push(`\uF040${unstaged}`); // nf  unstaged
+  if (staged)   parts.push(`\uF067${staged}`);
+  if (unstaged) parts.push(`\uF040${unstaged}`);
   return parts.join(" ");
 }
 const gitDirty = gitCache("git status --porcelain", 10_000, "", parseGitStatus);
@@ -126,14 +142,12 @@ export default function (pi: ExtensionAPI) {
 
     const model = ctx.model;
     const prov = PROVIDERS[model?.provider ?? ""];
-    const sep = c("\x1b[38;5;240m", " | ");
+    const sep = c(GRV.bg3, " | ");
+
     const topLeft = [
       prov ? c(prov.color, `${prov.icon} ${prov.name}`) : "",
-      c(
-        "\x1b[38;5;117m",
-        MODELS[model?.id?.toLowerCase() ?? ""] ?? model?.id ?? "—",
-      ),
-      c("\x1b[38;5;246m", `(${pi.getThinkingLevel()})`),
+      c(GRV.yellow, MODELS[model?.id?.toLowerCase() ?? ""] ?? model?.id ?? "—"),
+      c(GRV.gray,   `(${pi.getThinkingLevel()})`),
     ]
       .filter(Boolean)
       .join(sep);
@@ -141,46 +155,42 @@ export default function (pi: ExtensionAPI) {
     const branch = gitBranch(),
       dirty = gitDirty();
     const topRight = [
-      c("\x1b[38;5;179m", `\uF07B ${basename(ctx.cwd ?? "") || "root"}`),
-      c("\x1b[38;5;246m", `\uE0A0 ${branch || "no-git"}`)
-        + (dirty ? " " + c("\x1b[38;5;214m", dirty) : ""),
+      c(GRV.orange, `\uF07B ${basename(ctx.cwd ?? "") || "root"}`),
+      c(GRV.aqua,   `\uE0A0 ${branch || "no-git"}`)
+        + (dirty ? " " + c(GRV.red, dirty) : ""),
     ].join(sep);
 
-    // bottom: $cost  45% (50K/200K)  idle 2m        Bash 3 │ Read 5
     cachedUsage ??= ctx.getContextUsage();
     const t = runningTotals;
     const pct = cachedUsage?.percent ?? null;
     const pctColor =
       pct === null || pct < 60
-        ? "\x1b[38;5;142m"
+        ? GRV.green
         : pct < 80
-          ? "\x1b[38;5;214m"
-          : "\x1b[38;5;196m";
+          ? GRV.yellow
+          : GRV.red;
 
     const idleMs = !agentRunning ? Date.now() - lastActivityAt : -1;
     const idleColor =
       idleMs < 0
         ? ""
         : idleMs < 180_000
-          ? "\x1b[38;5;142m"
+          ? GRV.green
           : idleMs < 270_000
-            ? "\x1b[38;5;214m"
+            ? GRV.yellow
             : idleMs < 300_000
-              ? "\x1b[38;5;196m"
-              : "\x1b[38;5;240m";
+              ? GRV.red
+              : GRV.bg4;
 
-    const div = c("\x1b[38;5;240m", " | ");
+    const div = c(GRV.bg3, " | ");
     const bottomLeft = [
-      c("\x1b[38;5;246m", `↑${fmt(t.input)}`),
-      c("\x1b[38;5;246m", `↓${fmt(t.output)}`),
-      c(
-        "\x1b[38;5;246m",
-        t.cost < 0.01 ? `$${t.cost.toFixed(4)}` : `$${t.cost.toFixed(3)}`,
-      ),
+      c(GRV.gray, `↑${fmt(t.input)}`),
+      c(GRV.gray, `↓${fmt(t.output)}`),
+      c(GRV.gray, t.cost < 0.01 ? `$${t.cost.toFixed(4)}` : `$${t.cost.toFixed(3)}`),
       pct !== null
         ? c(pctColor, `${Math.round(pct)}%`) +
           c(
-            "\x1b[38;5;240m",
+            GRV.bg4,
             ` (${cachedUsage?.tokens != null ? fmt(cachedUsage.tokens) : "?"}/${cachedUsage ? fmt(cachedUsage.contextWindow) : "?"})`,
           )
         : "",
@@ -192,8 +202,8 @@ export default function (pi: ExtensionAPI) {
     const bottomRight =
       toolCounts.size > 0
         ? [...toolCounts.entries()]
-            .map(([n, cnt]) => c("\x1b[38;5;246m", `${n} ${cnt}`))
-            .join(c("\x1b[38;5;240m", " | "))
+            .map(([n, cnt]) => c(GRV.gray, `${n} ${cnt}`))
+            .join(c(GRV.bg3, " | "))
         : "";
 
     const key = topLeft + topRight + bottomLeft + bottomRight;
@@ -222,9 +232,9 @@ export default function (pi: ExtensionAPI) {
     if (event.message.role !== "assistant") return;
     const u = (event.message as AssistantMessage).usage;
     if (!u) return;
-    runningTotals.input  += u.input        ?? 0;
-    runningTotals.output += u.output       ?? 0;
-    runningTotals.cost   += u.cost?.total  ?? 0;
+    runningTotals.input  += u.input       ?? 0;
+    runningTotals.output += u.output      ?? 0;
+    runningTotals.cost   += u.cost?.total ?? 0;
   });
   pi.on("turn_end", () => {
     cachedUsage = undefined;

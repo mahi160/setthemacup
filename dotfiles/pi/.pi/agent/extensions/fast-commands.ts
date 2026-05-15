@@ -1,39 +1,61 @@
 /**
  * fast-commands.ts
  *
- * Registers fast-model commands that switch to a cheap model,
- * run the task, then restore the original model.
- * Tries Haiku first, falls back to Gemini Flash Lite.
- * On error: notifies user, then restores regardless.
+ * Reads fast-commands.json and registers each command.
+ * To add/edit commands, only touch fast-commands.json.
  *
- * Commands:
- *   /commit      — generate conventional commit message and commit
- *   /pr          — create a pull request via gh
- *   /standup     — generate standup from recent git activity
- *   /explain     — explain a file or symbol
+ * JSON schema:
+ *   models[]          — ordered list of fast models to try (first with API key wins)
+ *   commands[].name   — slash command name
+ *   commands[].description
+ *   commands[].role   — injected as "Role: <role>." prefix
+ *   commands[].prompt — string or string[] (joined with \n)
+ *   commands[].argsDefault — fallback text when {args} placeholder is used but args is empty
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { AssistantMessage, Model } from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
 } from "@earendil-works/pi-coding-agent";
 
-const FAST_MODELS = [
-  { provider: "anthropic", id: "claude-haiku-4-5" },
-  { provider: "google",    id: "gemini-3.1-flash-lite-preview" },
-];
+// ── config ────────────────────────────────────────────────────────────────────
 
-// ── shared helper ─────────────────────────────────────────────────────────────
+interface FastModel {
+  provider: string;
+  id: string;
+}
+interface FastCommand {
+  name: string;
+  description: string;
+  role: string;
+  prompt: string | string[];
+  argsDefault?: string;
+}
+interface Config {
+  models: FastModel[];
+  commands: FastCommand[];
+}
 
-function registerFastCommand(
-  pi: ExtensionAPI,
-  name: string,
-  description: string,
-  buildPrompt: (args: string) => string,
-) {
-  // Captured once per invocation; cleared after restore.
-  // Persistent listener checks this — no pi.off() needed.
+const configPath = join(__dirname, "fast-commands.json");
+const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function buildMessage(cmd: FastCommand, args: string): string {
+  const body = Array.isArray(cmd.prompt) ? cmd.prompt.join("\n") : cmd.prompt;
+
+  const argsText = args.trim() || cmd.argsDefault || args;
+  const resolved = body.replace(/\{args\}/g, argsText);
+
+  return `Role: ${cmd.role}.\n\n${resolved}`;
+}
+
+function registerFastCommand(pi: ExtensionAPI, cmd: FastCommand) {
+  // Captured before model switch; cleared after restore.
+  // Persistent listener — no pi.off() needed.
   let modelToRestore: Model | undefined;
 
   pi.on("agent_end", async (event, ctx) => {
@@ -42,12 +64,12 @@ function registerFastCommand(
     modelToRestore = undefined;
 
     const errMsg = (event.messages as AssistantMessage[])
-      .filter(m => m.role === "assistant")
-      .find(m => m.stopReason === "error" || m.stopReason === "aborted");
+      .filter((m) => m.role === "assistant")
+      .find((m) => m.stopReason === "error" || m.stopReason === "aborted");
 
     if (errMsg) {
       ctx.ui.notify(
-        `/${name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
+        `/${cmd.name} failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
         "error",
       );
     }
@@ -58,8 +80,8 @@ function registerFastCommand(
     }
   });
 
-  pi.registerCommand(name, {
-    description: `${description} (haiku → gemini fallback)`,
+  pi.registerCommand(cmd.name, {
+    description: `${cmd.description} (fast model)`,
     handler: async (args: string, ctx: ExtensionCommandContext) => {
       await ctx.waitForIdle();
 
@@ -69,7 +91,7 @@ function registerFastCommand(
       // Try each fast model in order
       let fastModel: Model | undefined;
       let fastModelId = "";
-      for (const candidate of FAST_MODELS) {
+      for (const candidate of config.models) {
         const found = ctx.modelRegistry.find(candidate.provider, candidate.id);
         if (!found) continue;
 
@@ -84,15 +106,15 @@ function registerFastCommand(
 
       if (!fastModel) {
         ctx.ui.notify(
-          `No fast model available. Tried: ${FAST_MODELS.map(m => m.id).join(", ")}`,
+          `No fast model available. Tried: ${config.models.map((m) => m.id).join(", ")}`,
           "error",
         );
         return;
       }
 
-      ctx.ui.notify(`⚡ Switched to ${fastModelId} for /${name}`, "info");
+      ctx.ui.notify(`⚡ Switched to ${fastModelId} for /${cmd.name}`, "info");
       modelToRestore = originalModel;
-      pi.sendUserMessage(buildPrompt(args));
+      pi.sendUserMessage(buildMessage(cmd, args));
     },
   });
 }
@@ -100,77 +122,7 @@ function registerFastCommand(
 // ── extension ─────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
-
-  // /commit
-  registerFastCommand(pi, "commit", "Generate and apply a conventional commit", (_args) => `
-Role: Tech Lead.
-
-Task:
-
-1. Run \`git diff --cached\` to get the staged changes.
-2. If result is empty, ask the user to stage changes and stop there.
-3. If not, only then analyze the staged diff via \`git diff --cached\`
-4. Generate a conventional commit message following the specification:
-   - Format: \`type(scope): subject\`
-   - Types allowed: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-   - Subject: Imperative mood, lowercase, no period, max 50 characters
-   - Body (if needed): Wrap at 72 characters, explain _why_ not _how_. Keep it short. Preferably one liner
-   - Footer: Flag breaking changes with \`BREAKING CHANGE:\`
-5. If you see multiple completely different scopes, use your best judgement to decide which one to commit.
-6. Commit the changes with the generated message and body
-`);
-
-  // /pr
-  registerFastCommand(pi, "pr", "Create a pull request", (_args) => `
-Role: Senior Engineer.
-
-Task:
-
-1. Run \`git remote get-url origin\` to identify the repo.
-2. Run \`git diff main...HEAD\` to get all changes on this branch.
-3. Run \`git log main...HEAD --oneline\` to get the commit history.
-4. Generate a pull request with:
-   - **Title**: Concise, imperative, max 72 chars
-   - **Body**:
-     - ## What
-       One paragraph summary of what changed
-     - ## Why
-       Why this change was needed
-     - ## How
-       Key implementation decisions worth noting (skip if obvious)
-     - ## Testing
-       How to verify the changes work
-5. Run \`gh pr create --title "..." --body "..."\` to create the PR.
-`);
-
-  // /standup
-  registerFastCommand(pi, "standup", "Generate daily standup from git activity", (_args) => `
-Role: Engineer writing a daily standup.
-
-Task:
-
-1. Run \`git log --since="24 hours ago" --oneline --author="$(git config user.name)"\`.
-2. Run \`git diff HEAD~5...HEAD --stat\` for recent file changes.
-3. Summarize into standup format:
-   - **Yesterday**: what was done (from commits)
-   - **Today**: what's next (infer from WIP or last commit direction)
-   - **Blockers**: none unless context suggests otherwise
-4. Keep it short — 3-5 bullet points max. No fluff.
-`);
-
-  // /explain
-  registerFastCommand(pi, "explain", "Explain a file or symbol", (args) => `
-Role: Senior Engineer explaining to a smart peer.
-
-Task:
-
-1. ${args ? `Read or find: ${args}` : "Explain the last code discussed in context."}
-2. Explain:
-   - **What it does** — one sentence summary
-   - **How it works** — key logic, data flow, important decisions
-   - **Why it exists** — the problem it solves
-   - **Gotchas** — non-obvious behavior, edge cases, performance traps
-3. Keep it tight. No padding. Use code snippets only when they clarify.
-`);
-
+  for (const cmd of config.commands) {
+    registerFastCommand(pi, cmd);
+  }
 }

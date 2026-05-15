@@ -1,4 +1,4 @@
 {
-  "tui.select.down": ["down", "ctrl+n"],
-  "tui.select.up":   ["up",   "ctrl+p"]
+  "tui.select.down": ["down", "ctrl+j"],
+  "tui.select.up": ["up", "ctrl+k"]
 }
