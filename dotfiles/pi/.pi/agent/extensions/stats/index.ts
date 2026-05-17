@@ -238,7 +238,7 @@ export default function (pi: ExtensionAPI): void {
     const msg = event.message as AssistantMessage;
     if (!msg.usage) return;
 
-    currentInput.totalTokens = msg.usage.totalTokens ?? 0;
+    currentInput.totalTokens += msg.usage.totalTokens ?? 0;
     currentInput.costAccumulated += msg.usage.cost.total ?? 0;
     currentInput.tokensInput += msg.usage.input ?? 0;
     currentInput.tokensOutput += msg.usage.output ?? 0;
@@ -375,8 +375,9 @@ export default function (pi: ExtensionAPI): void {
         recent: getRecentSessions(STATS_CONFIG.recentSessionsLimit),
         histogram: getDurationHistogram(),
         waste: getTokenWaste(),
-        tokenBreakdown: getTokenBreakdown(),
-        cacheRatio: getCacheRatio(),
+        tokenBreakdown: getTokenBreakdown(new Date(new Date().setHours(0,0,0,0)).getTime()),
+        cacheRatio: getCacheRatio(new Date(new Date().setHours(0,0,0,0)).getTime()),
+        weekCacheRatio: getCacheRatio(start),
         compactions: getCompactions(),
         compactionSummary: getCompactionSummary(),
         errorSummary: getErrorSummary(),

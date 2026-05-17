@@ -394,7 +394,8 @@ export function getOverallStats(): OverallStats {
   return getDb()
     .prepare(`
       SELECT COUNT(*)                  AS totalSessions,
-             COALESCE(SUM(tokens), 0)  AS totalTokens,
+             (SELECT COALESCE(SUM(tokens_used), 0)
+              FROM user_inputs WHERE ended_at IS NOT NULL) AS totalTokens,
              COALESCE(SUM(cost), 0)    AS totalCost,
              COALESCE(SUM(turns), 0)   AS totalTurns,
              (SELECT COUNT(*) FROM user_inputs WHERE ended_at IS NOT NULL) AS totalInputs
@@ -520,7 +521,9 @@ export function getDailyCosts(days = 30): DailyCost[] {
 export function getRecentSessions(limit = 6): RecentSession[] {
   return getDb()
     .prepare(`
-      SELECT s.id, s.started_at, s.duration, s.turns, s.tokens, s.cost, s.cwd,
+      SELECT s.id, s.started_at, s.duration, s.turns,
+             COALESCE(SUM(ui.tokens_used), 0) AS tokens,
+             s.cost, s.cwd,
              COUNT(ui.id) AS inputs
       FROM sessions s
       LEFT JOIN user_inputs ui ON ui.session_id = s.id AND ui.ended_at IS NOT NULL
@@ -616,17 +619,17 @@ export function getTokenBreakdown(sinceTs = 0): TokenBreakdown {
   return row ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 }
 
-export function getCacheRatio(): CacheRatio {
+export function getCacheRatio(sinceTs = 0): CacheRatio {
   const row = getDb()
     .prepare(`
       SELECT COALESCE(SUM(tokens_cache_read), 0) AS cacheRead,
              COALESCE(SUM(tokens_input), 0)       AS totalInput
-      FROM user_inputs WHERE ended_at IS NOT NULL
+      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
     `)
-    .get() as { cacheRead: number; totalInput: number } | undefined;
+    .get(sinceTs) as { cacheRead: number; totalInput: number } | undefined;
   const cr = Number(row?.cacheRead ?? 0);
   const ti = Number(row?.totalInput ?? 0);
-  return { cacheRead: cr, totalInput: ti, ratio: ti > 0 ? cr / ti : 0 };
+  return { cacheRead: cr, totalInput: ti, ratio: (cr + ti) > 0 ? cr / (cr + ti) : 0 };
 }
 
 export function getCompactions(limit = 10): CompactionRecord[] {
