@@ -1,22 +1,31 @@
 /**
- * html.ts — gruvbox redesign with period toggle, theme toggle, and social share card.
- * Data is injected as window.__STATS_DATA__; React app reads it at runtime.
+ * html.ts — Pre-rendered static HTML dashboard.
+ *
+ * All data is server-side rendered. No React, no Babel.
+ * Inline JS for theme toggle, period toggle, and PNG share.
+ * html-to-image (tiny, ~10kb) for share card → clipboard PNG.
  */
 
 import type {
+  DailyCost,
   DailyStat,
   DurationBucket,
   ModelEfficiency,
-  ModelStat,
   OverallStats,
   ProjectStat,
   RecentSession,
+  TokenBreakdown,
   TokenWasteEntry,
   ToolStat,
   WeeklyStat,
+  CacheRatio,
+  CompactionRecord,
+  ErrorRecord,
 } from "./db.js";
-import { fmtMs, fmtDate } from "./format.js";
+import { fmtTokens, fmtCost, fmtMs, fmtDate, fmtPct, escHtml } from "./format.js";
 import { GRUVBOX_CSS } from "./themes/gruvbox.css.js";
+
+// ── Report data interface ─────────────────────────────────────────────────────
 
 export interface ReportData {
   generatedAt: string;
@@ -24,538 +33,361 @@ export interface ReportData {
   week: WeeklyStat;
   overall: OverallStats;
   tools: ToolStat[];
-  models: ModelStat[];
-  efficiency: ModelEfficiency[];
+  models: ModelEfficiency[];
   projects: ProjectStat[];
   daily: DailyStat[];
+  dailyCost: DailyCost[];
   recent: RecentSession[];
   histogram: DurationBucket[];
   waste: TokenWasteEntry[];
+  tokenBreakdown: TokenBreakdown;
+  cacheRatio: CacheRatio;
+  compactions: CompactionRecord[];
+  compactionSummary: { total: number; tokensSaved: number };
+  errorSummary: { total: number; today: number };
+  errors: ErrorRecord[];
   streak: number;
   toolless: { total: number; toolless: number };
 }
 
-export function buildHtml(d: ReportData): string {
-  const chatOnlyPct =
-    d.toolless.total > 0
-      ? Math.round((d.toolless.toolless / d.toolless.total) * 100)
-      : 0;
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  const injected = JSON.stringify({
-    today: {
-      inputs: d.today.inputs,
-      sessions: d.today.sessions,
-      tokens: d.today.tokens,
-      cost: d.today.cost,
-      activeMs: d.today.timeMs,
-      streakDays: d.streak,
-      chatOnlyPct,
-    },
-    week: {
-      inputs: d.week.inputs,
-      sessions: d.week.sessions,
-      tokens: d.week.tokens,
-      cost: d.week.cost,
-      activeMs: d.week.timeMs,
-      streakDays: d.streak,
-      chatOnlyPct,
-    },
-    overall: {
-      sessions: d.overall.totalSessions,
-      inputs: d.overall.totalInputs,
-      turns: d.overall.totalTurns,
-      tokens: d.overall.totalTokens,
-      cost: d.overall.totalCost,
-    },
-    tools: d.tools.map((t) => ({ name: t.tool, uses: t.total })),
-    models: d.efficiency.map((e) => ({
-      provider: e.provider,
-      model: e.model_id,
-      inputs: e.inputs,
-      avgTok: e.avgTokens,
-      avgTime: e.avgTimeSec,
-      costIn: e.costPerInput,
-      total: e.totalCost,
-    })),
-    projects: d.projects.map((p) => ({ name: p.project, inputs: p.inputs })),
-    response: d.histogram.map((b) => ({ b: b.label, n: b.count })),
-    daily: d.daily.map((day) => [day.day, day.tokens] as [string, number]),
-    recent: d.recent.map((s) => ({
-      date: fmtDate(s.started_at),
-      project: s.cwd?.split("/").pop() ?? "—",
-      inputs: s.inputs ?? 0,
-      turns: s.turns,
-      tokens: s.tokens,
-      cost: s.cost,
-      dur: fmtMs(s.duration ?? 0),
-    })),
-    highToken: d.waste.map((w) => ({
-      date: fmtDate(w.started_at),
-      provider: w.provider,
-      model: w.model_id,
-      tokens: w.tokens_used,
-      time: fmtMs(w.time_ms),
-    })),
-    generatedAt: d.generatedAt,
-  });
+const fmtNum = (n: number): string => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, "")}k`;
+  return String(n);
+};
+
+const fmt$ = (n: number): string => n <= 0 ? "$0" : n < 0.01 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
+const fmtTime = (ms: number): string => {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${ss}s`;
+  return `${ss}s`;
+};
+
+function barList(rows: { label: string; value: number }[], max: number, color: string): string {
+  if (!rows.length) return `<div class="muted" style="padding:8px 0">No data</div>`;
+  return `<ul class="bar-list">${rows.map(r => {
+    const pct = Math.max(2, (r.value / Math.max(max, 1)) * 100);
+    return `<li class="bar-row"><div class="bar-label">${escHtml(r.label)}</div><div class="bar-track"><div class="bar-fill bar-${color}" style="width:${pct.toFixed(1)}%"></div></div><div class="bar-value">${r.value}</div></li>`;
+  }).join("")}</ul>`;
+}
+
+function card(title: string, hint: string, content: string, span: number, scroll = false): string {
+  return `<section class="card" style="grid-column:span ${span}"><header class="card-head"><h3>${escHtml(title)}</h3>${hint ? `<span class="card-hint">${escHtml(hint)}</span>` : ""}</header><div class="card-body${scroll ? " scroll" : ""}">${content}</div></section>`;
+}
+
+// ── Hero section ──────────────────────────────────────────────────────────────
+
+function heroSection(id: string, label: string, data: WeeklyStat, streak: number, chatPct: number, cachePct: string): string {
+  const stats = [
+    { label: "inputs",    value: fmtNum(data.inputs),    cls: "" },
+    { label: "sessions",  value: String(data.sessions),  cls: "" },
+    { label: "tokens",    value: fmtNum(data.tokens),    cls: "" },
+    { label: "cost",      value: fmt$(data.cost),         cls: "stat-hi" },
+    { label: "active",    value: fmtTime(data.timeMs),   cls: "" },
+    { label: "streak",    value: `${streak}d`,            cls: "stat-accent" },
+    { label: "cache hit", value: cachePct,                cls: "stat-good" },
+  ];
+  const date = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return `<section class="hero" id="${id}"><div class="hero-head"><div class="eyebrow">${escHtml(label)}</div><div class="hero-date">${escHtml(date)}</div></div><div class="hero-grid">${stats.map(s =>
+    `<div class="stat ${s.cls}"><div class="stat-val">${escHtml(s.value)}</div><div class="stat-lbl">${escHtml(s.label)}</div></div>`
+  ).join("")}</div></section>`;
+}
+
+// ── Token breakdown + efficiency (combined card) ─────────────────────────────
+
+function tokenAndEfficiencyCard(
+  tb: TokenBreakdown,
+  cache: CacheRatio,
+  comp: { total: number; tokensSaved: number },
+  errSum: { total: number; today: number },
+  span: number,
+): string {
+  const total = tb.input + tb.output + tb.cacheRead + tb.cacheWrite;
+
+  const segs = [
+    { label: "Input",       value: tb.input,      color: "var(--yellow)" },
+    { label: "Output",      value: tb.output,     color: "var(--orange)" },
+    { label: "Cache Read",  value: tb.cacheRead,  color: "var(--green)" },
+    { label: "Cache Write", value: tb.cacheWrite, color: "var(--blue)" },
+  ];
+
+  const bar = total > 0
+    ? `<div class="tok-bar">${segs.map(s => {
+        const pct = (s.value / total) * 100;
+        return pct > 0 ? `<div class="tok-seg" style="width:${pct.toFixed(1)}%;background:${s.color}"></div>` : "";
+      }).join("")}</div>
+      <div class="tok-legend">${segs.map(s =>
+        `<div class="tok-legend-item"><div class="tok-dot" style="background:${s.color}"></div>${escHtml(s.label)}: ${fmtNum(s.value)}</div>`
+      ).join("")}</div>`
+    : `<div class="muted" style="margin-bottom:8px">No token data yet</div>`;
+
+  const rows = [
+    { label: "Cache hit ratio", value: fmtPct(cache.ratio) },
+    { label: "Cache tokens read", value: fmtNum(cache.cacheRead) },
+    { label: "Compactions", value: String(comp.total) },
+    { label: "Tokens saved", value: fmtNum(comp.tokensSaved) },
+    { label: "Total errors", value: String(errSum.total) },
+    { label: "Errors today", value: String(errSum.today) },
+  ];
+  const stats = `<div class="mini-stats" style="margin-top:14px">${rows.map(r =>
+    `<div class="mini-row"><span class="mini-label">${escHtml(r.label)}</span><span class="mini-value">${escHtml(r.value)}</span></div>`
+  ).join("")}</div>`;
+
+  return card("tokens & efficiency", "breakdown · cache · errors", bar + stats, span);
+}
+
+// ── Combined daily chart (tokens + cost in tooltip) ───────────────────────────
+
+function dailyChart(tokens: DailyStat[], costs: DailyCost[], span: number): string {
+  if (!tokens.length) return card("daily usage", "", `<div class="muted">No data</div>`, span);
+
+  const totalTok = tokens.reduce((s, d) => s + d.tokens, 0);
+  const totalCost = costs.reduce((s, d) => s + d.cost, 0);
+  const maxTok = Math.max(...tokens.map(d => d.tokens), 1);
+  const costByDay = new Map(costs.map(c => [c.day, c.cost]));
+
+  const bars = tokens.map((d, i) => {
+    const h = Math.max(3, (d.tokens / maxTok) * 100);
+    const cls = i === tokens.length - 1 ? " today" : "";
+    const dayCost = costByDay.get(d.day) ?? 0;
+    const tooltip = `${escHtml(d.day)}: ${fmtNum(d.tokens)} tok · ${fmt$(dayCost)}`;
+    return `<div class="dc-col" title="${tooltip}"><div class="dc-bar${cls}" style="height:${h.toFixed(1)}%"></div></div>`;
+  }).join("");
+
+  const firstDay = tokens[0]!.day;
+  const lastDay = tokens[tokens.length - 1]!.day;
+  const axis = `<div class="daily-axis"><span>${escHtml(firstDay)}</span><span class="muted">peak ${fmtNum(maxTok)}</span><span>${escHtml(lastDay)}</span></div>`;
+  const title = `daily usage — ${fmtNum(totalTok)} tok · ${fmt$(totalCost)}`;
+  return card(title, `last ${tokens.length} days`, `<div class="daily-wrap"><div class="daily-chart">${bars}</div>${axis}</div>`, span);
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+
+function modelsTable(models: ReportData["models"], span: number): string {
+  if (!models.length) return "";
+  const head = `<tr><th style="width:15%">provider</th><th style="width:22%">model</th><th class="r" style="width:10%">inputs</th><th class="r" style="width:13%">avg tok</th><th class="r" style="width:13%">avg time</th><th class="r" style="width:12%">$/inp</th><th class="r" style="width:15%">total</th></tr>`;
+  const rows = models.map(m =>
+    `<tr><td class="muted">${escHtml(m.provider)}</td><td>${escHtml(m.model_id)}</td><td class="r">${m.inputs}</td><td class="r">${fmtNum(m.avgTokens)}</td><td class="r">${m.avgTimeSec.toFixed(1)}s</td><td class="r">${m.costPerInput < 0.01 && m.costPerInput > 0 ? "&lt;$0.01" : fmt$(m.costPerInput)}</td><td class="r cost">${fmt$(m.totalCost)}</td></tr>`
+  ).join("");
+  return card("models", "ranked by inputs", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
+}
+
+function recentTable(recent: RecentSession[], span: number): string {
+  if (!recent.length) return "";
+  const head = `<tr><th>date</th><th>project</th><th class="r">turns</th><th class="r">tokens</th><th class="r">cost</th><th class="r">dur</th></tr>`;
+  const rows = recent.map(s =>
+    `<tr><td class="muted">${fmtDate(s.started_at)}</td><td>${escHtml(s.cwd?.split("/").pop() ?? "—")}</td><td class="r">${s.turns}</td><td class="r">${fmtNum(s.tokens)}</td><td class="r cost">${fmt$(s.cost)}</td><td class="r muted">${fmtMs(s.duration ?? 0)}</td></tr>`
+  ).join("");
+  return card("recent sessions", "", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
+}
+
+function wasteTable(waste: TokenWasteEntry[], span: number): string {
+  if (!waste.length) return "";
+  const head = `<tr><th>date</th><th>model</th><th class="r">tokens</th><th class="r">time</th></tr>`;
+  const rows = waste.map(w =>
+    `<tr><td class="muted">${fmtDate(w.started_at)}</td><td>${escHtml(w.model_id)}</td><td class="r warn">${fmtNum(w.tokens_used)}</td><td class="r muted">${fmtMs(w.time_ms)}</td></tr>`
+  ).join("");
+  return card("high-token no-tool inputs", "", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
+}
+
+function errorsTable(errors: ErrorRecord[], span: number): string {
+  if (!errors.length) return "";
+  const head = `<tr><th>date</th><th>model</th><th>type</th><th>message</th></tr>`;
+  const rows = errors.slice(0, 10).map(e =>
+    `<tr><td class="muted">${fmtDate(e.occurredAt)}</td><td>${escHtml(e.modelId)}</td><td>${escHtml(e.errorType)}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${escHtml(e.message.slice(0, 80))}</td></tr>`
+  ).join("");
+  return card("recent errors", "", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
+}
+
+// ── Build HTML ────────────────────────────────────────────────────────────────
+
+export function buildHtml(d: ReportData): string {
+  const chatOnlyPct = d.toolless.total > 0 ? Math.round((d.toolless.toolless / d.toolless.total) * 100) : 0;
+  const cachePct = fmtPct(d.cacheRatio.ratio);
+  const toolMax = Math.max(...d.tools.map(t => t.total), 1);
+  const projMax = Math.max(...d.projects.map(p => p.inputs), 1);
+  const respMax = Math.max(...d.histogram.map(r => r.count), 1);
+  const date = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>π stats</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"></script>
 <style>${GRUVBOX_CSS}</style>
 </head>
 <body>
-<div id="root"></div>
-<script>window.__STATS_DATA__ = ${injected};</script>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"></script>
-<script type="text/babel">
-/* π stats — gruvbox redesign */
-const { useState, useRef, useEffect } = React;
-const D = window.__STATS_DATA__;
+<div class="page">
 
-/* ---------- HELPERS ---------- */
-const fmtNum = n => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + "M";
-  if (n >= 1_000)     return (n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\\.0$/, "") + "k";
-  return String(n);
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-l">
+    <div class="brand"><span class="pi">π</span><span class="brand-name">stats</span></div>
+    <span class="dot">·</span>
+    <span class="muted">ai usage dashboard</span>
+  </div>
+  <div class="topbar-r">
+    <button class="toggle on" data-period="today">today</button>
+    <button class="toggle" data-period="week">week</button>
+    <button class="toggle" id="theme-toggle">◑ theme</button>
+    <button class="toggle share-btn" id="share-btn">↥ share</button>
+  </div>
+</header>
+
+<!-- HERO: today (default visible) -->
+${heroSection("hero-today", "today's usage", d.today, d.streak, chatOnlyPct, cachePct)}
+
+<!-- HERO: week (hidden by default) -->
+<div id="hero-week" style="display:none">
+${heroSection("hero-week-inner", "this week", d.week, d.streak, chatOnlyPct, cachePct)}
+</div>
+
+<!-- GRID -->
+<main class="grid">
+${card("tools", "7 days", barList(d.tools.map(t => ({ label: t.tool, value: t.total })), toolMax, "yellow"), 4)}
+${card("response times", "all-time", barList(d.histogram.map(r => ({ label: r.label, value: r.count })), respMax, "aqua"), 4)}
+${card("projects", "all-time", barList(d.projects.map(p => ({ label: p.project, value: p.inputs })), projMax, "orange"), 4, true)}
+
+${dailyChart(d.daily, d.dailyCost, 6)}
+${tokenAndEfficiencyCard(d.tokenBreakdown, d.cacheRatio, d.compactionSummary, d.errorSummary, 6)}
+
+${modelsTable(d.models, 12)}
+${recentTable(d.recent, d.waste.length > 0 ? 7 : 12)}
+${wasteTable(d.waste, d.recent.length > 0 ? 5 : 12)}
+${errorsTable(d.errors, 12)}
+</main>
+
+<!-- HIDDEN SHARE CARD (for PNG capture) -->
+<div id="share-wrap" style="position:fixed;left:-9999px;top:0">
+  <div id="share-card" class="share-card">
+    <div class="sc-gradient"></div>
+    <div class="sc-inner">
+      <div class="sc-brand">
+        <div class="sc-logo">π</div>
+        <div class="sc-brand-text">
+          <div class="sc-title">Today's Vibe Check</div>
+          <div class="sc-date">${escHtml(date)}</div>
+        </div>
+      </div>
+      <div class="sc-grid">
+        <div class="sc-stat">
+          <div class="sc-val">${fmtNum(d.today.inputs)}</div>
+          <div class="sc-lbl">prompts shipped</div>
+        </div>
+        <div class="sc-stat">
+          <div class="sc-val">${fmtNum(d.today.tokens)}</div>
+          <div class="sc-lbl">tokens burned</div>
+        </div>
+        <div class="sc-stat">
+          <div class="sc-val sc-cost">${fmt$(d.today.cost)}</div>
+          <div class="sc-lbl">cost of vibes</div>
+        </div>
+        <div class="sc-stat">
+          <div class="sc-val sc-streak">${d.streak}d 🔥</div>
+          <div class="sc-lbl">streak</div>
+        </div>
+        <div class="sc-stat">
+          <div class="sc-val">${fmtTime(d.today.timeMs)}</div>
+          <div class="sc-lbl">active time</div>
+        </div>
+        <div class="sc-stat">
+          <div class="sc-val sc-cache">${cachePct}</div>
+          <div class="sc-lbl">cache hit</div>
+        </div>
+      </div>
+      <div class="sc-foot">
+        <span>π stats</span>
+        <span>powered by mass-approving AI suggestions</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-l">
+    <div class="eyebrow">all-time</div>
+    <div class="footer-stats">
+      <div class="fs"><span class="v">${d.overall.totalSessions}</span><span class="l">sessions</span></div>
+      <div class="fs"><span class="v">${d.overall.totalInputs}</span><span class="l">inputs</span></div>
+      <div class="fs"><span class="v">${d.overall.totalTurns}</span><span class="l">turns</span></div>
+      <div class="fs"><span class="v">${fmtNum(d.overall.totalTokens)}</span><span class="l">tokens</span></div>
+      <div class="fs"><span class="v cost">${fmt$(d.overall.totalCost)}</span><span class="l">cost</span></div>
+    </div>
+  </div>
+  <div class="footer-r">
+    <div class="brand" style="font-size:13px;gap:6px"><span class="pi" style="font-size:15px">π</span><span class="brand-name">stats</span></div>
+    <span class="dot">·</span>
+    <span class="muted">${escHtml(d.generatedAt)}</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+// Theme toggle
+document.getElementById("theme-toggle").onclick=function(){
+  var t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+  document.documentElement.dataset.theme=t;
+  try{localStorage.setItem("pi.theme",t)}catch(e){}
 };
-const fmt$ = n => "$" + n.toFixed(2);
-const fmtTime = ms => {
-  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
-  if (h) return h + "h " + m + "m";
-  if (m) return m + "m " + ss + "s";
-  return ss + "s";
+try{var st=localStorage.getItem("pi.theme");if(st)document.documentElement.dataset.theme=st}catch(e){}
+
+// Period toggle
+document.querySelectorAll("[data-period]").forEach(function(btn){
+  btn.onclick=function(){
+    var p=btn.dataset.period;
+    document.getElementById("hero-today").style.display=p==="today"?"":"none";
+    document.getElementById("hero-week").style.display=p==="week"?"":"none";
+    document.querySelectorAll("[data-period]").forEach(function(b){b.classList.toggle("on",b===btn)});
+  };
+});
+
+// Share as PNG to clipboard
+document.getElementById("share-btn").onclick=async function(){
+  var btn=this;
+  var wrap=document.getElementById("share-wrap");
+  var card=document.getElementById("share-card");
+  btn.textContent="↥ capturing…";
+  try {
+    // Briefly make visible for capture
+    wrap.style.position="absolute";
+    wrap.style.left="0";
+    wrap.style.top="0";
+    wrap.style.zIndex="-1";
+    wrap.style.opacity="0";
+
+    var dataUrl=await htmlToImage.toPng(card,{
+      pixelRatio:2,
+      cacheBust:true,
+      backgroundColor:document.documentElement.dataset.theme==="light"?"#fbf1c7":"#1d2021"
+    });
+
+    wrap.style.position="fixed";
+    wrap.style.left="-9999px";
+    wrap.style.opacity="";
+    wrap.style.zIndex="";
+
+    var res=await fetch(dataUrl);
+    var blob=await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
+    btn.textContent="✓ copied!";
+  } catch(e) {
+    wrap.style.position="fixed";
+    wrap.style.left="-9999px";
+    btn.textContent="✗ failed";
+    console.error(e);
+  }
+  setTimeout(function(){btn.textContent="↥ share"},2000);
 };
-
-/* ---------- COMPONENTS ---------- */
-function Brand({ small }) {
-  return (
-    <div className={"brand " + (small ? "brand-sm" : "")}>
-      <span className="pi">π</span>
-      <span className="brand-name">stats</span>
-    </div>
-  );
-}
-
-function SegToggle({ value, onChange, options }) {
-  return (
-    <div className="seg">
-      {options.map(o => (
-        <button key={o.v} className={"seg-btn " + (value === o.v ? "on" : "")} onClick={() => onChange(o.v)}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function IconBtn({ children, onClick, title, accent }) {
-  return (
-    <button className={"icon-btn " + (accent ? "accent" : "")} onClick={onClick} title={title}>
-      {children}
-    </button>
-  );
-}
-
-function Hero({ period, data }) {
-  const stats = [
-    { label: "inputs",   value: fmtNum(data.inputs),    hi: false, accent: false },
-    { label: "sessions", value: String(data.sessions),  hi: false, accent: false },
-    { label: "tokens",   value: fmtNum(data.tokens),    hi: false, accent: false },
-    { label: "cost",     value: fmt$(data.cost),         hi: true,  accent: false },
-    { label: "active",   value: fmtTime(data.activeMs), hi: false, accent: false },
-    { label: "streak",   value: data.streakDays + "d",  hi: false, accent: true  },
-  ];
-  return (
-    <section className="hero">
-      <div className="hero-head">
-        <div className="eyebrow">{period === "today" ? "today's usage" : "this week"}</div>
-        <div className="hero-date">
-          {new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-        </div>
-      </div>
-      <div className="hero-grid">
-        {stats.map(s => (
-          <div key={s.label} className={"stat " + (s.hi ? "stat-hi " : "") + (s.accent ? "stat-accent " : "")}>
-            <div className="stat-val">{s.value}</div>
-            <div className="stat-lbl">{s.label}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function BarList({ rows, max, accent = "yellow" }) {
-  return (
-    <ul className="bar-list">
-      {rows.map(r => {
-        const pct = Math.max(2, (r.value / max) * 100);
-        return (
-          <li key={r.label} className="bar-row">
-            <div className="bar-label">{r.label}</div>
-            <div className="bar-track">
-              <div className={"bar-fill bar-" + accent} style={{ width: pct + "%" }} />
-            </div>
-            <div className="bar-value">{r.value}</div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function Card({ title, hint, children, span, scroll }) {
-  return (
-    <section className="card" style={{ gridColumn: span ? "span " + span : undefined }}>
-      <header className="card-head">
-        <h3>{title}</h3>
-        {hint && <span className="card-hint">{hint}</span>}
-      </header>
-      <div className={"card-body " + (scroll ? "scroll" : "")}>{children}</div>
-    </section>
-  );
-}
-
-function DailyChart({ data }) {
-  const max = Math.max(...data.map(d => d[1]));
-  return (
-    <div className="daily-chart">
-      {data.map(([d, v], i) => {
-        const h = Math.max(3, (v / max) * 100);
-        const isToday = i === data.length - 1;
-        return (
-          <div className="dc-col" key={d} title={d + ": " + fmtNum(v) + " tokens"}>
-            <div className={"dc-bar " + (isToday ? "today" : "")} style={{ height: h + "%" }} />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function last7Days() {
-  const tail = D.daily.slice(-7);
-  return tail.map(([dateStr, tokens], i) => {
-    const dt = new Date(dateStr);
-    const dow = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
-    return { date: dateStr, dow, tokens, isToday: i === tail.length - 1 };
-  });
-}
-
-function ShareCard({ period, data, theme }) {
-  const topModel = D.models[0] || { model: "—", inputs: 0, total: 0 };
-  const date = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
-  const days = last7Days();
-  const maxDay = Math.max(...days.map(d => d.tokens), 1);
-  const tier = v => {
-    if (v >= 1_500_000) return "peak";
-    if (v >= 700_000)   return "high";
-    if (v >= 200_000)   return "mid";
-    return "low";
-  };
-  const modelName = topModel.model.replace(/^claude-/, "claude ").replace(/-([0-9])/, " $1");
-  const title = period === "today" ? "Today's Usage" : "Weekly Usage";
-
-  return (
-    <div className={"share-card share-" + theme}>
-      <div className="sc-glow" />
-      <div className="sc-panel">
-        <div className="sc-brand">
-          <div className="sc-brand-mark">π</div>
-          <div className="sc-brand-name">AI Stats</div>
-        </div>
-        <h1 className="sc-title">{title}</h1>
-        <div className="sc-rule" />
-        <div className="sc-pair">
-          <div className="sc-pair-col">
-            <div className="sc-pair-lbl">Total Tokens</div>
-            <div className="sc-pair-val sc-yellow">{fmtNum(data.tokens)}</div>
-            <div className="sc-pair-sub">{period === "today" ? "today" : "this week"}</div>
-          </div>
-          <div className="sc-pair-col">
-            <div className="sc-pair-lbl">
-              <span>Top Model</span>
-              <svg className="sc-chip" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
-            </div>
-            <div className="sc-pair-val sc-orange">{modelName}</div>
-            <div className="sc-pair-sub">{topModel.inputs} inputs · {fmt$(topModel.total)}</div>
-          </div>
-        </div>
-        <div className="sc-pills">
-          <div className="sc-pill">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-            <span className="sc-pill-lbl">Inputs:</span>
-            <span className="sc-pill-val">{data.inputs}</span>
-          </div>
-          <div className="sc-pill">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-            <span className="sc-pill-lbl">Cost:</span>
-            <span className="sc-pill-val">{fmt$(data.cost)}</span>
-          </div>
-        </div>
-        <div className="sc-chart-h">Weekly Activity</div>
-        <div className="sc-chart">
-          {days.map(d => {
-            const h = Math.max(8, (d.tokens / maxDay) * 100);
-            return (
-              <div className="sc-bar-col" key={d.date}>
-                <div className="sc-bar-val">{fmtNum(d.tokens)}</div>
-                <div className={"sc-bar sc-bar-" + tier(d.tokens) + (d.isToday ? " sc-bar-today" : "")} style={{ height: h + "%" }} />
-                <div className="sc-bar-dow">{d.dow}</div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="sc-foot">
-          <div className="sc-foot-l">{date}</div>
-          <div className="sc-foot-r">π stats · {data.streakDays}d streak</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ShareModal({ open, onClose, period, data, theme }) {
-  const cardRef = useRef(null);
-  const [busy, setBusy] = useState(false);
-  if (!open) return null;
-
-  const download = async () => {
-    setBusy(true);
-    try {
-      const node = cardRef.current.querySelector(".share-card");
-      const dataUrl = await window.htmlToImage.toPng(node, {
-        pixelRatio: 2,
-        cacheBust: true,
-        backgroundColor: theme === "light" ? "#fbf1c7" : "#1d2021",
-      });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = "pi-stats-" + period + "-" + new Date().toISOString().slice(0, 10) + ".png";
-      a.click();
-    } catch (e) {
-      alert("Couldn't generate image: " + e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="modal-veil" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <header className="modal-head">
-          <div>
-            <h2>share summary</h2>
-            <p>1080 × 1080 · ready for socials</p>
-          </div>
-          <div className="modal-actions">
-            <button className="btn ghost" onClick={onClose}>close</button>
-            <button className="btn primary" onClick={download} disabled={busy}>
-              {busy ? "rendering…" : "download .png"}
-            </button>
-          </div>
-        </header>
-        <div className="modal-body" ref={cardRef}>
-          <div className="share-wrap">
-            <ShareCard period={period} data={data} theme={theme} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- APP ---------- */
-function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem("pi.theme") || "dark");
-  const [period, setPeriod] = useState(() => localStorage.getItem("pi.period") || "today");
-  const [shareOpen, setShareOpen] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("pi.theme", theme);
-  }, [theme]);
-  useEffect(() => { localStorage.setItem("pi.period", period); }, [period]);
-
-  const data = period === "today" ? D.today : D.week;
-  const toolMax  = Math.max(...D.tools.map(t => t.uses), 1);
-  const projMax  = Math.max(...D.projects.map(p => p.inputs), 1);
-  const respMax  = Math.max(...D.response.map(r => r.n), 1);
-
-  return (
-    <div className="page">
-      {/* TOP BAR */}
-      <header className="topbar">
-        <div className="topbar-l">
-          <Brand />
-          <span className="dot">·</span>
-          <span className="muted">ai usage</span>
-        </div>
-        <div className="topbar-r">
-          <SegToggle
-            value={period}
-            onChange={setPeriod}
-            options={[{ v: "today", label: "today" }, { v: "week", label: "week" }]}
-          />
-          <IconBtn onClick={() => setTheme(theme === "dark" ? "light" : "dark")} title="toggle theme">
-            {theme === "dark" ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            )}
-            <span className="icon-btn-lbl">{theme}</span>
-          </IconBtn>
-          <IconBtn onClick={() => setShareOpen(true)} title="share" accent>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            <span className="icon-btn-lbl">share</span>
-          </IconBtn>
-        </div>
-      </header>
-
-      {/* HERO */}
-      <Hero period={period} data={data} />
-
-      {/* MAIN GRID */}
-      <main className="grid">
-        <Card title="tools" hint="7 days" span={4}>
-          <BarList accent="yellow" max={toolMax} rows={D.tools.map(t => ({ label: t.name, value: t.uses }))} />
-        </Card>
-
-        <Card title="response times" hint="7 days" span={4}>
-          <BarList accent="aqua" max={respMax} rows={D.response.map(r => ({ label: r.b, value: r.n }))} />
-        </Card>
-
-        <Card title="projects" hint="all-time" span={4} scroll>
-          <BarList accent="orange" max={projMax} rows={D.projects.map(p => ({ label: p.name, value: p.inputs }))} />
-        </Card>
-
-        {D.daily.length > 0 && (
-          <Card title="daily token usage" hint={"last " + D.daily.length + " days"} span={12}>
-            <div className="daily-wrap">
-              <DailyChart data={D.daily} />
-              <div className="daily-axis">
-                <span>{D.daily[0][0]}</span>
-                <span className="muted">peak {fmtNum(Math.max(...D.daily.map(d => d[1])))}</span>
-                <span>{D.daily[D.daily.length - 1][0]}</span>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {D.models.length > 0 && (
-          <Card title="models" hint="ranked by inputs" span={12}>
-            <div className="t-wrap">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>provider</th><th>model</th>
-                    <th className="r">inputs</th>
-                    <th className="r">avg tok</th>
-                    <th className="r">avg time</th>
-                    <th className="r">$/inp</th>
-                    <th className="r">total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {D.models.map((m, i) => (
-                    <tr key={i}>
-                      <td className="muted">{m.provider}</td>
-                      <td>{m.model}</td>
-                      <td className="r">{m.inputs}</td>
-                      <td className="r">{fmtNum(m.avgTok)}</td>
-                      <td className="r">{m.avgTime.toFixed(1)}s</td>
-                      <td className="r">{m.costIn < 0.01 && m.costIn > 0 ? "<$0.01" : fmt$(m.costIn)}</td>
-                      <td className="r cost">{fmt$(m.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-
-        {D.recent.length > 0 && (
-          <Card title="recent sessions" span={7}>
-            <div className="t-wrap">
-              <table className="tbl">
-                <thead>
-                  <tr><th>date</th><th>project</th><th className="r">turns</th><th className="r">tokens</th><th className="r">cost</th><th className="r">dur</th></tr>
-                </thead>
-                <tbody>
-                  {D.recent.map((r, i) => (
-                    <tr key={i}>
-                      <td className="muted">{r.date}</td>
-                      <td>{r.project}</td>
-                      <td className="r">{r.turns}</td>
-                      <td className="r">{fmtNum(r.tokens)}</td>
-                      <td className="r cost">{fmt$(r.cost)}</td>
-                      <td className="r muted">{r.dur}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-
-        {D.highToken.length > 0 && (
-          <Card title="high-token no-tool inputs" span={D.recent.length > 0 ? 5 : 12}>
-            <div className="t-wrap">
-              <table className="tbl">
-                <thead>
-                  <tr><th>date</th><th>model</th><th className="r">tokens</th><th className="r">time</th></tr>
-                </thead>
-                <tbody>
-                  {D.highToken.map((h, i) => (
-                    <tr key={i}>
-                      <td className="muted">{h.date}</td>
-                      <td>{h.model}</td>
-                      <td className="r warn">{fmtNum(h.tokens)}</td>
-                      <td className="r muted">{h.time}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-      </main>
-
-      {/* ALL-TIME FOOTER */}
-      <footer className="footer">
-        <div className="footer-l">
-          <div className="eyebrow">all-time</div>
-          <div className="footer-stats">
-            <div className="fs"><span className="v">{D.overall.sessions}</span><span className="l">sessions</span></div>
-            <div className="fs"><span className="v">{D.overall.inputs}</span><span className="l">inputs</span></div>
-            <div className="fs"><span className="v">{D.overall.turns}</span><span className="l">turns</span></div>
-            <div className="fs"><span className="v">{fmtNum(D.overall.tokens)}</span><span className="l">tokens</span></div>
-            <div className="fs"><span className="v cost">{fmt$(D.overall.cost)}</span><span className="l">cost</span></div>
-          </div>
-        </div>
-        <div className="footer-r">
-          <Brand small />
-          <span className="dot">·</span>
-          <span className="muted">{D.generatedAt}</span>
-        </div>
-      </footer>
-
-      <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} period={period} data={data} theme={theme} />
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>`;

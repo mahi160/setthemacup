@@ -1,4 +1,4 @@
-/** Shared formatters — null/NaN-safe, used by both TUI render and HTML dashboard. */
+/** Shared formatters — null/NaN-safe, used by both TUI and HTML dashboard. */
 
 function safe(v: unknown): number {
   const n = Number(v);
@@ -34,19 +34,10 @@ export function fmtDate(ts: number): string {
   return new Date(safe(ts)).toISOString().slice(0, 10);
 }
 
-export function fmtDateShort(ts: number): string {
-  const d = new Date(safe(ts));
-  return `${d.toLocaleString("default", { month: "short" })} ${d.getDate()}`;
-}
-
-/** Format a date in local YYYY-MM-DD (matches SQLite localtime). */
-export function localDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+export function fmtPct(ratio: number): string {
+  return `${Math.round(safe(ratio) * 100)}%`;
 }
 
 export function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

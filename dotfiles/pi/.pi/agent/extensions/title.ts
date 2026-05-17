@@ -1,277 +1,191 @@
-import os from "node:os";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-
-// ── π sign (no surrounding whitespace; centring done at render) ───────────────
-const PI_ART = [
-  "████████████████",   // top bar
-  "▄▄  ██    ██  ▄▄",   // bar → leg junction
-  "██    ██",            // legs (×4)
-  "██    ██",
-  "██    ██",
-  "██    ██",
-];
-
-// ── One witty quote per calendar day ─────────────────────────────────────────
-const QUOTES = [
-  "shipping beats perfection",
-  "the best refactor is deletion",
-  "naming things: still the second hardest problem",
-  "git commit --amend is a lifestyle",
-  "undefined is not a philosophy",
-  "it works on my machine™",
-  "measure twice, push once",
-  "complexity is the enemy of reliability",
-  "premature optimisation: the original sin",
-  "have you tried turning it off and on?",
-  "documentation is future self-care",
-  "code never lies; comments sometimes do",
-  "always code as if the next dev knows where you live",
-  "make it work, make it right, make it fast",
-  "the internet: duct tape and optimism",
-  "every bug is a feature waiting to be understood",
-  "you can't unit-test your way out of a bad design",
-];
-
-// ── Char-by-char gradient ─────────────────────────────────────────────────────
-type Rgb = [number, number, number];
-const RESET = "\x1b[0m";
-
-function extractRgb(ansi: string): Rgb | null {
-  const m = ansi.match(/\x1b\[38;2;(\d+);(\d+);(\d+)m/);
-  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
-}
-function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * t),
-    Math.round(a[1] + (b[1] - a[1]) * t),
-    Math.round(a[2] + (b[2] - a[2]) * t),
-  ];
-}
-function applyRgb([r, g, b]: Rgb, s: string): string {
-  return `\x1b[38;2;${r};${g};${b}m${s}${RESET}`;
-}
-function samplePalette(pal: Rgb[], pos: number): Rgb {
-  const w = ((pos % 1) + 1) % 1;
-  const sc = w * pal.length;
-  const i = Math.floor(sc);
-  return mixRgb(pal[i]!, pal[(i + 1) % pal.length]!, sc - i);
-}
-/** Colour every non-space char with a smooth gradient sweep. */
-function gradientLine(text: string, pal: Rgb[], phase: number): string {
-  const chars = [...text];
-  const span = Math.max(chars.length - 1, 1);
-  return chars
-    .map((c, i) => (c === " " ? c : applyRgb(samplePalette(pal, i / span + phase), c)))
-    .join("");
-}
-
 /**
- * Build a 6-stop palette from the active theme's 24-bit RGB values.
- * Samples: accent → warning → error → syntaxNumber → mdLink → success
- * (yellow → orange → red → purple → blue → green in gruvbox-material).
- * Falls back to a gruvbox-material palette if the theme uses indexed colours.
+ * title.ts — Flashy nerdy header with aggregate stats + daily quote.
+ *
+ * Shows today's usage + all-time totals + streak + a rotating
+ * nerdy one-liner. 4 lines including padding.
  */
-const FALLBACK_PALETTE: Rgb[] = [
-  [216, 166,  87],  // #d8a657  yellow
-  [231, 138,  78],  // #e78a4e  orange
-  [234, 105,  98],  // #ea6962  red
-  [211, 134, 155],  // #d3869b  purple
-  [125, 174, 163],  // #7daea3  blue
-  [137, 180, 130],  // #89b482  green
+
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { getDb, getStreak } from "./stats/db.js";
+
+// ── Nerdy quotes (one per day, cycles) ────────────────────────────────────────
+
+const QUOTES = [
+  "tokens go brrr",
+  "sudo make me a sandwich",
+  "it works on my machine™",
+  "there are 10 kinds of people…",
+  "!false — it's funny because it's true",
+  "my code doesn't have bugs, it has features",
+  "git push --force and pray",
+  "99 bugs in the code, fix one, 127 bugs in the code",
+  "AI wrote this. I just mass approve.",
+  "semicolons are just emotional crutches",
+  "undefined is not a function (of my patience)",
+  "works on my machine. ship my machine.",
+  "there is no place like 127.0.0.1",
+  "chmod 777 and hope for the best",
+  "// TODO: actually fix this later",
+  "NaN !== NaN and I'm not okay",
+  "segfault (core vibes dumped)",
+  "I don't always test my code, but when I do, I do it in production",
+  "rm -rf / — yolo",
+  "my other car is a recursive function",
+  "the cloud is just someone else's computer",
+  "there are only two hard problems: cache invalidation, naming things, and off-by-one errors",
+  "welcome to prompt engineering (it's turtles all the way down)",
+  "the AI hallucinated? nah, it's just creative nonfiction",
+  "stack overflow: where copy-paste engineers are born",
+  "async/await? more like async/a-pray",
+  "my code review feedback: LGTM (didn't read)",
+  "I use vim btw (and I can't exit)",
+  "0 errors, 847 warnings — close enough",
+  "prod is the final staging environment",
 ];
-function buildPalette(theme: { fg(t: string, s: string): string }): Rgb[] {
-  const tokens = ["accent", "warning", "error", "syntaxNumber", "mdLink", "success"];
-  const pal = tokens.map(t => extractRgb(theme.fg(t, "x"))).filter(Boolean) as Rgb[];
-  return pal.length >= 2 ? pal : FALLBACK_PALETTE;
-}
 
-// ── Layout helpers ────────────────────────────────────────────────────────────
-/** Prepend spaces to visually centre `s` in `w` columns. */
-function centerIn(s: string, w: number): string {
-  const vw = visibleWidth(s);
-  return vw >= w ? s : " ".repeat(Math.floor((w - vw) / 2)) + s;
-}
-/** Pad an ANSI string to exactly `w` visible columns. */
-function padRight(s: string, w: number): string {
-  const vw = visibleWidth(s);
-  return vw < w ? s + " ".repeat(w - vw) : s;
-}
+// ── Formatters ────────────────────────────────────────────────────────────────
 
-// ── Number formatters ─────────────────────────────────────────────────────────
 const COMPACT = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-const fmtK    = (n: number) => COMPACT.format(n);
+const fmtK = (n: number) => COMPACT.format(n);
 const fmtCost = (n: number) =>
-  n <= 0 ? "$0.00" : n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
+  n <= 0 ? "$0" : n < 0.01 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
 
-// ── Stats (from stats/db, gracefully absent) ──────────────────────────────────
-interface StatData {
-  inputs: number; sessions: number;
-  tokensIn: number; tokensOut: number;
-  cost: number; topModel: string; streak: number;
+// ── Stats queries ─────────────────────────────────────────────────────────────
+
+interface AggrStats {
+  today: { inputs: number; tokens: number; cost: number };
+  allTime: { sessions: number; tokens: number; cost: number };
+  streak: number;
 }
-const ZERO_STATS: StatData = {
-  inputs: 0, sessions: 0, tokensIn: 0, tokensOut: 0, cost: 0, topModel: "—", streak: 0,
+
+const ZERO: AggrStats = {
+  today: { inputs: 0, tokens: 0, cost: 0 },
+  allTime: { sessions: 0, tokens: 0, cost: 0 },
+  streak: 0,
 };
-function fetchStats(): StatData {
+
+function fetchStats(): AggrStats {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require("./stats/db") as {
-      getDb(): { prepare(sql: string): { get(...a: unknown[]): Record<string, unknown> | undefined } };
-      getStreak(): number;
-    };
-    const db    = mod.getDb();
-    const since = Date.now() - 86_400_000;
-    const row = db.prepare(
-      `SELECT COUNT(*)                        AS inputs,
-              COUNT(DISTINCT session_id)      AS sessions,
-              COALESCE(SUM(tokens_input),  0) AS tokensIn,
-              COALESCE(SUM(tokens_output), 0) AS tokensOut,
-              COALESCE(SUM(cost_usd),      0) AS cost
-       FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL`,
-    ).get(since);
-    const mrow = db.prepare(
-      `SELECT model_id FROM user_inputs
-       WHERE started_at >= ? AND ended_at IS NOT NULL
-       GROUP BY model_id ORDER BY COUNT(*) DESC LIMIT 1`,
-    ).get(since);
+    const db = getDb();
+    const now = new Date();
+    const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const t = db.prepare(`
+      SELECT COUNT(*) AS inputs,
+             COALESCE(SUM(tokens_used), 0) AS tokens,
+             COALESCE(SUM(cost_usd), 0)    AS cost
+      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
+    `).get(sod) as { inputs: number; tokens: number; cost: number } | undefined;
+
+    const a = db.prepare(`
+      SELECT COUNT(*) AS sessions,
+             COALESCE(SUM(tokens), 0) AS tokens,
+             COALESCE(SUM(cost), 0)   AS cost
+      FROM sessions WHERE ended_at IS NOT NULL AND turns > 0
+    `).get() as { sessions: number; tokens: number; cost: number } | undefined;
+
     return {
-      inputs:    Number(row?.inputs    ?? 0),
-      sessions:  Number(row?.sessions  ?? 0),
-      tokensIn:  Number(row?.tokensIn  ?? 0),
-      tokensOut: Number(row?.tokensOut ?? 0),
-      cost:      Number(row?.cost      ?? 0),
-      topModel:  String(mrow?.model_id ?? "—"),
-      streak:    mod.getStreak(),
+      today:   { inputs: Number(t?.inputs ?? 0), tokens: Number(t?.tokens ?? 0), cost: Number(t?.cost ?? 0) },
+      allTime: { sessions: Number(a?.sessions ?? 0), tokens: Number(a?.tokens ?? 0), cost: Number(a?.cost ?? 0) },
+      streak:  getStreak(),
     };
-  } catch { return ZERO_STATS; }
+  } catch {
+    return ZERO;
+  }
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
-export default function (pi: ExtensionAPI) {
+
+export default function (pi: ExtensionAPI): void {
   let requestRender: (() => void) | undefined;
 
-  function installHeader(ctx: ExtensionContext) {
+  function installHeader(ctx: ExtensionContext): void {
     ctx.ui.setHeader((tui, theme) => {
       requestRender = () => tui.requestRender();
 
-      // Palette cache — busted on invalidate() so theme switches take effect
-      let palette: Rgb[] | null = null;
-      const getPalette = () => palette ?? (palette = buildPalette(theme));
+      let cache: AggrStats | null = null;
+      let cacheAt = 0;
 
-      // Stats cache — refreshed at most once per minute
-      let statsCache = ZERO_STATS;
-      let statsCacheAt = 0;
-      const getStats = (): StatData => {
+      function stats(): AggrStats {
         const now = Date.now();
-        if (now - statsCacheAt < 60_000) return statsCache;
-        statsCache = fetchStats();
-        statsCacheAt = now;
-        return statsCache;
-      };
+        if (cache && now - cacheAt < 60_000) return cache;
+        cache = fetchStats();
+        cacheAt = now;
+        return cache;
+      }
 
       return {
         render(width: number): string[] {
-          const pal   = getPalette();
-          const stats = getStats();
-          const user  = os.userInfo().username;
+          const { today: td, allTime: at, streak } = stats();
+          const h  = (s: string) => theme.fg("accent", theme.bold(s));
+          const v  = (s: string) => theme.bold(s);
+          const m  = (s: string) => theme.fg("muted", s);
+          const d  = (s: string) => theme.fg("dim", s);
+          const w  = (s: string) => theme.fg("warning", s);
+          const ok = (s: string) => theme.fg("success", s);
+
+          const sep = d("  ·  ");
+          const pipe = d("  │  ");
+
+          // Pick quote for today
           const quote = QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
-          const cmds  = pi.getCommands();
-          const extCnt = new Set(
-            cmds.filter(c => c.source === "extension").map(c => c.sourceInfo.path),
-          ).size;
-          const cmdCnt = cmds.filter(c => c.source === "extension").length;
 
-          // ── Narrow: centred π art only ───────────────────────────────────
-          if (width < 56) {
-            return [
-              "",
-              ...PI_ART.map((ln, i) => centerIn(gradientLine(ln, pal, i * 0.05), width)),
-              "",
-            ];
-          }
+          // Line 1: brand + nerdy quote + date
+          const brand = h("⟨π⟩") + " " + v("stats");
+          const quoteStr = d(`"${quote}"`);
+          const date = m(new Date().toLocaleDateString(undefined, {
+            month: "short", day: "numeric", year: "numeric",
+          }));
 
-          // ── True 50/50 column split ──────────────────────────────────────
-          const LEFT_W  = Math.floor((width - 3) / 2);
-          const RIGHT_W = width - LEFT_W - 3;
-          const div     = theme.fg("borderMuted", " │ ");
-
-          // ── Left column: π art + one-liner quote ─────────────────────────
-          const L: string[] = [""];
-          for (let i = 0; i < PI_ART.length; i++) {
-            L.push(centerIn(gradientLine(PI_ART[i]!, pal, i * 0.05), LEFT_W));
-          }
-          L.push("");
-          // Quote + "— name" truncated to fit, then centred
-          L.push(centerIn(
-            theme.fg("muted", truncateToWidth(`"${quote}"  — ${user}`, LEFT_W - 1, "…")),
-            LEFT_W,
-          ));
-          L.push("");
-
-          // ── Right column: build rows, then centre the block ──────────────
-          const h    = (s: string) => theme.fg("accent", theme.bold(s));
-          const d    = (s: string) => theme.fg("dim",    s);
-          const m    = (s: string) => theme.fg("muted",  s);
-          const LPAD = 9;
-          const lbl  = (s: string) => m(s.padEnd(LPAD));
-          const fire = stats.streak > 0
-            ? "🔥".repeat(Math.min(3, Math.max(1, Math.floor(stats.streak / 5))))
-            : "";
-
-          const rows: string[] = [];
-          rows.push("");
-          rows.push(h("◆ last 24 hours"));
-          if (stats.inputs > 0) {
-            rows.push(`${lbl("prompts")}${stats.inputs}  ${d("·")}  ${stats.sessions} ${d("sessions")}`);
-            rows.push(`${lbl("tokens")}${d("↑")} ${fmtK(stats.tokensIn)}   ${d("↓")} ${fmtK(stats.tokensOut)}`);
-            rows.push(`${lbl("cost")}${fmtCost(stats.cost)}`);
-            rows.push(`${lbl("model")}${stats.topModel}`);
+          let line1: string;
+          const brandAndQuote = brand + sep + quoteStr;
+          const bqWidth = visibleWidth(brandAndQuote);
+          const dateWidth = visibleWidth(date);
+          if (bqWidth + dateWidth + 4 <= width) {
+            const gap = Math.max(2, width - bqWidth - dateWidth);
+            line1 = brandAndQuote + " ".repeat(gap) + date;
           } else {
-            rows.push(d("no activity yet"));
-            rows.push(""); rows.push(""); rows.push("");
+            const gap = Math.max(2, width - visibleWidth(brand) - dateWidth);
+            line1 = brand + " ".repeat(gap) + date;
           }
-          rows.push("");
-          rows.push(h("◆ this session"));
-          rows.push(`${lbl("loaded")}${extCnt} ${d("ext")}  ${d("·")}  ${cmdCnt} ${d("cmds")}`);
-          rows.push(stats.streak > 0
-            ? `${lbl("streak")}${stats.streak} ${d(stats.streak !== 1 ? "days" : "day")}  ${fire}`
-            : `${lbl("streak")}${d("—  start today")}`);
-          rows.push("");
 
-          // Centre the block as a unit: shift every line by the same offset
-          const maxRw  = rows.reduce((mx, r) => Math.max(mx, visibleWidth(r)), 0);
-          const offset = " ".repeat(Math.max(0, Math.floor((RIGHT_W - maxRw) / 2)));
-          const R      = rows.map(r => visibleWidth(r) > 0 ? offset + r : r);
+          // Line 2: today | all-time | streak
+          const todayPart = td.inputs > 0
+            ? h("▲") + m(" today ") + v(String(td.inputs)) + m(" inp") + sep + v(fmtK(td.tokens)) + m(" tok") + sep + w(fmtCost(td.cost))
+            : h("▲") + m(" today ") + d("—");
 
-          // ── Zip columns ──────────────────────────────────────────────────
-          const len = Math.max(L.length, R.length);
-          return Array.from({ length: len }, (_, i) =>
-            truncateToWidth(
-              padRight(L[i] ?? "", LEFT_W) + div + truncateToWidth(R[i] ?? "", RIGHT_W),
-              width,
-            ),
-          );
+          const allPart = h("◆") + m(" all ") + v(String(at.sessions)) + m(" sess") + sep
+            + v(fmtK(at.tokens)) + m(" tok") + sep + w(fmtCost(at.cost));
+
+          const fire = streak > 0
+            ? "🔥" + ok(` ${streak}d`)
+            : d("no streak");
+
+          const line2 = todayPart + pipe + allPart + pipe + fire;
+
+          // Narrow fallback
+          if (width < 60) {
+            const shortLine = h("⟨π⟩") + sep + w(fmtCost(td.cost)) + sep + fire;
+            return ["", truncateToWidth(shortLine, width), ""];
+          }
+
+          return [
+            "",
+            truncateToWidth(line1, width),
+            truncateToWidth(line2, width),
+            "",
+          ];
         },
 
         invalidate() {
-          palette = null; // rebuild from new theme on next render
           tui.requestRender();
         },
       };
     });
   }
 
-  pi.on("session_start", (_event, ctx) => { if (!ctx.hasUI) return; installHeader(ctx); });
-  pi.on("model_select",  ()           => { requestRender?.(); });
-  pi.on("session_shutdown", (_event, ctx) => { if (ctx.hasUI) ctx.ui.setHeader(undefined); });
-
-  pi.registerCommand("flow-title", {
-    description: "Enable the two-column π session header",
-    handler: async (_args, ctx) => { installHeader(ctx); ctx.ui.notify("Flow title enabled", "info"); },
-  });
-  pi.registerCommand("flow-title-builtin", {
-    description: "Restore pi's built-in header",
-    handler: async (_args, ctx) => { ctx.ui.setHeader(undefined); ctx.ui.notify("Built-in header restored", "info"); },
-  });
+  pi.on("session_start", (_, ctx) => { if (ctx.hasUI) installHeader(ctx); });
+  pi.on("agent_end",     ()       => { requestRender?.(); });
+  pi.on("session_shutdown", (_, ctx) => { if (ctx.hasUI) ctx.ui.setHeader(undefined); });
 }

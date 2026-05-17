@@ -1,5 +1,5 @@
 {
   "name": "pi-stats",
-  "version": "2.0.0",
-  "description": "Per-session, per-input, and per-turn usage stats. Uses node:sqlite — no npm install needed."
+  "version": "3.0.0",
+  "description": "Per-session usage stats with compaction, error, and cache tracking. Uses node:sqlite — no npm install needed."
 }

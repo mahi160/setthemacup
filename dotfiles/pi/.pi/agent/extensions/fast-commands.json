@@ -9,19 +9,17 @@
       "description": "Generate and apply a conventional commit",
       "role": "Tech Lead",
       "prompt": [
-        "Task:",
-        "",
-        "1. Run `git diff --cached` to get the staged changes.",
-        "2. If result is empty, ask the user to stage changes and stop there.",
-        "3. If not, only then analyze the staged diff via `git diff --cached`",
-        "4. Generate a conventional commit message following the specification:",
+        "1. Run `git diff --cached` to get staged changes.",
+        "2. If empty, ask the user to stage changes and stop.",
+        "3. Analyze the staged diff.",
+        "4. Generate a conventional commit:",
         "   - Format: `type(scope): subject`",
-        "   - Types allowed: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert",
-        "   - Subject: Imperative mood, lowercase, no period, max 50 characters",
-        "   - Body (if needed): Wrap at 72 characters, explain _why_ not _how_. Keep it short. Preferably one liner",
-        "   - Footer: Flag breaking changes with `BREAKING CHANGE:`",
-        "5. If you see multiple completely different scopes, use your best judgement to decide which one to commit.",
-        "6. Commit the changes with the generated message and body"
+        "   - Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert",
+        "   - Subject: imperative mood, lowercase, no period, max 50 chars",
+        "   - Body (if needed): wrap at 72 chars, explain _why_ not _how_, one liner preferred",
+        "   - Footer: `BREAKING CHANGE:` if needed",
+        "5. If multiple scopes, use best judgement.",
+        "6. Commit with the generated message."
       ]
     },
     {
@@ -29,24 +27,14 @@
       "description": "Create a pull request",
       "role": "Senior Engineer",
       "prompt": [
-        "Task:",
-        "",
         "1. Run `git remote get-url origin` to identify the repo.",
-        "2. Run `git diff main...HEAD` to get all changes on this branch.",
-        "3. Run `git log main...HEAD --oneline` to get the commit history.",
-        "5. Look for pr_template.",
-        "4. Generate a pull request with it if found or use the following:",
-        "   - **Title**: Concise, imperative, max 72 chars",
-        "   - **Body**:",
-        "     - ## What",
-        "       One paragraph summary of what changed",
-        "     - ## Why",
-        "       Why this change was needed",
-        "     - ## How",
-        "       Key implementation decisions worth noting (skip if obvious)",
-        "     - ## Testing",
-        "       How to verify the changes work",
-        "5. Run `gh pr create --title \"...\" --body \"...\"` to create the PR."
+        "2. Run `git diff main...HEAD` for all changes on this branch.",
+        "3. Run `git log main...HEAD --oneline` for commit history.",
+        "4. Look for pr_template.",
+        "5. Generate a PR (use template if found, else):",
+        "   - **Title**: concise, imperative, max 72 chars",
+        "   - **Body**: ## What (summary) / ## Why (motivation) / ## How (key decisions) / ## Testing",
+        "6. Run `gh pr create --title \"...\" --body \"...\"`."
       ]
     },
     {
@@ -54,15 +42,13 @@
       "description": "Generate daily standup from git activity",
       "role": "Engineer writing a daily standup",
       "prompt": [
-        "Task:",
-        "",
         "1. Run `git log --since=\"24 hours ago\" --oneline --author=\"$(git config user.name)\"`.",
         "2. Run `git diff HEAD~5...HEAD --stat` for recent file changes.",
-        "3. Summarize into standup format:",
+        "3. Summarize:",
         "   - **Yesterday**: what was done (from commits)",
-        "   - **Today**: what's next (infer from WIP or last commit direction)",
+        "   - **Today**: what's next (infer from WIP or last commit)",
         "   - **Blockers**: none unless context suggests otherwise",
-        "4. Keep it short — 3-5 bullet points max. No fluff."
+        "4. Keep short — 3-5 bullets max."
       ]
     },
     {
@@ -71,15 +57,80 @@
       "role": "Senior Engineer explaining to a smart peer",
       "argsDefault": "Explain the last code discussed in context.",
       "prompt": [
-        "Task:",
-        "",
         "1. {args}",
         "2. Explain:",
-        "   - **What it does** — one sentence summary",
-        "   - **How it works** — key logic, data flow, important decisions",
+        "   - **What it does** — one sentence",
+        "   - **How it works** — key logic, data flow",
         "   - **Why it exists** — the problem it solves",
-        "   - **Gotchas** — non-obvious behavior, edge cases, performance traps",
-        "3. Keep it tight. No padding. Use code snippets only when they clarify."
+        "   - **Gotchas** — non-obvious behavior, edge cases",
+        "3. Keep tight. Code snippets only when they clarify."
+      ]
+    },
+    {
+      "name": "bugs",
+      "description": "Find bugs, logic errors, and edge cases",
+      "role": "Senior Engineer doing a bug review",
+      "argsDefault": "Review the last code discussed in context.",
+      "prompt": [
+        "1. Read {args}.",
+        "2. Hunt for:",
+        "   - Logic errors, off-by-one mistakes",
+        "   - Null/undefined/empty edge cases",
+        "   - Race conditions or async issues",
+        "   - Error handling gaps (swallowed errors, missing fallbacks)",
+        "   - Type mismatches or unsafe casts",
+        "   - Security issues (injection, unvalidated input, exposed secrets)",
+        "   - Resource leaks (unclosed handles, missing cleanup)",
+        "3. For each bug: location, what, why, fix with code snippet.",
+        "4. Prioritize: critical → high → low."
+      ]
+    },
+    {
+      "name": "refactor",
+      "description": "Refactor code for clarity, performance, or maintainability",
+      "role": "Senior Engineer doing a focused refactor",
+      "argsDefault": "Refactor the last code discussed in context.",
+      "prompt": [
+        "1. Read {args}.",
+        "2. Identify:",
+        "   - Complexity / hard to follow logic",
+        "   - Duplication",
+        "   - Poor naming",
+        "   - Performance problems",
+        "   - Unnecessary abstraction",
+        "3. Refactor with constraints:",
+        "   - Preserve exact behavior — no feature changes",
+        "   - Minimal diff — don't rewrite what isn't broken",
+        "   - Explain each significant change",
+        "4. Apply the changes."
+      ]
+    },
+    {
+      "name": "review",
+      "description": "Review staged or branch changes",
+      "role": "Senior Engineer doing a code review",
+      "prompt": [
+        "1. Run `git diff --cached` for staged changes, or `git diff main...HEAD` if nothing staged.",
+        "2. Review for: bugs, security, error handling, performance, naming, test gaps.",
+        "3. Format:",
+        "   - `[CRITICAL]` — must fix before merge",
+        "   - `[SUGGEST]` — worth changing",
+        "   - `[NIT]` — minor style/preference",
+        "4. End with one-line verdict: approve / request changes / needs discussion."
+      ]
+    },
+    {
+      "name": "test",
+      "description": "Write tests for a file or function",
+      "role": "Senior Engineer writing tests",
+      "argsDefault": "Write tests for the last code discussed in context.",
+      "prompt": [
+        "1. Read {args}.",
+        "2. Identify the testing framework in use (jest, vitest, mocha, etc). Match it.",
+        "3. Write tests covering: happy path, edge cases (empty, null, boundary), error cases, async behavior.",
+        "4. One assertion per test where possible.",
+        "5. No mocking unless truly necessary. Prefer real behavior.",
+        "6. Write tests to the appropriate test file."
       ]
     }
   ]

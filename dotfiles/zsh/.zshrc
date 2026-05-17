@@ -55,8 +55,8 @@ eval "$(fnm env --use-on-cd --shell zsh)"
 # pnpm
 export PNPM_HOME="/Users/mahi/Library/pnpm"
 case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 # pnpm end
 
