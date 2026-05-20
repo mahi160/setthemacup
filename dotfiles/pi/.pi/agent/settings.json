@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.74.0",
+  "lastChangelogVersion": "0.75.1",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-sonnet-4-6",
   "defaultThinkingLevel": "medium",
@@ -26,5 +26,8 @@
   "warnings": {
     "anthropicExtraUsage": false
   },
-  "theme": "gruvbox-material"
+  "theme": "gruvbox-material",
+  "packages": [
+    "npm:@plannotator/pi-extension"
+  ]
 }

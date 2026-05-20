@@ -128,7 +128,7 @@ export default function (pi: ExtensionAPI): void {
         // Show visual indicator
         ctx.ui.setWidget("fast-mode", (_tui, theme) => ({
           render() {
-            return [theme.fg("warning", theme.bold(`⚡ FAST MODE`)) + theme.fg("dim", ` · /${cmd.name} · ${fastModel!.id}`)];
+            return [theme.fg("warning", `⚡ fastmode`) + theme.fg("dim", ` ${fastModel!.id}`)];
           },
           invalidate() {},
         }), { placement: "aboveEditor" });
