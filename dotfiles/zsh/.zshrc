@@ -1,29 +1,53 @@
 fastfetch
-export ZSH="$HOME/.oh-my-zsh"
 
-# Plugins
+# ─── Oh My Zsh ────────────────────────────────────────────────────────────────
+export ZSH="$HOME/.oh-my-zsh"
 DISABLE_UNTRACKED_FILES_DIRTY="true"
 plugins=(git z zsh-autosuggestions zsh-syntax-highlighting)
 source $ZSH/oh-my-zsh.sh
 
-# aliases
-alias v="NVIM_APPNAME=nvim.12 nvim"
-alias vm="nvim"
-alias a="pi"
-alias zc="vi ~/.zshrc"
-alias zs="source ~/.zshrc"
+# ─── History ──────────────────────────────────────────────────────────────────
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt appendhistory sharehistory incappendhistory extendedhistory
+setopt histignorealldups histignorespace histignoredups histreduceblanks
+
+# ─── Editors ──────────────────────────────────────────────────────────────────
+alias v="nvim"
+alias vm="NVIM_APPNAME=nvim.12 nvim"
+
+# ─── Shell ────────────────────────────────────────────────────────────────────
 alias ls="eza"
 alias ll="eza -la"
-alias setup="vi ~/Documents/Coding/Projects/setthemacup/"
-alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
-alias wick="~/Documents/Coding/Projects/setthemacup/scripts/wick.sh"
-alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
-alias pokemon-bg="~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh"
+alias zc='dev --dir "$HOME/Documents/Coding/Projects/setthemacup" --name config'
+alias zs="source ~/.zshrc"
 
+# ─── Git ──────────────────────────────────────────────────────────────────────
 alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gmail.com\""
 alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
 
-# Alt+Q: change Pokemon background from anywhere in the terminal
+# ─── Tools ────────────────────────────────────────────────────────────────────
+alias a="pi"
+alias of="onefetch"
+alias setup="zc"
+alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
+alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
+alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
+alias pokemon-bg="~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh"
+
+# yazi: cd into directory on exit
+function y() {
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  rm -f -- "$tmp"
+}
+
+# ─── Keybindings ─────────────────────────────────────────────────────────────
+# Alt+Q: cycle Pokemon background
 _pokemon_bg_widget() {
   ~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh
   zle reset-prompt
@@ -31,43 +55,34 @@ _pokemon_bg_widget() {
 zle -N _pokemon_bg_widget
 bindkey '\eq' _pokemon_bg_widget
 
-# starship
-eval "$(starship init zsh)"
-
-# fzf search
-source <(fzf --zsh)
-
-# history
-HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
-setopt appendhistory
-setopt sharehistory
-setopt incappendhistory
-setopt extendedhistory
-setopt histignorealldups
-setopt histignorespace
-setopt histignoredups
-setopt histreduceblanks
-
+# ─── Runtimes ─────────────────────────────────────────────────────────────────
 eval "$(fnm env --use-on-cd --shell zsh)"
 
 # pnpm
-export PNPM_HOME="/Users/mahi/Library/pnpm"
+export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
-# pnpm end
-
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# cargo
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
+# ─── Prompt & Tools ───────────────────────────────────────────────────────────
+eval "$(starship init zsh)"
+eval "$(thefuck --alias)"
+source <(fzf --zsh)
+
+# bun completions
 [ -s "/Users/mahi/.bun/_bun" ] && source "/Users/mahi/.bun/_bun"
 
-# Vite+ bin (https://viteplus.dev)
-. "$HOME/.vite-plus/env"
-export PATH="$HOME/.local/bin:$PATH"
+# opencode
+export PATH=/Users/mahi/.opencode/bin:$PATH
 
-source "$HOME/.cargo/env"
+# pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)
+export PI_CACHE_RETENTION=long
