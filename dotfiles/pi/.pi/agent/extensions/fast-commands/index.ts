@@ -1,22 +1,28 @@
 /**
- * fast-commands.ts — Slash commands that auto-switch to a fast model.
+ * fast-commands.ts — Slash commands that run in clean, ephemeral pi sessions.
  *
- * Features:
- *   - Reads commands from fast-commands.json (edit JSON to add/change)
- *   - Shared state machine prevents concurrent fast commands
- *   - Visual ⚡ FAST widget while active
- *   - Model restored after agent completes (handles multi-turn Q&A)
- *   - Ctrl+Shift+C shortcut for /commit
+ * Each command spawns `pi --mode json -p "..."` as a subprocess so the current
+ * session's context is NEVER injected into the task. Structured JSON events from
+ * the subprocess drive a live widget: braille spinner, elapsed time, current tool,
+ * and streaming assistant text.
+ *
+ * Result display is controlled per command via "output" in fast-commands.json:
+ *   "notify" — last line of output shown as a notification (commit, standup, test)
+ *   "file"   — full output written to /tmp/pi-{name}.md and opened (review, bugs, etc.)
+ *
+ * Thinking level is configured per command via "thinking":
+ *   "off" / "low" / "medium" — defaults to "low"
+ *
+ * To add a command: add an entry to fast-commands.json.
+ * To change fast models: edit the "models" array in fast-commands.json.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join, basename } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import type { AssistantMessage, Model } from "@earendil-works/pi-ai";
-import type {
-  ExtensionAPI,
-  ExtensionCommandContext,
-} from "@earendil-works/pi-coding-agent";
+import { spawn } from "node:child_process";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 // ── Config schema ─────────────────────────────────────────────────────────────
 
@@ -30,6 +36,8 @@ interface FastCommand {
   role: string;
   prompt: string | string[];
   argsDefault?: string;
+  thinking?: string;              // "off" | "minimal" | "low" | "medium" | "high"
+  output?: "notify" | "file";    // "notify" = last-line toast, "file" = open .md — default "notify"
 }
 interface Config {
   models: FastModel[];
@@ -39,12 +47,30 @@ interface Config {
 const configPath = join(fileURLToPath(new URL(".", import.meta.url)), "fast-commands.json");
 const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
 
-// ── State machine ─────────────────────────────────────────────────────────────
+// ── Spinner ───────────────────────────────────────────────────────────────────
 
-type State = "idle" | "fast" | "restoring";
-let state: State = "idle";
-let modelToRestore: Model | undefined;
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+
+// ── Widget state ──────────────────────────────────────────────────────────────
+
+interface WidgetState {
+  spinnerFrame: number;
+  elapsedMs: number;
+  currentTool: string;   // e.g. "bash: git diff --cached"
+  toolCount: number;     // tools completed so far
+  recentText: string[];  // last 2 non-empty lines of streamed assistant text
+  retrying: boolean;
+  retryAttempt: number;
+}
+
+// ── Session-level state ───────────────────────────────────────────────────────
+// Mutex: one fast command at a time.
+// Resolved model cached per session — credentials don't change mid-session.
+
 let activeCommand = "";
+let activeAbort: AbortController | undefined;
+let cachedModel: { provider: string; id: string } | null | undefined = undefined;
+// undefined = not yet resolved, null = resolved but none available
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -53,78 +79,179 @@ function buildMessage(cmd: FastCommand, args: string): string {
   return `Role: ${cmd.role}.\n\n` + body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args);
 }
 
+/**
+ * Formats a tool name + args into a concise readable string for the widget.
+ *   bash  → "bash: git diff --cached"
+ *   read  → "read: src/index.ts"
+ *   grep  → "grep: somePattern"
+ */
+function formatTool(name: string | undefined, args: Record<string, unknown> | undefined): string {
+  if (!name) return "";
+  const n = name.toLowerCase();
+  if (!args) return n;
+  if (n === "bash" && typeof args.command === "string")
+    return `bash: ${args.command.slice(0, 60)}`;
+  if ((n === "read" || n === "write" || n === "edit") && typeof args.path === "string")
+    return `${n}: ${args.path}`;
+  if (n === "grep" && typeof args.pattern === "string")
+    return `grep: ${args.pattern}`;
+  return n;
+}
+
+/**
+ * Parses one JSONL line from `--mode json` output.
+ * Mutates `state` for tool/retry/spinner events.
+ * Appends assistant text deltas to `textAcc.value` and refreshes `state.recentText`.
+ */
+function parseJsonEvents(
+  line: string,
+  state: WidgetState,
+  textAcc: { value: string },
+): void {
+  let event: {
+    type: string;
+    toolName?: string;
+    args?: Record<string, unknown>;
+    assistantMessageEvent?: { type: string; delta?: string };
+    attempt?: number;
+  };
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return; // skip non-JSON lines (startup noise, etc.)
+  }
+
+  switch (event.type) {
+    case "tool_execution_start":
+      state.currentTool = formatTool(event.toolName, event.args);
+      break;
+    case "tool_execution_end":
+      state.currentTool = "";
+      state.toolCount++;
+      break;
+    case "message_update": {
+      const ame = event.assistantMessageEvent;
+      if (ame?.type === "text_delta" && ame.delta) {
+        textAcc.value += ame.delta;
+        state.recentText = textAcc.value
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .slice(-2);
+      }
+      break;
+    }
+    case "auto_retry_start":
+      state.retrying = true;
+      state.retryAttempt = event.attempt ?? 1;
+      break;
+    case "auto_retry_end":
+      state.retrying = false;
+      break;
+  }
+}
+
+/**
+ * Spawns pi in ephemeral JSON-stream mode.
+ * Lines are parsed into structured events that update `widgetState` live.
+ * Full assistant text is accumulated and returned as `fullText` on exit.
+ * Subprocess is killed via SIGTERM when `signal` fires.
+ */
+function spawnCleanSession(
+  modelFlag: string,
+  thinking: string,
+  prompt: string,
+  signal: AbortSignal,
+  widgetState: WidgetState,
+  onUpdate: () => void,
+): Promise<{ exitCode: number | null; fullText: string }> {
+  return new Promise((resolve) => {
+    const textAcc = { value: "" };
+    let lineBuffer = "";
+
+    const proc = spawn(
+      "pi",
+      [
+        "--model", modelFlag,
+        "--no-session",
+        "--no-context-files", // fast commands have own prompts — skip AGENTS.md
+        "--no-skills",        // fast commands don't invoke skills
+        "--thinking", thinking,
+        "--mode", "json",
+        "-p", prompt,
+      ],
+      { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: process.env },
+    );
+
+    proc.stdout.on("data", (chunk: Buffer) => {
+      lineBuffer += chunk.toString();
+      const lines = lineBuffer.split("\n");
+      lineBuffer = lines.pop() ?? ""; // keep incomplete trailing line
+      for (const line of lines) {
+        if (line.trim()) {
+          parseJsonEvents(line, widgetState, textAcc);
+          onUpdate();
+        }
+      }
+    });
+
+    proc.on("close", (code) => {
+      // flush any remaining buffered content
+      if (lineBuffer.trim()) parseJsonEvents(lineBuffer, widgetState, textAcc);
+      resolve({ exitCode: code, fullText: textAcc.value.trim() });
+    });
+
+    signal.addEventListener("abort", () => proc.kill("SIGTERM"), { once: true });
+  });
+}
+
+/**
+ * Resolves the first fast model with available credentials.
+ * Cached per session — credentials don't change mid-session.
+ * Falls back to first model to cover OAuth (no API key, but auth.json inherited by subprocess).
+ */
+async function resolveFastModel(
+  ctx: ExtensionCommandContext,
+): Promise<{ provider: string; id: string } | undefined> {
+  if (cachedModel !== undefined) return cachedModel ?? undefined;
+  for (const candidate of config.models) {
+    const key = await ctx.modelRegistry.getApiKeyForProvider(candidate.provider);
+    if (key) { cachedModel = candidate; return candidate; }
+  }
+  // No API key found — still try first model (OAuth subprocess inherits auth.json)
+  cachedModel = config.models[0] ?? null;
+  return cachedModel ?? undefined;
+}
+
 // ── Extension ─────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
-  // Single agent_end listener for all fast commands
-  pi.on("agent_end", async (event, ctx) => {
-    if (state !== "fast" || !modelToRestore) return;
-    state = "restoring";
-
-    const target = modelToRestore;
-    modelToRestore = undefined;
-    activeCommand = "";
-
-    // Clear fast mode indicator
-    ctx.ui.setWidget("fast-mode", undefined);
-
-    // Check for errors
-    const errMsg = (event.messages as AssistantMessage[])
-      .filter((m) => m.role === "assistant")
-      .find((m) => m.stopReason === "error" || m.stopReason === "aborted");
-
-    if (errMsg) {
-      ctx.ui.notify(
-        `Fast command failed: ${errMsg.errorMessage ?? errMsg.stopReason}`,
-        "error",
-      );
-    }
-
-    await pi.setModel(target);
-    state = "idle";
-    ctx.ui.notify(`↩ Restored ${target.id}`, "info");
-  });
-
-  // Reset state on session boundaries
   pi.on("session_start", () => {
-    state = "idle";
-    modelToRestore = undefined;
     activeCommand = "";
+    activeAbort?.abort();
+    activeAbort = undefined;
+    cachedModel = undefined;
   });
 
-  // Register each command
+  pi.on("session_shutdown", () => {
+    activeAbort?.abort();
+    activeAbort = undefined;
+    activeCommand = "";
+    cachedModel = undefined;
+  });
+
   for (const cmd of config.commands) {
     pi.registerCommand(cmd.name, {
-      description: `${cmd.description} (fast model)`,
+      description: `${cmd.description} (clean session)`,
       handler: async (args: string, ctx: ExtensionCommandContext) => {
-        // Mutex: reject if already in fast mode
-        if (state !== "idle") {
-          ctx.ui.notify(
-            `Already running /${activeCommand} in fast mode — wait for it to finish`,
-            "warning",
-          );
+        if (activeCommand) {
+          ctx.ui.notify(`Already running /${activeCommand} — wait for it to finish`, "warning");
           return;
         }
 
         await ctx.waitForIdle();
-        const originalModel = ctx.model;
 
-        // Try each fast model in order
-        let fastModel: Model | undefined;
-        for (const candidate of config.models) {
-          const found = ctx.modelRegistry.find(
-            candidate.provider,
-            candidate.id,
-          );
-          if (!found) continue;
-          const switched = await pi.setModel(found);
-          if (switched) {
-            fastModel = found;
-            break;
-          }
-          ctx.ui.notify(`No API key for ${candidate.id}, trying next…`, "info");
-        }
-
+        const fastModel = await resolveFastModel(ctx);
         if (!fastModel) {
           ctx.ui.notify(
             `No fast model available. Tried: ${config.models.map((m) => m.id).join(", ")}`,
@@ -133,35 +260,115 @@ export default function (pi: ExtensionAPI): void {
           return;
         }
 
-        // Enter fast mode
-        state = "fast";
         activeCommand = cmd.name;
-        modelToRestore = originalModel;
+        const abort = new AbortController();
+        activeAbort = abort;
 
-        // Show visual indicator
+        const widgetState: WidgetState = {
+          spinnerFrame: 0,
+          elapsedMs: 0,
+          currentTool: "",
+          toolCount: 0,
+          recentText: [],
+          retrying: false,
+          retryAttempt: 0,
+        };
+
+        let widgetTui: { requestRender(): void } | undefined;
+
         ctx.ui.setWidget(
           "fast-mode",
-          (_tui, theme) => ({
-            render() {
-              return [
-                theme.fg("warning", `⚡ fastmode`) +
-                  theme.fg("dim", ` ${fastModel!.id}`),
-              ];
-            },
-            invalidate() {},
-          }),
+          (tui, theme) => {
+            widgetTui = tui;
+            return {
+              render(width: number): string[] {
+                const spin = theme.fg("warning", SPINNER_FRAMES[widgetState.spinnerFrame % SPINNER_FRAMES.length]!);
+                const elapsed = theme.fg("dim", ` ${(widgetState.elapsedMs / 1000).toFixed(1)}s`);
+                const header =
+                  spin +
+                  theme.fg("dim", ` ${fastModel.id}`) +
+                  theme.fg("muted", ` → /${cmd.name}`) +
+                  elapsed;
+
+                const lines: string[] = [header];
+
+                if (widgetState.retrying) {
+                  lines.push(theme.fg("warning", `  ↻ retry ${widgetState.retryAttempt}...`));
+                } else if (widgetState.currentTool) {
+                  lines.push(theme.fg("dim", `  ⟳ ${widgetState.currentTool.slice(0, width - 4)}`));
+                }
+
+                for (const line of widgetState.recentText) {
+                  lines.push(theme.fg("dim", `  ${line.slice(0, width - 2)}`));
+                }
+
+                return lines;
+              },
+              invalidate() {},
+            };
+          },
           { placement: "aboveEditor" },
         );
 
         ctx.ui.notify(`⚡ ${fastModel.id} → /${cmd.name}`, "info");
-        pi.sendUserMessage(buildMessage(cmd, args));
+
+        // Spinner timer — advances frame + elapsed every 100ms
+        // Cleared in finally to guarantee no leak on success, error, or abort
+        let spinnerTimer: ReturnType<typeof setInterval> | undefined;
+        let exitCode: number | null = null;
+        let fullText = "";
+
+        try {
+          spinnerTimer = setInterval(() => {
+            widgetState.spinnerFrame = (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
+            widgetState.elapsedMs += 100;
+            widgetTui?.requestRender();
+          }, 100);
+
+          ({ exitCode, fullText } = await spawnCleanSession(
+            `${fastModel.provider}/${fastModel.id}`,
+            cmd.thinking ?? "low",
+            buildMessage(cmd, args),
+            abort.signal,
+            widgetState,
+            () => widgetTui?.requestRender(),
+          ));
+        } finally {
+          // Always runs — success, thrown error, or abort
+          clearInterval(spinnerTimer);
+          ctx.ui.setWidget("fast-mode", undefined);
+          activeCommand = "";
+          activeAbort = undefined;
+        }
+
+        if (abort.signal.aborted) return;
+
+        if (exitCode === 0) {
+          if (cmd.output === "file") {
+            // Write full output to temp .md file and open with system default handler
+            const tmpFile = join(tmpdir(), `pi-${cmd.name}-${Date.now()}.md`);
+            writeFileSync(tmpFile, fullText, "utf8");
+            spawn("open", [tmpFile], { detached: true, stdio: "ignore" }).unref();
+            ctx.ui.notify(`✓ /${cmd.name} → ${basename(tmpFile)}`, "success");
+          } else {
+            // Show last meaningful line as notification
+            const lastLine = fullText.split("\n").map((l) => l.trim()).filter(Boolean).at(-1) ?? "";
+            ctx.ui.notify(`✓ /${cmd.name}${lastLine ? `: ${lastLine.slice(0, 120)}` : ""}`, "success");
+          }
+        } else {
+          const lastLine = fullText.split("\n").map((l) => l.trim()).filter(Boolean).at(-1) ?? "";
+          ctx.ui.notify(
+            `✗ /${cmd.name} failed${lastLine ? `: ${lastLine.slice(0, 120)}` : ` (exit ${exitCode})`}`,
+            "error",
+          );
+        }
       },
     });
   }
 
-  // Shortcut: Ctrl+Shift+C for commit
+  // Ctrl+Shift+C → /commit
   pi.registerShortcut("ctrl+shift+c", {
-    description: "Quick commit (fast model)",
+    description: "Quick commit (clean session)",
     handler: async () => {
       pi.sendUserMessage("/commit");
     },

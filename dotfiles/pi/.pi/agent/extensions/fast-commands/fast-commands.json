@@ -6,6 +6,8 @@
   "commands": [
     {
       "name": "commit",
+      "thinking": "off",
+      "output": "notify",
       "description": "Generate and apply a conventional commit",
       "role": "Tech Lead",
       "prompt": [
@@ -24,6 +26,8 @@
     },
     {
       "name": "pr",
+      "thinking": "low",
+      "output": "file",
       "description": "Create a pull request",
       "role": "Senior Engineer",
       "prompt": [
@@ -39,6 +43,8 @@
     },
     {
       "name": "standup",
+      "thinking": "off",
+      "output": "notify",
       "description": "Generate daily standup from git activity",
       "role": "Engineer writing a daily standup",
       "prompt": [
@@ -53,6 +59,8 @@
     },
     {
       "name": "explain",
+      "thinking": "low",
+      "output": "file",
       "description": "Explain a file or symbol",
       "role": "Senior Engineer explaining to a smart peer",
       "argsDefault": "Explain the last code discussed in context.",
@@ -68,6 +76,8 @@
     },
     {
       "name": "bugs",
+      "thinking": "medium",
+      "output": "file",
       "description": "Find bugs, logic errors, and edge cases",
       "role": "Senior Engineer doing a bug review",
       "argsDefault": "Review the last code discussed in context.",
@@ -87,6 +97,8 @@
     },
     {
       "name": "refactor",
+      "thinking": "low",
+      "output": "file",
       "description": "Refactor code for clarity, performance, or maintainability",
       "role": "Senior Engineer doing a focused refactor",
       "argsDefault": "Refactor the last code discussed in context.",
@@ -107,6 +119,8 @@
     },
     {
       "name": "review",
+      "thinking": "low",
+      "output": "file",
       "description": "Review staged or branch changes",
       "role": "Senior Engineer doing a code review",
       "prompt": [
@@ -121,6 +135,8 @@
     },
     {
       "name": "test",
+      "thinking": "low",
+      "output": "notify",
       "description": "Write tests for a file or function",
       "role": "Senior Engineer writing tests",
       "argsDefault": "Write tests for the last code discussed in context.",
