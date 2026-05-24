@@ -16,7 +16,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { randomUUID } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
@@ -43,7 +43,6 @@ import {
   getTokenBreakdown,
   getTokenWaste,
   getToollessInputCount,
-  getTopModelsByInputs,
   getTopProjects,
   getTopToolsByInputs,
   getWeeklyStats,
@@ -127,12 +126,16 @@ let _gitBranchAt = 0, _gitBranchVal = "";
 function gitBranch(): string {
   const now = Date.now();
   if (now - _gitBranchAt < 5_000) return _gitBranchVal;
-  _gitBranchAt = now;
-  try {
-    _gitBranchVal = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      encoding: "utf8", timeout: 3_000, stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch { _gitBranchVal = ""; }
+  _gitBranchAt = now; // stamp first — prevents concurrent refreshes
+  execFile(
+    "git",
+    ["rev-parse", "--abbrev-ref", "HEAD"],
+    { encoding: "utf8", timeout: 3_000 },
+    (err, stdout) => {
+      if (!err) _gitBranchVal = (stdout as string).trim();
+      else _gitBranchVal = "";
+    },
+  );
   return _gitBranchVal;
 }
 

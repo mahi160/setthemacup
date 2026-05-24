@@ -38,7 +38,7 @@ export default function (pi: ExtensionAPI): void {
     state.savedCtx = ctx;
     resetState(state);
     resetGitCache();
-    state.plannotatorPhase = "planning"; // Default to planning
+    state.plannotatorPhase = "executing"; // Default to build
 
     clearInterval(state.idleTimer);
     // 5s — avoids hammering getEntries() + double render every second while idle

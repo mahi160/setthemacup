@@ -50,11 +50,7 @@ let activeCommand = "";
 
 function buildMessage(cmd: FastCommand, args: string): string {
   const body = Array.isArray(cmd.prompt) ? cmd.prompt.join("\n") : cmd.prompt;
-  const resolved = body.replace(
-    /\{args\}/g,
-    args.trim() || cmd.argsDefault || args,
-  );
-  return `Role: ${cmd.role}.\n\n${resolved}`;
+  return `Role: ${cmd.role}.\n\n` + body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args);
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
@@ -84,11 +80,9 @@ export default function (pi: ExtensionAPI): void {
       );
     }
 
-    const success = await pi.setModel(target);
+    await pi.setModel(target);
     state = "idle";
-    if (success) {
-      ctx.ui.notify(`↩ Restored ${target.id}`, "info");
-    }
+    ctx.ui.notify(`↩ Restored ${target.id}`, "info");
   });
 
   // Reset state on session boundaries

@@ -9,7 +9,16 @@
     "google/gemini-flash-lite-latest"
   ],
   "compaction": {
-    "enabled": true
+    "enabled": true,
+    "keepRecentTokens": 30000
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "provider": {
+      "timeoutMs": 300000,
+      "maxRetries": 0
+    }
   },
   "enableSkillCommands": false,
   "showHardwareCursor": true,
@@ -21,8 +30,13 @@
   "hideThinkingBlock": false,
   "quietStartup": true,
   "collapseChangelog": true,
+  "enableInstallTelemetry": false,
+  "autocompleteMaxVisible": 10,
   "doubleEscapeAction": "tree",
-  "treeFilterMode": "default",
+  "treeFilterMode": "no-tools",
+  "branchSummary": {
+    "skipPrompt": true
+  },
   "warnings": {
     "anthropicExtraUsage": false
   },
