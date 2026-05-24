@@ -41,7 +41,7 @@ let activeCommand = "";
 function buildMessage(cmd: FastCommand, args: string): string {
   const body = Array.isArray(cmd.prompt) ? cmd.prompt.join("\n") : cmd.prompt;
   const resolved = body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args);
-  return `Role: ${cmd.role}.\n\n${resolved}`;
+  return `Role: ${cmd.role}.\n\nIMPORTANT: Use the \`spawn_subtask\` tool (name='fast-commands') for ALL shell command execution.\n\n${resolved}`;
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
