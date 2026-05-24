@@ -1,8 +1,8 @@
 {
   "lastChangelogVersion": "0.75.4",
-  "defaultProvider": "google",
-  "defaultModel": "gemini-flash-lite-latest",
-  "defaultThinkingLevel": "high",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-6",
+  "defaultThinkingLevel": "medium",
   "enabledModels": [
     "openai-codex/gpt-5.5",
     "anthropic/claude-sonnet-4-6",

@@ -11,6 +11,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AssistantMessage, Model } from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
@@ -35,7 +36,7 @@ interface Config {
   commands: FastCommand[];
 }
 
-const configPath = join(__dirname, "fast-commands.json");
+const configPath = join(fileURLToPath(new URL(".", import.meta.url)), "fast-commands.json");
 const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
 
 // ── State machine ─────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ function buildMessage(cmd: FastCommand, args: string): string {
     /\{args\}/g,
     args.trim() || cmd.argsDefault || args,
   );
-  return `Role: ${cmd.role}.\n\nIMPORTANT: Use the \`spawn_subtask\` tool (name='fast-commands') for ALL shell command execution.\n\n${resolved}`;
+  return `Role: ${cmd.role}.\n\n${resolved}`;
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────

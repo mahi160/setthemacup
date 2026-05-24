@@ -39,7 +39,7 @@ let warned = false;
  */
 function detectOrchestrator(ctx: any): boolean {
   const tools = ctx?.systemPromptOptions?.selectedTools || [];
-  return tools.includes("subagent");
+  return tools.includes("spawn_subtask");
 }
 
 /** Build the warning prompt injected into system context. */
@@ -72,9 +72,7 @@ export default function (pi: any): void {
     warned = false;
     isOrchestrator = detectOrchestrator(ctx);
 
-    if (ctx.ui) {
-      ctx.ui.setStatus("turn-limiter", buildStatus());
-    }
+    ctx.ui?.notify(buildStatus(), "info");
   });
 
   /** Turn end — increment counter, inject warning if needed. */
@@ -90,27 +88,21 @@ export default function (pi: any): void {
     if (turnCount >= TOTAL_TRIGGER && !warned) {
       warned = true;
       // Append warning to system prompt for next turn
-      if (ctx.appendSystemPrompt) {
-        ctx.appendSystemPrompt(buildWarning());
-      }
+      ctx.ui?.notify(buildWarning(), "warning");
     }
 
-    if (ctx.ui) {
-      ctx.ui.setStatus("turn-limiter", buildStatus());
-    }
+    ctx.ui?.notify(buildStatus(), "info");
   });
 
   /** Tool call — reset on delegation. */
   pi.on("tool_call", async (event: any, ctx: any) => {
     if (!isOrchestrator) return;
 
-    const delegationTools = ["subagent", "TaskExecute"];
+    const delegationTools = ["spawn_subtask"];
     if (delegationTools.includes(event.toolName)) {
       turnCount = 0;
       warned = false;
-      if (ctx.ui) {
-        ctx.ui.setStatus("turn-limiter", `🔄 orch: 0/${LIMIT} ✓ delegated`);
-      }
+      ctx.ui?.notify(`🔄 orch: 0/${LIMIT} ✓ delegated`, "info");
     }
   });
 }

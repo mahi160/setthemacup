@@ -2,6 +2,13 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export default function (pi: ExtensionAPI): void {
   let named = false;
+  let abortController: AbortController | undefined;
+
+  pi.on("session_start", () => {
+    named = false;
+    abortController?.abort();
+    abortController = undefined;
+  });
 
   pi.on("agent_end", async (event, ctx) => {
     if (named || pi.getSessionName()) {
@@ -27,6 +34,10 @@ export default function (pi: ExtensionAPI): void {
 
     named = true;
 
+    abortController?.abort();
+    const controller = new AbortController();
+    abortController = controller;
+
     try {
       const apiKey = await ctx.modelRegistry.getApiKeyForProvider("google");
       if (!apiKey) throw new Error("No API Key");
@@ -48,6 +59,7 @@ export default function (pi: ExtensionAPI): void {
             ],
             generationConfig: { maxOutputTokens: 20, temperature: 0.2 },
           }),
+          signal: controller.signal,
         },
       );
 
@@ -62,7 +74,15 @@ export default function (pi: ExtensionAPI): void {
         pi.setSessionName(text.substring(0, 50));
       }
     } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
       pi.setSessionName(text.substring(0, 50));
+    } finally {
+      if (abortController === controller) abortController = undefined;
     }
+  });
+
+  pi.on("session_shutdown", () => {
+    abortController?.abort();
+    abortController = undefined;
   });
 }

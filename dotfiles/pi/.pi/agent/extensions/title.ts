@@ -1,18 +1,42 @@
 /**
- * title.ts — Flashy nerdy header with aggregate stats + daily quote.
+ * title.ts — Gruvbox-material gradient ASCII header for mahi.
  *
- * Shows today's usage + all-time totals + streak + a rotating
- * nerdy one-liner. 4 lines including padding.
+ * Displays block-font "mahi" logo with a gruvbox color cycle gradient.
+ * Subtitle shows current model, project name, and a daily rotating quote.
+ * No DB queries, no timers — pure visual.
  */
 
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { getDb, getStreak } from "./stats/db.js";
+import { basename } from "node:path";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-// ── Nerdy quotes (one per day, cycles) ────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Rgb = [number, number, number];
+
+// ── Gruvbox-material palette (accent cycle) ───────────────────────────────────
+
+const PALETTE: Rgb[] = [
+  [216, 166,  87],  // yellow
+  [231, 138,  78],  // orange
+  [234, 105,  98],  // red
+  [211, 134, 155],  // purple
+  [125, 174, 163],  // blue
+  [137, 180, 130],  // aqua
+  [169, 182, 101],  // green
+];
+
+// ── ASCII art: "mahi" ─────────────────────────────────────────────────────────
+
+const TITLE_LINES = [
+  "  ███╗   ███╗  █████╗  ██╗  ██╗ ██╗  ",
+  "  ████╗ ████║ ██╔══██╗ ██║  ██║ ██║  ",
+  "  ██╔████╔██║ ███████║ ███████║ ██║  ",
+  "  ██║╚██╔╝██║ ██╔══██║ ██╔══██║ ██║  ",
+  "  ██║ ╚═╝ ██║ ██║  ██║ ██║  ██║ ██║  ",
+  "  ╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝  ",
+];
+
+// ── Quotes (one per day, cycles) ──────────────────────────────────────────────
 
 const QUOTES = [
   "tokens go brrr",
@@ -47,183 +71,86 @@ const QUOTES = [
   "prod is the final staging environment",
 ];
 
-// ── Formatters ────────────────────────────────────────────────────────────────
+// ── Gradient helpers ──────────────────────────────────────────────────────────
 
-const COMPACT = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-const fmtK = (n: number) => COMPACT.format(n);
-const fmtCost = (n: number) =>
-  n <= 0 ? "$0" : n < 0.01 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
+const RESET = "\x1b[0m";
+const BOLD  = "\x1b[1m";
+const DIM   = "\x1b[2m";
 
-// ── Stats queries ─────────────────────────────────────────────────────────────
-
-interface AggrStats {
-  today: { inputs: number; tokens: number; cost: number };
-  allTime: { sessions: number; tokens: number; cost: number };
-  streak: number;
+function mix(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
 }
 
-const ZERO: AggrStats = {
-  today: { inputs: 0, tokens: 0, cost: 0 },
-  allTime: { sessions: 0, tokens: 0, cost: 0 },
-  streak: 0,
-};
+function sampleGradient(position: number): Rgb {
+  const wrapped = ((position % 1) + 1) % 1;
+  const scaled  = wrapped * PALETTE.length;
+  const index   = Math.floor(scaled);
+  const next    = (index + 1) % PALETTE.length;
+  const t       = scaled - index;
+  const a       = PALETTE[index]!;
+  const b       = PALETTE[next]!;
+  return [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
+}
 
-function fetchStats(): AggrStats {
-  try {
-    const db = getDb();
-    const now = new Date();
-    const sod = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    ).getTime();
+function fgRgb([r, g, b]: Rgb, text: string): string {
+  return `\x1b[38;2;${r};${g};${b}m${text}${RESET}`;
+}
 
-    const t = db
-      .prepare(
-        `
-      SELECT COUNT(*) AS inputs,
-             COALESCE(SUM(tokens_used), 0) AS tokens,
-             COALESCE(SUM(cost_usd), 0)    AS cost
-      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
-    `,
-      )
-      .get(sod) as { inputs: number; tokens: number; cost: number } | undefined;
+function gradientText(text: string, phase: number): string {
+  const chars = [...text];
+  const span  = Math.max(chars.length - 1, 1);
+  return chars
+    .map((ch, i) => (ch === " " ? ch : fgRgb(sampleGradient(i / span + phase), ch)))
+    .join("");
+}
 
-    const a = db
-      .prepare(
-        `
-      SELECT COUNT(*) AS sessions,
-             COALESCE(SUM(tokens), 0) AS tokens,
-             COALESCE(SUM(cost), 0)   AS cost
-      FROM sessions WHERE ended_at IS NOT NULL AND turns > 0
-    `,
-      )
-      .get() as { sessions: number; tokens: number; cost: number } | undefined;
+function center(text: string, width: number): string {
+  const len = [...text].length;
+  if (len >= width) return text;
+  return " ".repeat(Math.floor((width - len) / 2)) + text;
+}
 
-    return {
-      today: {
-        inputs: Number(t?.inputs ?? 0),
-        tokens: Number(t?.tokens ?? 0),
-        cost: Number(t?.cost ?? 0),
-      },
-      allTime: {
-        sessions: Number(a?.sessions ?? 0),
-        tokens: Number(a?.tokens ?? 0),
-        cost: Number(a?.cost ?? 0),
-      },
-      streak: getStreak(),
-    };
-  } catch {
-    return ZERO;
-  }
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderHeader(
+  width: number,
+  modelId: string,
+  cwd: string,
+  quote: string,
+): string[] {
+  const lines = TITLE_LINES.map((line, row) =>
+    gradientText(center(line, width), row * 0.045),
+  );
+
+  const proj     = basename(cwd) || "session";
+  const subtitle = `${modelId}  ·  ${proj}  ·  "${quote}"`;
+  const divider  = "─".repeat(Math.max(0, Math.min(subtitle.length + 4, width - 4)));
+
+  return [
+    "",
+    ...lines,
+    `${BOLD}${gradientText(center(subtitle, width), 0.18)}${RESET}`,
+    DIM + center(divider, width) + RESET,
+    "",
+  ];
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
   let requestRender: (() => void) | undefined;
+  let currentModelId = "";
+  let currentCwd     = "";
+
+  const dailyQuote = QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
 
   function installHeader(ctx: ExtensionContext): void {
-    ctx.ui.setHeader((tui, theme) => {
+    ctx.ui.setHeader((tui) => {
       requestRender = () => tui.requestRender();
-
-      let cache: AggrStats | null = null;
-      let cacheAt = 0;
-
-      function stats(): AggrStats {
-        const now = Date.now();
-        if (cache && now - cacheAt < 60_000) return cache;
-        cache = fetchStats();
-        cacheAt = now;
-        return cache;
-      }
-
       return {
         render(width: number): string[] {
-          const { today: td, allTime: at, streak } = stats();
-          const h = (s: string) => theme.fg("accent", theme.bold(s));
-          const v = (s: string) => theme.bold(s);
-          const m = (s: string) => theme.fg("muted", s);
-          const d = (s: string) => theme.fg("dim", s);
-          const w = (s: string) => theme.fg("warning", s);
-          const ok = (s: string) => theme.fg("success", s);
-
-          const sep = d("  ·  ");
-          const pipe = d("  │  ");
-
-          // Pick quote for today
-          const quote =
-            QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
-
-          // Line 1: brand + nerdy quote + date
-          const brand = h("⟨π⟩") + " " + v("stats");
-          const quoteStr = d(`"${quote}"`);
-          const date = m(
-            new Date().toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          );
-
-          let line1: string;
-          const brandAndQuote = brand + sep + quoteStr;
-          const bqWidth = visibleWidth(brandAndQuote);
-          const dateWidth = visibleWidth(date);
-          if (bqWidth + dateWidth + 4 <= width) {
-            const gap = Math.max(2, width - bqWidth - dateWidth);
-            line1 = brandAndQuote + " ".repeat(gap) + date;
-          } else {
-            const gap = Math.max(2, width - visibleWidth(brand) - dateWidth);
-            line1 = brand + " ".repeat(gap) + date;
-          }
-
-          // Line 2: today | all-time | streak
-          const todayPart =
-            td.inputs > 0
-              ? h("▲") +
-                m(" today ") +
-                v(String(td.inputs)) +
-                m(" inp") +
-                sep +
-                v(fmtK(td.tokens)) +
-                m(" tok") +
-                sep +
-                w(fmtCost(td.cost))
-              : h("▲") + m(" today ") + d("—");
-
-          const allPart =
-            h("◆") +
-            m(" all ") +
-            v(String(at.sessions)) +
-            m(" sess") +
-            sep +
-            v(fmtK(at.tokens)) +
-            m(" tok") +
-            sep +
-            w(fmtCost(at.cost));
-
-          const fire = streak > 0 ? "🔥" + ok(` ${streak}d`) : d("no streak");
-
-          const line2 = todayPart + pipe + allPart + pipe + fire;
-
-          // Narrow fallback
-          if (width < 60) {
-            const shortLine = h("⟨π⟩") + sep + w(fmtCost(td.cost)) + sep + fire;
-            return ["", truncateToWidth(shortLine, width), ""];
-          }
-
-          return [
-            "",
-            truncateToWidth(line1, width),
-            truncateToWidth(line2, width),
-            "",
-          ];
+          return renderHeader(width, currentModelId || "—", currentCwd, dailyQuote);
         },
-
         invalidate() {
           tui.requestRender();
         },
@@ -232,12 +159,18 @@ export default function (pi: ExtensionAPI): void {
   }
 
   pi.on("session_start", (_, ctx) => {
+    currentModelId = ctx.model?.id ?? "";
+    currentCwd     = ctx.cwd ?? "";
     if (ctx.hasUI) installHeader(ctx);
   });
-  pi.on("agent_end", () => {
+
+  pi.on("model_select", (event) => {
+    currentModelId = event.model.id;
     requestRender?.();
   });
+
   pi.on("session_shutdown", (_, ctx) => {
+    requestRender = undefined;
     if (ctx.hasUI) ctx.ui.setHeader(undefined);
   });
 }

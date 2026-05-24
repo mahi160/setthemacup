@@ -36,6 +36,7 @@ export function createState(): FooterState {
     lastEntryCount: 0,
     widgetTui: undefined,
     footerTui: undefined,
+    footerDispose: undefined,
   };
 }
 

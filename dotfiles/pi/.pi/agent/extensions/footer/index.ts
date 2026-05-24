@@ -41,12 +41,13 @@ export default function (pi: ExtensionAPI): void {
     state.plannotatorPhase = "planning"; // Default to planning
 
     clearInterval(state.idleTimer);
+    // 5s — avoids hammering getEntries() + double render every second while idle
     state.idleTimer = setInterval(() => {
       if (!state.agentRunning) {
         if (state.savedCtx) syncPlannotatorPhase(state.savedCtx);
         requestRender(state);
       }
-    }, 1000);
+    }, 5_000);
 
     if (ctx.hasUI) {
       ctx.ui.setWidget("status-top", createTopWidget(ctx, pi, state), {

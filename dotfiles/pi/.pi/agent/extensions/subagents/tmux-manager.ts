@@ -27,10 +27,14 @@ export async function runInNewTmuxPane(
   );
   const paneId = stdout.trim();
 
-  // Run command, then kill pane when done
-  // We use `&&` to ensure kill-pane runs even if the command fails
+  // Run command, then always kill pane (use ; not && so cleanup runs on failure too)
+  const safe = command
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/`/g, "\\`")
+    .replace(/\$/g, "\\$");
   await execAsync(
-    `tmux send-keys -t "${paneId}" "${command.replace(/"/g, '\\"')} && tmux kill-pane -t ${paneId}" C-m`
+    `tmux send-keys -t "${paneId}" "${safe}; tmux kill-pane -t ${paneId}" C-m`
   );
 
   return paneId;

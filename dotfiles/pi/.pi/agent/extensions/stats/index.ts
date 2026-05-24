@@ -78,7 +78,6 @@ interface SessionState {
   commands: Map<string, number>;
   skills: Map<string, number>;
   models: Array<{ provider: string; modelId: string; selectedAt: number }>;
-  named: boolean;
 }
 
 interface InputState {
@@ -167,16 +166,9 @@ export default function (pi: ExtensionAPI): void {
       models: ctx.model
         ? [{ provider: ctx.model.provider, modelId: ctx.model.id, selectedAt: now }]
         : [],
-      named: false,
     };
     upsertSession(id, now, ctx.cwd ?? "");
-
-    // Auto-name session from git branch
-    const branch = gitBranch();
-    if (branch && branch !== "main" && branch !== "master" && branch !== "HEAD") {
-      pi.setSessionName(branch);
-      session.named = true;
-    }
+    lastCompactWarning = 0;
   });
 
   pi.on("model_select", (event) => {
@@ -223,14 +215,6 @@ export default function (pi: ExtensionAPI): void {
       branch: currentInput.branch,
     });
 
-    // Auto-name from first prompt if not already named
-    if (!session.named && event.prompt) {
-      const name = event.prompt.trim().slice(0, 60).replace(/\n/g, " ").trim();
-      if (name) {
-        pi.setSessionName(name);
-        session.named = true;
-      }
-    }
   });
 
   pi.on("message_end", (event) => {
