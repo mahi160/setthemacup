@@ -22,7 +22,33 @@ import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
+
+// ── Border helpers ───────────────────────────────────────────────────────────
+
+/** Visible character count — strips SGR escape codes used by theme.fg/bg. */
+function visibleLen(s: string): number {
+  return s.replace(/\x1b\[[0-9;]*m/g, "").length;
+}
+
+/**
+ * Wraps an array of pre-styled lines in a rounded box.
+ * Each line should already be truncated to width-4 visible chars.
+ * Border styled with theme borderMuted.
+ */
+function bordered(lines: string[], width: number, theme: Theme): string[] {
+  const b = (s: string) => theme.fg("borderMuted", s);
+  const bar = "─".repeat(Math.max(0, width - 2));
+  return [
+    b("╭" + bar + "╮"),
+    ...lines.map((line) => {
+      const innerW = Math.max(0, width - 4);
+      const pad = " ".repeat(Math.max(0, innerW - visibleLen(line)));
+      return b("│") + " " + line + pad + " " + b("│");
+    }),
+    b("╰" + bar + "╯"),
+  ];
+}
 
 // ── Config schema ─────────────────────────────────────────────────────────────
 
@@ -282,6 +308,7 @@ export default function (pi: ExtensionAPI): void {
             widgetTui = tui;
             return {
               render(width: number): string[] {
+                const iw = Math.max(0, width - 4); // inner content width inside border+padding
                 const spin = theme.fg("warning", SPINNER_FRAMES[widgetState.spinnerFrame % SPINNER_FRAMES.length]!);
                 const elapsed = theme.fg("dim", ` ${(widgetState.elapsedMs / 1000).toFixed(1)}s`);
                 const header =
@@ -290,24 +317,24 @@ export default function (pi: ExtensionAPI): void {
                   theme.fg("muted", ` → /${cmd.name}`) +
                   elapsed;
 
-                const lines: string[] = [header];
+                const inner: string[] = [header];
 
                 if (widgetState.retrying) {
-                  lines.push(theme.fg("warning", `  ↻ retry ${widgetState.retryAttempt}...`));
+                  inner.push(theme.fg("warning", `↻ retry ${widgetState.retryAttempt}...`));
                 } else if (widgetState.currentTool) {
-                  lines.push(theme.fg("dim", `  ⟳ ${widgetState.currentTool.slice(0, width - 4)}`));
+                  inner.push(theme.fg("dim", `⟳ ${widgetState.currentTool.slice(0, iw - 2)}`));
                 }
 
                 for (const line of widgetState.recentText) {
-                  lines.push(theme.fg("dim", `  ${line.slice(0, width - 2)}`));
+                  inner.push(theme.fg("dim", line.slice(0, iw)));
                 }
 
-                return lines;
+                return bordered(inner, width, theme);
               },
               invalidate() {},
             };
           },
-          { placement: "aboveEditor" },
+          { placement: "belowEditor" },
         );
 
         ctx.ui.notify(`⚡ ${fastModel.id} → /${cmd.name}`, "info");
