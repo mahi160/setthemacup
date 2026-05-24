@@ -6,7 +6,10 @@
  * is in the background.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { execFile } from "node:child_process";
 import { basename } from "node:path";
 

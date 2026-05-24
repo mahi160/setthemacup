@@ -24,7 +24,10 @@ interface Skill {
   dir: string;
 }
 
-function parseFrontmatter(content: string): { name?: string; description?: string } {
+function parseFrontmatter(content: string): {
+  name?: string;
+  description?: string;
+} {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
 
@@ -50,7 +53,9 @@ function discoverSkills(): Skill[] {
         const skillMd = join(dir, entry.name, "SKILL.md");
         if (!existsSync(skillMd)) continue;
 
-        const { name, description } = parseFrontmatter(readFileSync(skillMd, "utf-8"));
+        const { name, description } = parseFrontmatter(
+          readFileSync(skillMd, "utf-8"),
+        );
         const skillName = name ?? entry.name;
         if (seen.has(skillName)) continue;
         seen.add(skillName);
@@ -62,7 +67,9 @@ function discoverSkills(): Skill[] {
           dir: join(dir, entry.name),
         });
       }
-    } catch { /* skip unreadable dirs */ }
+    } catch {
+      /* skip unreadable dirs */
+    }
   }
 
   return skills;
@@ -76,9 +83,9 @@ export default function (pi: ExtensionAPI): void {
         const content = readFileSync(skill.path, "utf-8");
         pi.sendUserMessage(
           `[Skill directory: ${skill.dir}]\n` +
-          `[Resolve all relative paths against the skill directory above]\n\n` +
-          content +
-          (args ? `\n\nUser: ${args}` : ""),
+            `[Resolve all relative paths against the skill directory above]\n\n` +
+            content +
+            (args ? `\n\nUser: ${args}` : ""),
         );
       },
     });
