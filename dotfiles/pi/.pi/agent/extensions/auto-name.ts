@@ -1,101 +1,84 @@
 /**
  * auto-name.ts — Auto-generates a 3-5 word session title after the first agent run.
  *
- * Uses pi's configured API keys (via ctx.modelRegistry) — no hardcoded credentials.
+ * Uses pi's own model system (spawns `pi -p`) instead of raw provider API calls.
+ * Auth, retries, and provider selection are all handled by pi — no fetch, no API keys here.
  *
- * Fallback chain (tries in order, skips on error or missing key):
- *   1. "big pickle" — current session model (whatever the user has active)
- *   2. google/gemini-flash-lite-latest — fast & cheap
- *   3. anthropic/claude-haiku-4-5 — reliable fallback
- *   4. First 50 chars of user message — last resort, no API call
+ * Subprocess flags keep it lean:
+ *   --no-session        don't persist the naming session
+ *   --no-tools          no tools needed for a title
+ *   --no-extensions     skip loading stats, footer, etc.
+ *   --no-context-files  skip AGENTS.md — saves tokens
+ *   --thinking off      no extended thinking for a 5-word title
  *
- * Only fires once per session (stops after first successful name).
- * In-flight requests are aborted on session change or shutdown.
+ * Fallback chain (tries in order):
+ *   1. google/gemini-flash-lite-latest — fast & cheap
+ *   2. anthropic/claude-haiku-4-5 — reliable fallback
+ *   3. First 50 chars of user message — no API call
  *
- * To add a new provider: add a case to callModel().
- * To change the fallback order: edit the chain array in agent_end handler.
- * To change title length: edit NAMING_PROMPT.
+ * Big model intentionally skipped — overkill for a title.
+ *
+ * To change models: edit NAMING_MODELS.
+ * To change title format: edit NAMING_PROMPT.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { spawn } from "node:child_process";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const NAMING_PROMPT = (text: string): string =>
   `Create a 3-5 word title for this request (no quotes, no punctuation): ${text.slice(0, 200)}`;
 
-// ── Per-provider callers ──────────────────────────────────────────────────────
+const NAMING_MODELS = [
+  "google/gemini-flash-lite-latest",
+  "anthropic/claude-haiku-4-5",
+] as const;
 
-async function callAnthropic(
-  modelId: string,
+/**
+ * Spawns a minimal pi process to generate a title.
+ * Returns the first line of stdout, or undefined on failure/abort.
+ */
+function callPiForName(
+  modelFlag: string,
   text: string,
-  apiKey: string,
   signal: AbortSignal,
 ): Promise<string | undefined> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: modelId,
-      max_tokens: 20,
-      messages: [{ role: "user", content: NAMING_PROMPT(text) }],
-    }),
-    signal,
+  return new Promise((resolve) => {
+    let output = "";
+
+    const proc = spawn(
+      "pi",
+      [
+        "--model",
+        modelFlag,
+        "--no-session",
+        "--no-tools",
+        "--no-extensions",
+        "--no-context-files",
+        "--thinking",
+        "off",
+        "-p",
+        NAMING_PROMPT(text),
+      ],
+      { stdio: ["ignore", "pipe", "pipe"], env: process.env },
+    );
+
+    proc.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+    proc.on("close", (code) => {
+      const name = output.trim().split("\n")[0]?.trim();
+      resolve(code === 0 && name ? name : undefined);
+    });
+
+    signal.addEventListener(
+      "abort",
+      () => {
+        proc.kill("SIGTERM");
+        resolve(undefined);
+      },
+      { once: true },
+    );
   });
-  if (!res.ok) return undefined;
-  const data = await res.json() as { content?: Array<{ text?: string }> };
-  return data.content?.[0]?.text?.trim();
-}
-
-async function callGoogle(
-  modelId: string,
-  text: string,
-  apiKey: string,
-  signal: AbortSignal,
-): Promise<string | undefined> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: NAMING_PROMPT(text) }] }],
-        generationConfig: { maxOutputTokens: 20, temperature: 0.2 },
-      }),
-      signal,
-    },
-  );
-  if (!res.ok) return undefined;
-  const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-}
-
-/** Dispatches to the right API based on provider. Returns undefined on any failure. */
-async function callModel(
-  provider: string,
-  modelId: string,
-  text: string,
-  ctx: ExtensionContext,
-  signal: AbortSignal,
-): Promise<string | undefined> {
-  try {
-    if (provider === "anthropic") {
-      const key = await ctx.modelRegistry.getApiKeyForProvider("anthropic");
-      if (!key) return undefined;
-      return await callAnthropic(modelId, text, key, signal);
-    }
-    if (provider === "google") {
-      const key = await ctx.modelRegistry.getApiKeyForProvider("google");
-      if (!key) return undefined;
-      return await callGoogle(modelId, text, key, signal);
-    }
-    // Other providers (openai-codex, etc.) not wired up for naming — skip to next
-    return undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
@@ -110,7 +93,7 @@ export default function (pi: ExtensionAPI): void {
     abortController = undefined;
   });
 
-  pi.on("agent_end", async (event, ctx) => {
+  pi.on("agent_end", async (event) => {
     if (named || pi.getSessionName()) {
       named = true;
       return;
@@ -138,29 +121,14 @@ export default function (pi: ExtensionAPI): void {
     abortController = controller;
 
     try {
-      // Build chain: current model ("big pickle") → flash-lite → haiku
-      const cur = ctx.model;
-      const chain: Array<{ provider: string; id: string }> = [];
-
-      if (cur) chain.push({ provider: cur.provider, id: cur.id });
-
-      // Add fallbacks only if not already in chain
-      if (!chain.some((m) => m.provider === "google" && m.id === "gemini-flash-lite-latest"))
-        chain.push({ provider: "google", id: "gemini-flash-lite-latest" });
-
-      if (!chain.some((m) => m.provider === "anthropic" && m.id === "claude-haiku-4-5"))
-        chain.push({ provider: "anthropic", id: "claude-haiku-4-5" });
-
-      for (const model of chain) {
+      for (const model of NAMING_MODELS) {
         if (controller.signal.aborted) return;
-        const name = await callModel(model.provider, model.id, text, ctx, controller.signal);
+        const name = await callPiForName(model, text, controller.signal);
         if (name) {
           pi.setSessionName(name.replace(/["']/g, ""));
           return;
         }
       }
-
-      // All models failed — fall back to truncated text
       pi.setSessionName(text.slice(0, 50));
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
