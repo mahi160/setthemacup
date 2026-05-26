@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.75.5",
-  "defaultProvider": "google",
-  "defaultModel": "gemini-flash-lite-latest",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-6",
   "defaultThinkingLevel": "medium",
   "enabledModels": [
     "openai-codex/gpt-5.5",
@@ -41,7 +41,6 @@
     "anthropicExtraUsage": false
   },
   "theme": "gruvbox-material",
-  "packages": [
-    "npm:@plannotator/pi-extension@0.19.23"
-  ]
+  "packages": ["npm:@plannotator/pi-extension@0.19.23", "npm:pi-web-access"]
 }
+

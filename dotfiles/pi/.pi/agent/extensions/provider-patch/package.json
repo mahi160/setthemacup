@@ -1,7 +1,0 @@
-{
-  "name": "pi-extensions",
-  "private": true,
-  "dependencies": {
-    "jiti": "^2.7.0"
-  }
-}

@@ -7,8 +7,8 @@
  * and streaming assistant text.
  *
  * Result display is controlled per command via "output" in fast-commands.json:
- *   "notify" — last line of output shown as a notification (commit, standup, test)
- *   "file"   — full output written to /tmp/pi-{name}.md and opened (review, bugs, etc.)
+ *   "notify" — last line shown as a notification toast
+ *   "file"   — full output injected inline into the main session via registerMessageRenderer
  *
  * Thinking level is configured per command via "thinking":
  *   "off" / "low" / "medium" — defaults to "low"
@@ -17,13 +17,21 @@
  * To change fast models: edit the "models" array in fast-commands.json.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { join, basename } from "node:path";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { visibleWidth, truncateToWidth } from "@earendil-works/pi-tui";
-import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
+import {
+  visibleWidth,
+  truncateToWidth,
+  Markdown,
+} from "@earendil-works/pi-tui";
+import {
+  getMarkdownTheme,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type Theme,
+} from "@earendil-works/pi-coding-agent";
 
 // ── Border helpers ───────────────────────────────────────────────────────────
 
@@ -59,29 +67,43 @@ interface FastCommand {
   role: string;
   prompt: string | string[];
   argsDefault?: string;
-  thinking?: string;              // "off" | "minimal" | "low" | "medium" | "high"
-  output?: "notify" | "file";    // "notify" = last-line toast, "file" = open .md — default "notify"
+  thinking?: string; // "off" | "minimal" | "low" | "medium" | "high"
+  output?: "notify" | "file"; // "notify" = last-line toast, "file" = open .md — default "notify"
 }
 interface Config {
   models: FastModel[];
   commands: FastCommand[];
 }
 
-const configPath = join(fileURLToPath(new URL(".", import.meta.url)), "fast-commands.json");
+const configPath = join(
+  fileURLToPath(new URL(".", import.meta.url)),
+  "fast-commands.json",
+);
 const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+const SPINNER_FRAMES = [
+  "⠋",
+  "⠙",
+  "⠹",
+  "⠸",
+  "⠼",
+  "⠴",
+  "⠦",
+  "⠧",
+  "⠇",
+  "⠏",
+] as const;
 
 // ── Widget state ──────────────────────────────────────────────────────────────
 
 interface WidgetState {
   spinnerFrame: number;
   elapsedMs: number;
-  currentTool: string;   // e.g. "bash: git diff --cached"
-  toolCount: number;     // tools completed so far
-  recentText: string[];  // last 2 non-empty lines of streamed assistant text
+  currentTool: string; // e.g. "bash: git diff --cached"
+  toolCount: number; // tools completed so far
+  recentText: string[]; // last 2 non-empty lines of streamed assistant text
   retrying: boolean;
   retryAttempt: number;
 }
@@ -92,14 +114,18 @@ interface WidgetState {
 
 let activeCommand = "";
 let activeAbort: AbortController | undefined;
-let cachedModel: { provider: string; id: string } | null | undefined = undefined;
+let cachedModel: { provider: string; id: string } | null | undefined =
+  undefined;
 // undefined = not yet resolved, null = resolved but none available
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildMessage(cmd: FastCommand, args: string): string {
   const body = Array.isArray(cmd.prompt) ? cmd.prompt.join("\n") : cmd.prompt;
-  return `Role: ${cmd.role}.\n\n` + body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args);
+  return (
+    `Role: ${cmd.role}.\n\n` +
+    body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args)
+  );
 }
 
 /**
@@ -108,13 +134,19 @@ function buildMessage(cmd: FastCommand, args: string): string {
  *   read  → "read: src/index.ts"
  *   grep  → "grep: somePattern"
  */
-function formatTool(name: string | undefined, args: Record<string, unknown> | undefined): string {
+function formatTool(
+  name: string | undefined,
+  args: Record<string, unknown> | undefined,
+): string {
   if (!name) return "";
   const n = name.toLowerCase();
   if (!args) return n;
   if (n === "bash" && typeof args.command === "string")
     return `bash: ${args.command.slice(0, 60)}`;
-  if ((n === "read" || n === "write" || n === "edit") && typeof args.path === "string")
+  if (
+    (n === "read" || n === "write" || n === "edit") &&
+    typeof args.path === "string"
+  )
     return `${n}: ${args.path}`;
   if (n === "grep" && typeof args.pattern === "string")
     return `grep: ${args.pattern}`;
@@ -195,15 +227,23 @@ function spawnCleanSession(
     const proc = spawn(
       "pi",
       [
-        "--model", modelFlag,
+        "--model",
+        modelFlag,
         "--no-session",
         "--no-context-files", // fast commands have own prompts — skip AGENTS.md
-        "--no-skills",        // fast commands don't invoke skills
-        "--thinking", thinking,
-        "--mode", "json",
-        "-p", prompt,
+        "--no-skills", // fast commands don't invoke skills
+        "--thinking",
+        thinking,
+        "--mode",
+        "json",
+        "-p",
+        prompt,
       ],
-      { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: process.env },
+      {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+        env: process.env,
+      },
     );
 
     proc.stdout.on("data", (chunk: Buffer) => {
@@ -224,7 +264,9 @@ function spawnCleanSession(
       resolve({ exitCode: code, fullText: textAcc.value.trim() });
     });
 
-    signal.addEventListener("abort", () => proc.kill("SIGTERM"), { once: true });
+    signal.addEventListener("abort", () => proc.kill("SIGTERM"), {
+      once: true,
+    });
   });
 }
 
@@ -238,8 +280,13 @@ async function resolveFastModel(
 ): Promise<{ provider: string; id: string } | undefined> {
   if (cachedModel !== undefined) return cachedModel ?? undefined;
   for (const candidate of config.models) {
-    const key = await ctx.modelRegistry.getApiKeyForProvider(candidate.provider);
-    if (key) { cachedModel = candidate; return candidate; }
+    const key = await ctx.modelRegistry.getApiKeyForProvider(
+      candidate.provider,
+    );
+    if (key) {
+      cachedModel = candidate;
+      return candidate;
+    }
   }
   // No API key found — still try first model (OAuth subprocess inherits auth.json)
   cachedModel = config.models[0] ?? null;
@@ -249,6 +296,21 @@ async function resolveFastModel(
 // ── Extension ─────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
+  // ── Inline result renderer ──────────────────────────────────────────────────
+  pi.registerMessageRenderer("fast-result", (message, _opts, theme) => {
+    const { name, text } = message.details as { name: string; text: string };
+    const header = theme.fg("success", ` ✓ /${name}`);
+    const md = new Markdown(text, 1, 0, getMarkdownTheme());
+    return {
+      render(width: number): string[] {
+        return [header, "", ...md.render(width)];
+      },
+      invalidate() {
+        md.invalidate();
+      },
+    };
+  });
+
   pi.on("session_start", () => {
     activeCommand = "";
     activeAbort?.abort();
@@ -268,7 +330,10 @@ export default function (pi: ExtensionAPI): void {
       description: `${cmd.description} (clean session)`,
       handler: async (args: string, ctx: ExtensionCommandContext) => {
         if (activeCommand) {
-          ctx.ui.notify(`Already running /${activeCommand} — wait for it to finish`, "warning");
+          ctx.ui.notify(
+            `Already running /${activeCommand} — wait for it to finish`,
+            "warning",
+          );
           return;
         }
 
@@ -306,8 +371,16 @@ export default function (pi: ExtensionAPI): void {
             return {
               render(width: number): string[] {
                 const iw = Math.max(0, width - 4); // inner content width inside border+padding
-                const spin = theme.fg("warning", SPINNER_FRAMES[widgetState.spinnerFrame % SPINNER_FRAMES.length]!);
-                const elapsed = theme.fg("dim", ` ${(widgetState.elapsedMs / 1000).toFixed(1)}s`);
+                const spin = theme.fg(
+                  "warning",
+                  SPINNER_FRAMES[
+                    widgetState.spinnerFrame % SPINNER_FRAMES.length
+                  ]!,
+                );
+                const elapsed = theme.fg(
+                  "dim",
+                  ` ${(widgetState.elapsedMs / 1000).toFixed(1)}s`,
+                );
                 const header =
                   spin +
                   theme.fg("dim", ` ${fastModel.id}`) +
@@ -317,9 +390,19 @@ export default function (pi: ExtensionAPI): void {
                 const inner: string[] = [header];
 
                 if (widgetState.retrying) {
-                  inner.push(theme.fg("warning", `↻ retry ${widgetState.retryAttempt}...`));
+                  inner.push(
+                    theme.fg(
+                      "warning",
+                      `↻ retry ${widgetState.retryAttempt}...`,
+                    ),
+                  );
                 } else if (widgetState.currentTool) {
-                  inner.push(theme.fg("dim", `⟳ ${truncateToWidth(widgetState.currentTool, iw - 2)}`));
+                  inner.push(
+                    theme.fg(
+                      "dim",
+                      `⟳ ${truncateToWidth(widgetState.currentTool, iw - 2)}`,
+                    ),
+                  );
                 }
 
                 for (const line of widgetState.recentText) {
@@ -344,7 +427,8 @@ export default function (pi: ExtensionAPI): void {
 
         try {
           spinnerTimer = setInterval(() => {
-            widgetState.spinnerFrame = (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
+            widgetState.spinnerFrame =
+              (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
             widgetState.elapsedMs += 100;
             widgetTui?.requestRender();
           }, 100);
@@ -369,18 +453,36 @@ export default function (pi: ExtensionAPI): void {
 
         if (exitCode === 0) {
           if (cmd.output === "file") {
-            // Write full output to temp .md file and open with system default handler
-            const tmpFile = join(tmpdir(), `pi-${cmd.name}-${Date.now()}.md`);
-            writeFileSync(tmpFile, fullText, "utf8");
-            spawn("open", [tmpFile], { detached: true, stdio: "ignore" }).unref();
-            ctx.ui.notify(`✓ /${cmd.name} → ${basename(tmpFile)}`, "success");
+            // Inject full output as inline message in the main session
+            pi.sendMessage(
+              {
+                customType: "fast-result",
+                content: "",
+                display: true,
+                details: { name: cmd.name, text: fullText },
+              },
+              { triggerTurn: false },
+            );
           } else {
-            // Show last meaningful line as notification
-            const lastLine = fullText.split("\n").map((l) => l.trim()).filter(Boolean).at(-1) ?? "";
-            ctx.ui.notify(`✓ /${cmd.name}${lastLine ? `: ${lastLine.slice(0, 120)}` : ""}`, "success");
+            // Show last meaningful line as a notification toast
+            const lastLine =
+              fullText
+                .split("\n")
+                .map((l) => l.trim())
+                .filter(Boolean)
+                .at(-1) ?? "";
+            ctx.ui.notify(
+              `✓ /${cmd.name}${lastLine ? `: ${lastLine.slice(0, 120)}` : ""}`,
+              "success",
+            );
           }
         } else {
-          const lastLine = fullText.split("\n").map((l) => l.trim()).filter(Boolean).at(-1) ?? "";
+          const lastLine =
+            fullText
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean)
+              .at(-1) ?? "";
           ctx.ui.notify(
             `✗ /${cmd.name} failed${lastLine ? `: ${lastLine.slice(0, 120)}` : ` (exit ${exitCode})`}`,
             "error",

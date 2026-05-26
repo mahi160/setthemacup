@@ -18,7 +18,10 @@
  * To change the skip threshold: edit MIN_DURATION_MS.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { execFile } from "node:child_process";
 import { basename } from "node:path";
@@ -38,7 +41,12 @@ function fmtDuration(ms: number): string {
   return `${Math.floor(ms / 60_000)}m ${Math.floor((ms % 60_000) / 1000)}s`;
 }
 
-function notify(title: string, subtitle: string, body: string, sound: string): void {
+function notify(
+  title: string,
+  subtitle: string,
+  body: string,
+  sound: string,
+): void {
   const script = `display notification "${esc(body)}" with title "${esc(title)}" subtitle "${esc(subtitle)}" sound name "${sound}"`;
   execFile("osascript", ["-e", script], { timeout: 5_000 }, () => {});
 }
@@ -68,7 +76,10 @@ export default function (pi: ExtensionAPI): void {
       lastAssistant?.stopReason === "aborted";
 
     if (isError) {
-      const errMsg = (lastAssistant?.errorMessage ?? "unknown error").slice(0, 100);
+      const errMsg = (lastAssistant?.errorMessage ?? "unknown error").slice(
+        0,
+        100,
+      );
       notify("π ✗", subtitle, errMsg, ERROR_SOUND);
     } else {
       const content = lastAssistant?.content;

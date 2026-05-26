@@ -1,11 +1,21 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { basename } from "node:path";
 
-let _recordQna: ((s: string, q: string, a: string, c: string[] | null) => void) | null = null;
-function tryRecordQna(sessionId: string, question: string, answer: string, choices: string[] | null): void {
+let _recordQna:
+  | ((s: string, q: string, a: string, c: string[] | null) => void)
+  | null = null;
+function tryRecordQna(
+  sessionId: string,
+  question: string,
+  answer: string,
+  choices: string[] | null,
+): void {
   try {
     if (!_recordQna) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -13,7 +23,9 @@ function tryRecordQna(sessionId: string, question: string, answer: string, choic
       _recordQna = db.recordQna;
     }
     _recordQna?.(sessionId, question, answer, choices);
-  } catch { /* stats DB unavailable */ }
+  } catch {
+    /* stats DB unavailable */
+  }
 }
 
 // ── Ask-user overlay component ────────────────────────────────────────────────
@@ -31,7 +43,11 @@ class AskUserOverlay implements Component {
   private params: AskParams;
   private theme: Theme;
 
-  constructor(params: AskParams, theme: Theme, onDone: (answer: string | null) => void) {
+  constructor(
+    params: AskParams,
+    theme: Theme,
+    onDone: (answer: string | null) => void,
+  ) {
     this.params = params;
     this.theme = theme;
     this.onDone = onDone;
@@ -70,15 +86,15 @@ class AskUserOverlay implements Component {
       choices.forEach((c, i) => {
         const num = t.fg("muted", `${i + 1}`);
         const isSelected = i === this.selected;
-        const label = isSelected
-          ? t.fg("success", `▶ ${c}`)
-          : `  ${c}`;
+        const label = isSelected ? t.fg("success", `▶ ${c}`) : `  ${c}`;
         const isDefault = c === def;
         const suffix = isDefault ? t.fg("dim", " (default)") : "";
         rows.push(line(`  ${num}  ${label}${suffix}`));
       });
       rows.push(line(""));
-      rows.push(line(t.fg("dim", "  ↑↓ navigate · Enter confirm · Esc cancel")));
+      rows.push(
+        line(t.fg("dim", "  ↑↓ navigate · Enter confirm · Esc cancel")),
+      );
     } else {
       rows.push(line(""));
       rows.push(line(t.fg("dim", "  Press Enter to confirm · Esc to cancel")));
@@ -149,17 +165,34 @@ export default function (pi: ExtensionAPI): void {
     ].join(" "),
     parameters: Type.Object({
       question: Type.String({ description: "The question to ask the user" }),
-      choices: Type.Optional(Type.Array(Type.String(), {
-        description: "List of answer choices (if omitted, user can press Enter to confirm or Esc to cancel)",
-      })),
-      default: Type.Optional(Type.String({ description: "Default answer if user presses Enter without selecting" })),
-      allowFreeText: Type.Optional(Type.Boolean({ description: "Unused in current impl — choices are keyboard-driven" })),
+      choices: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "List of answer choices (if omitted, user can press Enter to confirm or Esc to cancel)",
+        }),
+      ),
+      default: Type.Optional(
+        Type.String({
+          description: "Default answer if user presses Enter without selecting",
+        }),
+      ),
+      allowFreeText: Type.Optional(
+        Type.Boolean({
+          description: "Unused in current impl — choices are keyboard-driven",
+        }),
+      ),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const uiCtx = ctx ?? savedCtx;
       if (!uiCtx) {
         return {
-          content: [{ type: "text", text: params.default ?? params.choices?.[0] ?? "(no UI available)" }],
+          content: [
+            {
+              type: "text",
+              text:
+                params.default ?? params.choices?.[0] ?? "(no UI available)",
+            },
+          ],
           details: {},
         };
       }
@@ -168,10 +201,14 @@ export default function (pi: ExtensionAPI): void {
 
       await uiCtx.ui.custom<string | null>(
         (_tui, theme, _kb, done) => {
-          const overlay = new AskUserOverlay(params as AskParams, theme, (result) => {
-            answer = result;
-            done(result);
-          });
+          const overlay = new AskUserOverlay(
+            params as AskParams,
+            theme,
+            (result) => {
+              answer = result;
+              done(result);
+            },
+          );
           return overlay;
         },
         {
@@ -181,7 +218,12 @@ export default function (pi: ExtensionAPI): void {
       );
 
       const finalAnswer = answer ?? params.default ?? params.choices?.[0] ?? "";
-      tryRecordQna(sessionId, params.question, finalAnswer, params.choices ?? null);
+      tryRecordQna(
+        sessionId,
+        params.question,
+        finalAnswer,
+        params.choices ?? null,
+      );
 
       return {
         content: [{ type: "text", text: finalAnswer }],

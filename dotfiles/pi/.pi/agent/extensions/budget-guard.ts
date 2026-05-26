@@ -1,4 +1,7 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -6,7 +9,7 @@ import { join } from "node:path";
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const BUDGET_PATH = join(homedir(), ".pi", "agent", "budget.json");
-const DB_PATH     = join(homedir(), ".pi", "agent", "stats.db");
+const DB_PATH = join(homedir(), ".pi", "agent", "stats.db");
 
 interface BudgetConfig {
   mode: "auto" | "cost" | "messages";
@@ -35,7 +38,10 @@ const DEFAULTS: BudgetConfig = {
 function loadConfig(): BudgetConfig {
   if (!existsSync(BUDGET_PATH)) return { ...DEFAULTS };
   try {
-    return { ...DEFAULTS, ...JSON.parse(readFileSync(BUDGET_PATH, "utf-8")) } as BudgetConfig;
+    return {
+      ...DEFAULTS,
+      ...JSON.parse(readFileSync(BUDGET_PATH, "utf-8")),
+    } as BudgetConfig;
   } catch {
     return { ...DEFAULTS };
   }
@@ -51,7 +57,11 @@ function saveConfig(cfg: BudgetConfig): void {
 // Dynamic require avoids TS resolution errors for built-in node:sqlite
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { DatabaseSync } = require("node:sqlite") as {
-  DatabaseSync: new (path: string) => { prepare(sql: string): { get(...p: unknown[]): Record<string, unknown> | undefined } };
+  DatabaseSync: new (path: string) => {
+    prepare(sql: string): {
+      get(...p: unknown[]): Record<string, unknown> | undefined;
+    };
+  };
 };
 
 interface DayTotals {
@@ -64,12 +74,16 @@ function queryTotals(sinceMs: number): DayTotals {
   if (!existsSync(DB_PATH)) return { cost: 0, inputs: 0, requests: 0 };
   try {
     const db = new DatabaseSync(DB_PATH);
-    const row = db.prepare(`
+    const row = db
+      .prepare(
+        `
       SELECT COALESCE(SUM(cost_usd), 0)      AS cost,
              COUNT(*)                          AS inputs,
              COALESCE(SUM(request_count), 0)  AS requests
       FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
-    `).get(sinceMs) as DayTotals | undefined;
+    `,
+      )
+      .get(sinceMs) as DayTotals | undefined;
     return row ?? { cost: 0, inputs: 0, requests: 0 };
   } catch {
     return { cost: 0, inputs: 0, requests: 0 };
@@ -81,10 +95,14 @@ function detectMode(cfg: BudgetConfig): "cost" | "messages" {
   if (!existsSync(DB_PATH)) return "messages";
   try {
     const db = new DatabaseSync(DB_PATH);
-    const row = db.prepare(`
+    const row = db
+      .prepare(
+        `
       SELECT COALESCE(SUM(cost_usd), 0) AS totalCost
       FROM (SELECT cost_usd FROM user_inputs WHERE ended_at IS NOT NULL ORDER BY started_at DESC LIMIT 50)
-    `).get() as { totalCost: number } | undefined;
+    `,
+      )
+      .get() as { totalCost: number } | undefined;
     return (row?.totalCost ?? 0) > 0 ? "cost" : "messages";
   } catch {
     return "messages";
@@ -127,7 +145,10 @@ export default function (pi: ExtensionAPI): void {
         bypass = true;
       } else if (cost >= cfg.softUsd) {
         const pct = Math.round((cost / cfg.dailyUsd) * 100);
-        ctx.ui.notify(`⚠ Budget ${pct}% ($${cost.toFixed(2)} / $${cfg.dailyUsd})`, "warning");
+        ctx.ui.notify(
+          `⚠ Budget ${pct}% ($${cost.toFixed(2)} / $${cfg.dailyUsd})`,
+          "warning",
+        );
       }
     } else {
       const windowStart = now - cfg.windowHours * 3_600_000;
@@ -163,10 +184,16 @@ export default function (pi: ExtensionAPI): void {
       } else if (softWindow || softWeekly) {
         if (softWindow) {
           const pct = Math.round(windowPct * 100);
-          ctx.ui.notify(`⚠ ${pct}% of ${cfg.windowHours}h window (${windowReq}/${cfg.windowMessages})`, "warning");
+          ctx.ui.notify(
+            `⚠ ${pct}% of ${cfg.windowHours}h window (${windowReq}/${cfg.windowMessages})`,
+            "warning",
+          );
         } else {
           const pct = Math.round(weeklyPct * 100);
-          ctx.ui.notify(`⚠ ${pct}% of weekly cap (${weeklyReq}/${cfg.weeklyMessages})`, "warning");
+          ctx.ui.notify(
+            `⚠ ${pct}% of weekly cap (${weeklyReq}/${cfg.weeklyMessages})`,
+            "warning",
+          );
         }
       }
     }
@@ -175,29 +202,35 @@ export default function (pi: ExtensionAPI): void {
   // ── /budget command ──────────────────────────────────────────────────────
 
   pi.registerCommand("budget", {
-    description: "Show budget usage or set caps. Usage: /budget [set <key> <N>] [mode <cost|messages|auto>]",
+    description:
+      "Show budget usage or set caps. Usage: /budget [set <key> <N>] [mode <cost|messages|auto>]",
     handler: async (args, ctx: ExtensionContext) => {
       const cfg = loadConfig();
       const mode = detectedMode;
 
       if (!args || args.trim() === "") {
         const now = Date.now();
-        const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
         const windowStart = now - cfg.windowHours * 3_600_000;
         const today = new Date();
         const daysAgo = (today.getDay() - cfg.cycleStartDay + 7) % 7;
-        const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - daysAgo); weekStart.setHours(0, 0, 0, 0);
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - daysAgo);
+        weekStart.setHours(0, 0, 0, 0);
 
-        const dayData   = queryTotals(startOfDay.getTime());
-        const winData   = queryTotals(windowStart);
-        const weekData  = queryTotals(weekStart.getTime());
+        const dayData = queryTotals(startOfDay.getTime());
+        const winData = queryTotals(windowStart);
+        const weekData = queryTotals(weekStart.getTime());
 
         const lines: string[] = [
           `Mode: ${cfg.mode} → ${mode}`,
           mode === "cost"
             ? `Cost today: $${dayData.cost.toFixed(2)} / soft $${cfg.softUsd} / hard $${cfg.dailyUsd}`
             : `${cfg.windowHours}h window: ${winData.requests} / soft ${cfg.softWindow} / hard ${cfg.windowMessages}`,
-          mode === "messages" ? `Weekly: ${weekData.requests} / soft ${cfg.softWeekly} / hard ${cfg.weeklyMessages}` : "",
+          mode === "messages"
+            ? `Weekly: ${weekData.requests} / soft ${cfg.softWeekly} / hard ${cfg.weeklyMessages}`
+            : "",
           bypass ? "(bypass active — won't prompt again this session)" : "",
         ].filter(Boolean);
 
@@ -215,15 +248,29 @@ export default function (pi: ExtensionAPI): void {
         cfg.mode = newMode;
         saveConfig(cfg);
         detectedMode = detectMode(cfg);
-        ctx.ui.notify(`Budget mode set to: ${newMode} (effective: ${detectedMode})`, "success");
+        ctx.ui.notify(
+          `Budget mode set to: ${newMode} (effective: ${detectedMode})`,
+          "success",
+        );
         return;
       }
 
       if (parts[0] === "set" && parts[1] && parts[2]) {
         const key = parts[1] as keyof BudgetConfig;
         const val = Number(parts[2]);
-        if (isNaN(val)) { ctx.ui.notify("Value must be a number", "warning"); return; }
-        const allowed: (keyof BudgetConfig)[] = ["dailyUsd", "softUsd", "windowHours", "windowMessages", "softWindow", "weeklyMessages", "softWeekly"];
+        if (isNaN(val)) {
+          ctx.ui.notify("Value must be a number", "warning");
+          return;
+        }
+        const allowed: (keyof BudgetConfig)[] = [
+          "dailyUsd",
+          "softUsd",
+          "windowHours",
+          "windowMessages",
+          "softWindow",
+          "weeklyMessages",
+          "softWeekly",
+        ];
         if (!allowed.includes(key)) {
           ctx.ui.notify(`Valid keys: ${allowed.join(" ")}`, "warning");
           return;
@@ -234,7 +281,10 @@ export default function (pi: ExtensionAPI): void {
         return;
       }
 
-      ctx.ui.notify("Usage: /budget | /budget set <key> <N> | /budget mode <cost|messages|auto>", "info");
+      ctx.ui.notify(
+        "Usage: /budget | /budget set <key> <N> | /budget mode <cost|messages|auto>",
+        "info",
+      );
     },
   });
 }

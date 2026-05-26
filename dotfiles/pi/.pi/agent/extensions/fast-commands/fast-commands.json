@@ -44,7 +44,7 @@
     {
       "name": "standup",
       "thinking": "off",
-      "output": "notify",
+      "output": "file",
       "description": "Generate daily standup from git activity",
       "role": "Engineer writing a daily standup",
       "prompt": [
@@ -136,7 +136,7 @@
     {
       "name": "test",
       "thinking": "low",
-      "output": "notify",
+      "output": "file",
       "description": "Write tests for a file or function",
       "role": "Senior Engineer writing tests",
       "argsDefault": "Write tests for the last code discussed in context.",
