@@ -9,6 +9,40 @@ import { fmt, fmtCost, buildLine } from "./format";
 import { getGitDirty } from "./git";
 import { getModelDisplayName, getProviderDisplay } from "./models";
 
+// Tool name → nerd font icon. Falls back to generic ⚙ for unknowns.
+const TOOL_ICONS: Record<string, string> = {
+  bash:                               "\uF120", // 
+  read:                               "\uF06E", // 
+  write:                              "\uF040", // 
+  edit:                               "\uF044", // 
+  grep:                               "\uF002", // 
+  find:                               "\uF07C", // 
+  ls:                                 "\uF0CA", // 
+  web_search:                         "\uF0AC", // 
+  code_search:                        "\uF121", // 
+  fetch_content:                      "\uF0C1", // 
+  get_search_content:                 "\uF0C1", // 
+  ask_user:                           "\uF128", // 
+  ask_user_question:                  "\uF128", // 
+  plannotator_submit_plan:            "\uF0AE", // 
+  mcp__plannotator__submit_plan:      "\uF0AE",
+  mcp__ask_user:                      "\uF128",
+  mcp__ask_user_question:             "\uF128",
+  mcp__webaccess__web_search:         "\uF0AC",
+  mcp__webaccess__code_search:        "\uF121",
+  mcp__webaccess__fetch_content:      "\uF0C1",
+  mcp__webaccess__get_search_content: "\uF0C1",
+};
+
+function toolIcon(name: string): string {
+  return (
+    TOOL_ICONS[name] ??
+    // strip mcp__provider__ prefix and try again
+    TOOL_ICONS[name.replace(/^mcp__[^_]+__/, "")] ??
+    "\u2699" // ⚙ fallback
+  );
+}
+
 export function createTokenWidget(state: FooterState) {
   return (tui: any, theme: Theme) => {
     state.widgetTokenTui = tui;
@@ -103,7 +137,7 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
         const toolPart =
           state.toolCounts.size > 0
             ? Array.from(state.toolCounts, ([n, c]) =>
-                theme.fg("muted", `${n} ${c}`),
+                theme.fg("muted", `${toolIcon(n)} ${c}`),
               ).join(div)
             : "";
 

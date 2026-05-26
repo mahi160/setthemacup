@@ -10,7 +10,7 @@ import { resetGitCache } from "./git";
 export default function (pi: ExtensionAPI): void {
   const state = createState();
 
-  function syncPlannotatorPhase(ctx: ExtensionContext): void {
+  function syncPlannotatorPhase(ctx: ExtensionContext): boolean {
     const entries = ctx.sessionManager.getEntries() as Array<{
       type: string;
       customType?: string;
@@ -18,7 +18,7 @@ export default function (pi: ExtensionAPI): void {
     }>;
 
     // Skip scanning if no new entries — avoids filter/pop allocation per poll
-    if (entries.length === state.lastEntryCount) return;
+    if (entries.length === state.lastEntryCount) return false;
     state.lastEntryCount = entries.length;
 
     // Backwards scan for latest plannotator entry — single pass, zero allocations
@@ -29,9 +29,10 @@ export default function (pi: ExtensionAPI): void {
           | "idle"
           | "planning"
           | "executing";
-        return;
+        return true;
       }
     }
+    return false;
   }
 
   pi.on("session_start", (_, ctx) => {
@@ -41,12 +42,17 @@ export default function (pi: ExtensionAPI): void {
     state.plannotatorPhase = "executing"; // Default to build
 
     clearInterval(state.idleTimer);
+    let lastIdleRender = 0;
     state.idleTimer = setInterval(() => {
       if (!state.agentRunning) {
-        if (state.savedCtx) syncPlannotatorPhase(state.savedCtx);
-        requestRender(state);
+        const changed = state.savedCtx ? syncPlannotatorPhase(state.savedCtx) : false;
+        const now = Date.now();
+        if (changed || now - lastIdleRender >= 10_000) {
+          lastIdleRender = now;
+          requestRender(state);
+        }
       }
-    }, 15_000);
+    }, 500);
 
     if (ctx.hasUI) {
       ctx.ui.setWidget("token-stats", createTokenWidget(state), {
