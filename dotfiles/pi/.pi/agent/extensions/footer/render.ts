@@ -9,6 +9,28 @@ import { fmt, fmtCost, buildLine } from "./format";
 import { getGitDirty } from "./git";
 import { getModelDisplayName, getProviderDisplay } from "./models";
 
+export function createTokenWidget(state: FooterState) {
+  return (tui: any, theme: Theme) => {
+    state.widgetTokenTui = tui;
+    return {
+      render(_width: number): string[] {
+        if (!state.sessionHasData) return [];
+        const div = theme.fg("borderMuted", " │ ");
+        const parts = [
+          theme.fg("dim", `↑ ${fmt(state.lastTurnInput)}`),
+          theme.fg("dim", `↓ ${fmt(state.lastTurnOutput)}`),
+          ...(state.lastTurnCacheRead > 0
+            ? [theme.fg("dim", `∅ ${fmt(state.lastTurnCacheRead)}`)]
+            : []),
+          theme.fg("dim", fmtCost(state.lastTurnCost)),
+        ];
+        return [" " + parts.join(div), " "];
+      },
+      invalidate() {},
+    };
+  };
+}
+
 export function createTopWidget(
   ctx: ExtensionContext,
   pi: ExtensionAPI,
@@ -88,7 +110,8 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
         const isPlanning = state.plannotatorPhase === "planning";
         const label = isPlanning ? " PLAN " : " BUILD ";
         const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
-        const modePart = theme.bg(bg, theme.fg("text", label));
+        const fgColor = isPlanning ? "success" : "accent";
+        const modePart = theme.bg(bg, theme.fg(fgColor, label));
 
         const costPart = theme.fg("dim", fmtCost(state.sessionCost));
 

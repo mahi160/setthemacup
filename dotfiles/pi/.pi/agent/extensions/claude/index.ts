@@ -92,6 +92,13 @@ const COMPANIONS: CompanionSpec[] = [
 		],
 	},
 	{
+		dirName: "ask-user",
+		packageName: "ask-user",
+		aliases: [
+			["ask_user", "mcp__ask_user"],
+		],
+	},
+	{
 		dirName: "pi-coding-agent",
 		packageName: "@earendil-works/pi-coding-agent",
 		aliases: [

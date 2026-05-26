@@ -41,6 +41,8 @@
     "anthropicExtraUsage": false
   },
   "theme": "gruvbox-material",
-  "packages": ["npm:@plannotator/pi-extension@0.19.23", "npm:pi-web-access"]
+  "packages": [
+    "npm:@plannotator/pi-extension@0.19.23",
+    "npm:pi-web-access"
+  ]
 }
-

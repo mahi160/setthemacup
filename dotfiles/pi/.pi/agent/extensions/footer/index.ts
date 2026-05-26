@@ -4,7 +4,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { createState, resetState, requestRender } from "./state";
-import { createTopWidget, createFooter } from "./render";
+import { createTopWidget, createFooter, createTokenWidget } from "./render";
 import { resetGitCache } from "./git";
 
 export default function (pi: ExtensionAPI): void {
@@ -49,6 +49,9 @@ export default function (pi: ExtensionAPI): void {
     }, 15_000);
 
     if (ctx.hasUI) {
+      ctx.ui.setWidget("token-stats", createTokenWidget(state), {
+        placement: "aboveEditor",
+      });
       ctx.ui.setWidget("status-top", createTopWidget(ctx, pi, state), {
         placement: "aboveEditor",
       });
@@ -58,6 +61,10 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on("agent_start", () => {
     state.agentRunning = true;
+    state.lastTurnInput = 0;
+    state.lastTurnOutput = 0;
+    state.lastTurnCacheRead = 0;
+    state.lastTurnCost = 0;
   });
 
   pi.on("message_end", (event) => {
@@ -67,6 +74,10 @@ export default function (pi: ExtensionAPI): void {
     state.sessionCost += u.cost?.total ?? 0;
     state.sessionHasData = true;
     state.sessionRequests++;
+    state.lastTurnInput += u.input ?? 0;
+    state.lastTurnOutput += u.output ?? 0;
+    state.lastTurnCacheRead += u.cacheRead ?? 0;
+    state.lastTurnCost += u.cost?.total ?? 0;
   });
 
   pi.on("agent_end", (_, ctx) => {

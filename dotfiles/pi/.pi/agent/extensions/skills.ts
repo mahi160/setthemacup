@@ -69,7 +69,7 @@ function discoverSkills(): Skill[] {
 
 export default function (pi: ExtensionAPI): void {
   for (const skill of discoverSkills()) {
-    pi.registerCommand(skill.name, {
+    pi.registerCommand(`skill:${skill.name}`, {
       description: skill.description || `Run ${skill.name} skill`,
       handler: async (args) => {
         const content = readFileSync(skill.path, "utf-8");

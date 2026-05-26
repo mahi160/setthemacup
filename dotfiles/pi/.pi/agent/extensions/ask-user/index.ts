@@ -2,10 +2,15 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { Component } from "@earendil-works/pi-tui";
-import type { Theme } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { basename } from "node:path";
+import { execFile } from "node:child_process";
+
+function notifyQuestion(question: string): void {
+  const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const script = `display notification "${esc(question.slice(0, 100))}" with title "π ??" subtitle "Waiting for your input" sound name "Ping"`;
+  execFile("osascript", ["-e", script], { timeout: 5_000 }, () => {});
+}
 
 let _recordQna:
   | ((s: string, q: string, a: string, c: string[] | null) => void)
@@ -26,116 +31,6 @@ function tryRecordQna(
   } catch {
     /* stats DB unavailable */
   }
-}
-
-// ── Ask-user overlay component ────────────────────────────────────────────────
-
-interface AskParams {
-  question: string;
-  choices?: string[];
-  default?: string;
-  allowFreeText?: boolean;
-}
-
-class AskUserOverlay implements Component {
-  private selected = 0;
-  private onDone: (answer: string | null) => void;
-  private params: AskParams;
-  private theme: Theme;
-
-  constructor(
-    params: AskParams,
-    theme: Theme,
-    onDone: (answer: string | null) => void,
-  ) {
-    this.params = params;
-    this.theme = theme;
-    this.onDone = onDone;
-    if (params.default && params.choices) {
-      const idx = params.choices.indexOf(params.default);
-      if (idx >= 0) this.selected = idx;
-    }
-  }
-
-  render(width: number): string[] {
-    const t = this.theme;
-    const { question, choices, default: def } = this.params;
-    const inner = Math.max(0, width - 4);
-
-    const truncate = (s: string, max: number) =>
-      s.length > max ? s.slice(0, max - 1) + "…" : s;
-
-    const border = (s: string) => t.fg("borderMuted", s);
-    const line = (content: string) => {
-      const visible = content.replace(/\x1b\[[^m]*m/g, "");
-      const pad = Math.max(0, inner - visible.length);
-      return border("│ ") + content + " ".repeat(pad) + border(" │");
-    };
-
-    const hr = border("├" + "─".repeat(Math.max(0, width - 2)) + "┤");
-
-    const rows: string[] = [
-      border("╭" + "─".repeat(Math.max(0, width - 2)) + "╮"),
-      line(t.fg("accent", "  Ask")),
-      hr,
-      line("  " + truncate(question, inner - 2)),
-    ];
-
-    if (choices?.length) {
-      rows.push(line(""));
-      choices.forEach((c, i) => {
-        const num = t.fg("muted", `${i + 1}`);
-        const isSelected = i === this.selected;
-        const label = isSelected ? t.fg("success", `▶ ${c}`) : `  ${c}`;
-        const isDefault = c === def;
-        const suffix = isDefault ? t.fg("dim", " (default)") : "";
-        rows.push(line(`  ${num}  ${label}${suffix}`));
-      });
-      rows.push(line(""));
-      rows.push(
-        line(t.fg("dim", "  ↑↓ navigate · Enter confirm · Esc cancel")),
-      );
-    } else {
-      rows.push(line(""));
-      rows.push(line(t.fg("dim", "  Press Enter to confirm · Esc to cancel")));
-    }
-
-    rows.push(border("╰" + "─".repeat(Math.max(0, width - 2)) + "╯"));
-    return rows;
-  }
-
-  handleInput(data: string): void {
-    const { choices } = this.params;
-
-    if (data === "\r" || data === "\n") {
-      const answer = choices?.length
-        ? (choices[this.selected] ?? this.params.default ?? "")
-        : (this.params.default ?? "");
-      this.onDone(answer);
-      return;
-    }
-
-    if (data === "\x1b" || data === "\x1b\x1b") {
-      const fallback = this.params.default ?? choices?.[0] ?? "";
-      this.onDone(fallback);
-      return;
-    }
-
-    if (choices?.length) {
-      const n = parseInt(data, 10);
-      if (!isNaN(n) && n >= 1 && n <= choices.length) {
-        this.selected = n - 1;
-        return;
-      }
-      if (data === "\x1b[A" || data === "k") {
-        this.selected = Math.max(0, this.selected - 1);
-      } else if (data === "\x1b[B" || data === "j") {
-        this.selected = Math.min(choices.length - 1, this.selected + 1);
-      }
-    }
-  }
-
-  invalidate(): void {}
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
@@ -186,38 +81,26 @@ export default function (pi: ExtensionAPI): void {
       const uiCtx = ctx ?? savedCtx;
       if (!uiCtx) {
         return {
-          content: [
-            {
-              type: "text",
-              text:
-                params.default ?? params.choices?.[0] ?? "(no UI available)",
-            },
-          ],
+          content: [{
+            type: "text",
+            text: params.default ?? params.choices?.[0] ?? "(no UI available)",
+          }],
           details: {},
         };
       }
 
-      let answer: string | null = null;
+      notifyQuestion(params.question);
 
-      await uiCtx.ui.custom<string | null>(
-        (_tui, theme, _kb, done) => {
-          const overlay = new AskUserOverlay(
-            params as AskParams,
-            theme,
-            (result) => {
-              answer = result;
-              done(result);
-            },
-          );
-          return overlay;
-        },
-        {
-          overlay: true,
-          overlayOptions: { width: "55%", anchor: "center" },
-        },
-      );
+      let finalAnswer: string;
 
-      const finalAnswer = answer ?? params.default ?? params.choices?.[0] ?? "";
+      if (params.choices?.length) {
+        const result = await uiCtx.ui.select(params.question, params.choices);
+        finalAnswer = result ?? params.default ?? params.choices[0] ?? "";
+      } else {
+        const ok = await uiCtx.ui.confirm("Question", params.question);
+        finalAnswer = ok ? (params.default ?? "yes") : "no";
+      }
+
       tryRecordQna(
         sessionId,
         params.question,

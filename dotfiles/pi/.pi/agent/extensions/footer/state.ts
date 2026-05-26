@@ -8,12 +8,17 @@ export interface FooterState {
   sessionCost: number;       // cumulative cost across all runs in this session
   sessionHasData: boolean;   // true after first assistant message — unlocks cost display
   sessionRequests: number;   // count of assistant round-trips (LLM requests) this session
+  lastTurnInput: number;     // input tokens for last assistant message
+  lastTurnOutput: number;    // output tokens for last assistant message
+  lastTurnCacheRead: number; // cache read tokens for last assistant message
+  lastTurnCost: number;      // cost for last assistant message
   idleTimer: ReturnType<typeof setInterval> | undefined;
   savedCtx: ExtensionContext | undefined;
   plannotatorPhase: "idle" | "planning" | "executing";
   branch: string;
   lastEntryCount: number;
   widgetTui: { requestRender(): void } | undefined;
+  widgetTokenTui: { requestRender(): void } | undefined;
   footerTui: { requestRender(): void } | undefined;
   footerDispose: (() => void) | undefined;
 }
@@ -27,12 +32,17 @@ export function createState(): FooterState {
     sessionCost: 0,
     sessionHasData: false,
     sessionRequests: 0,
+    lastTurnInput: 0,
+    lastTurnOutput: 0,
+    lastTurnCacheRead: 0,
+    lastTurnCost: 0,
     idleTimer: undefined,
     savedCtx: undefined,
     plannotatorPhase: "idle",
     branch: "",
     lastEntryCount: 0,
     widgetTui: undefined,
+    widgetTokenTui: undefined,
     footerTui: undefined,
     footerDispose: undefined,
   };
@@ -52,5 +62,6 @@ export function resetState(state: FooterState): void {
 
 export function requestRender(state: FooterState): void {
   state.widgetTui?.requestRender();
+  state.widgetTokenTui?.requestRender();
   state.footerTui?.requestRender();
 }
