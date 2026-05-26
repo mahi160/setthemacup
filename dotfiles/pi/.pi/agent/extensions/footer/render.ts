@@ -1,5 +1,8 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { basename } from "node:path";
 import type { FooterState } from "./state";
 import { fmt, fmtCost, buildLine } from "./format";
@@ -53,7 +56,7 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
       state.branch = footerData.getGitBranch() ?? "";
       tui.requestRender();
     });
-    
+
     state.footerDispose = dispose;
 
     return {
@@ -87,10 +90,9 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
         const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
         const modePart = theme.bg(bg, theme.fg("text", label));
 
-        const costPart = state.sessionHasData ? theme.fg("dim", fmtCost(state.sessionCost)) : "";
-        const reqPart = state.sessionRequests > 0
-          ? theme.fg("dim", `\uD83D\uDCE8 ${state.sessionRequests}`)
-          : "";
+        const costPart = theme.fg("dim", fmtCost(state.sessionCost));
+
+        const reqPart = theme.fg("dim", ` ${state.sessionRequests}`);
 
         const left = [modePart, costPart, reqPart, ctxPart]
           .filter(Boolean)
