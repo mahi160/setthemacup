@@ -417,7 +417,7 @@ export default function (pi: ExtensionAPI): void {
           { placement: "belowEditor" },
         );
 
-        ctx.ui.notify(`⚡ ${fastModel.id} → /${cmd.name}`, "info");
+        // ctx.ui.notify(`⚡ ${fastModel.id} → /${cmd.name}`, "info");
 
         // Spinner timer — advances frame + elapsed every 100ms
         // Cleared in finally to guarantee no leak on success, error, or abort
