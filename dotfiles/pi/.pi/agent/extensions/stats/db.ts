@@ -160,7 +160,10 @@ let _db: SqlDb | undefined;
 
 export function closeDb(): void {
   if (!_db) return;
-  try { _db.close(); } catch { /* ignore */ }
+  try {
+    _db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); // flush WAL on exit
+    _db.close();
+  } catch { /* ignore */ }
   _db = undefined;
 }
 
@@ -178,6 +181,7 @@ function migrate(db: SqlDb): void {
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous  = NORMAL;
+    PRAGMA wal_autocheckpoint = 1000;
 
     CREATE TABLE IF NOT EXISTS sessions (
       id          TEXT    PRIMARY KEY,
@@ -273,6 +277,21 @@ function migrate(db: SqlDb): void {
   addCol("user_inputs", "tokens_cache_read",  "INTEGER DEFAULT 0");
   addCol("user_inputs", "tokens_cache_write", "INTEGER DEFAULT 0");
   addCol("user_inputs", "branch",             "TEXT DEFAULT ''");
+  addCol("user_inputs", "request_count",      "INTEGER DEFAULT 0");
+  addCol("user_inputs", "success",            "INTEGER DEFAULT 0");
+  addCol("user_inputs", "ttft_ms",            "INTEGER DEFAULT 0");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS qna (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id  TEXT    NOT NULL,
+      asked_at    INTEGER NOT NULL,
+      question    TEXT    DEFAULT '',
+      answer      TEXT    DEFAULT '',
+      choices_json TEXT   DEFAULT 'null'
+    );
+    CREATE INDEX IF NOT EXISTS idx_ui_ended ON user_inputs (ended_at, started_at);
+  `);
 }
 
 // ── Writes ────────────────────────────────────────────────────────────────────
@@ -346,6 +365,8 @@ export function finalizeInputRecord(
   tokensOutput: number,
   tokensCacheRead: number,
   tokensCacheWrite: number,
+  requestCount = 0,
+  hasError = false,
 ): void {
   getDb()
     .prepare(`
@@ -353,7 +374,8 @@ export function finalizeInputRecord(
       SET ended_at=?, time_ms=?,
           tokens_used=?, tokens_input=?, tokens_output=?,
           tokens_cache_read=?, tokens_cache_write=?,
-          tools=?, commands=?, skills=?, cost_usd=?
+          tools=?, commands=?, skills=?, cost_usd=?,
+          request_count=?, success=?
       WHERE id=?
     `)
     .run(
@@ -363,7 +385,8 @@ export function finalizeInputRecord(
       JSON.stringify(Object.fromEntries(tools)),
       JSON.stringify(Object.fromEntries(commands)),
       JSON.stringify(Object.fromEntries(skills)),
-      costUsd, id,
+      costUsd, requestCount, hasError ? 0 : 1,
+      id,
     );
 }
 
@@ -395,10 +418,14 @@ export function getOverallStats(): OverallStats {
     .prepare(`
       SELECT COUNT(*)                  AS totalSessions,
              (SELECT COALESCE(SUM(tokens_used), 0)
-              FROM user_inputs WHERE ended_at IS NOT NULL) AS totalTokens,
+              FROM user_inputs ui2
+              JOIN sessions s2 ON ui2.session_id = s2.id
+              WHERE ui2.ended_at IS NOT NULL AND s2.ended_at IS NOT NULL AND s2.turns > 0) AS totalTokens,
              COALESCE(SUM(cost), 0)    AS totalCost,
              COALESCE(SUM(turns), 0)   AS totalTurns,
-             (SELECT COUNT(*) FROM user_inputs WHERE ended_at IS NOT NULL) AS totalInputs
+             (SELECT COUNT(*) FROM user_inputs ui3
+              JOIN sessions s3 ON ui3.session_id = s3.id
+              WHERE ui3.ended_at IS NOT NULL AND s3.ended_at IS NOT NULL AND s3.turns > 0) AS totalInputs
       FROM sessions WHERE ended_at IS NOT NULL AND turns > 0
     `)
     .get() as OverallStats;
@@ -596,11 +623,14 @@ export function getDurationHistogram(): DurationBucket[] {
 }
 
 export function getTokenWaste(minTokens = 5000, limit = 5): TokenWasteEntry[] {
+  // exclude intentional no-tool flows like /commit
   return getDb()
     .prepare(`
       SELECT id, tokens_used, time_ms, provider, model_id, started_at
       FROM user_inputs
       WHERE ended_at IS NOT NULL AND tools='{}' AND tokens_used >= ?
+        AND (commands='{}' OR commands IS NULL)
+        AND (skills='{}' OR skills IS NULL)
       ORDER BY tokens_used DESC LIMIT ?
     `)
     .all(minTokens, limit) as TokenWasteEntry[];
@@ -677,4 +707,54 @@ export function getErrorSummary(): { total: number; today: number } {
 
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ── Request counts + QnA ──────────────────────────────────────────────────────
+
+export interface RequestCounts {
+  today: number;
+  windowHours: number;
+  weekly: number;
+  allTime: number;
+}
+
+export function getRequestCounts(windowHours = 5, cycleStartDay = 0): RequestCounts {
+  const now = Date.now();
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const windowStart = now - windowHours * 3_600_000;
+
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysAgo = (dayOfWeek - cycleStartDay + 7) % 7;
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - daysAgo);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const row = getDb().prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS today,
+      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS windowHours,
+      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS weekly,
+      COALESCE(SUM(request_count), 0) AS allTime
+    FROM user_inputs WHERE ended_at IS NOT NULL
+  `).get(
+    startOfDay.getTime(),
+    windowStart,
+    weekStart.getTime(),
+  ) as RequestCounts | undefined;
+
+  return row ?? { today: 0, windowHours: 0, weekly: 0, allTime: 0 };
+}
+
+export function recordQna(
+  sessionId: string,
+  question: string,
+  answer: string,
+  choices: string[] | null,
+): void {
+  getDb()
+    .prepare("INSERT INTO qna (session_id, asked_at, question, answer, choices_json) VALUES (?,?,?,?,?)")
+    .run(sessionId, Date.now(), question.slice(0, 500), answer.slice(0, 200), JSON.stringify(choices));
 }

@@ -145,7 +145,6 @@ async function searchExaMcp(query: string, count: number): Promise<SearchRespons
 
 	const body = await res.text();
 
-	// Response is SSE – find data lines
 	const dataLines = body.split("\n").filter((l) => l.startsWith("data:"));
 	let parsed: { result?: { content?: Array<{ type?: string; text?: string }>; isError?: boolean }; error?: { message?: string } } | null = null;
 
@@ -154,13 +153,8 @@ async function searchExaMcp(query: string, count: number): Promise<SearchRespons
 		if (!payload) continue;
 		try {
 			const candidate = JSON.parse(payload) as typeof parsed;
-			if (candidate?.result || candidate?.error) {
-				parsed = candidate;
-				break;
-			}
-		} catch {
-			// skip
-		}
+			if (candidate?.result || candidate?.error) parsed = candidate;
+		} catch { /**/ }
 	}
 
 	if (!parsed) throw new Error("Exa MCP: empty response");
@@ -222,21 +216,23 @@ async function fetchUrl(url: string): Promise<FetchResult> {
 		});
 		if (res.ok) {
 			const body = await res.text();
-			const dataLine = body.split("\n").find((l) => l.startsWith("data:"));
-			if (dataLine) {
-				const parsed = JSON.parse(dataLine.slice(5)) as { result?: { content?: Array<{ type?: string; text?: string }> } };
-				const text = parsed.result?.content?.find((c) => c.type === "text")?.text ?? "";
-				if (text && !text.includes("isError")) {
-					const titleMatch = text.match(/^#+\s*(.+)/m) ?? text.match(/Title:\s*(.+)/i);
-					return { url, title: titleMatch?.[1]?.trim() ?? url, content: text.slice(0, 8000), error: null };
-				}
+			let bestText = "";
+			for (const line of body.split("\n")) {
+				if (!line.startsWith("data:")) continue;
+				try {
+					const parsed = JSON.parse(line.slice(5)) as { result?: { content?: Array<{ type?: string; text?: string }> } };
+					const text = parsed.result?.content?.find((c) => c.type === "text")?.text ?? "";
+					if (text && !text.includes("isError")) bestText = text;
+				} catch { /* skip */ }
+			}
+			if (bestText) {
+				const titleMatch = bestText.match(/^#+\s*(.+)/m) ?? bestText.match(/Title:\s*(.+)/i);
+				return { url, title: titleMatch?.[1]?.trim() ?? url, content: bestText.slice(0, 8000), error: null };
 			}
 		}
-	} catch {
-		// fall through
-	}
+	} catch { /**/ }
 
-	// Try Jina Reader (free, no key)
+	// Jina Reader
 	const jinaUrl = `https://r.jina.ai/${url}`;
 	try {
 		const res = await fetch(jinaUrl, {
@@ -249,9 +245,7 @@ async function fetchUrl(url: string): Promise<FetchResult> {
 			const content = text.replace(/^(Title:|URL Source:|Published Time:).+\n?/gm, "").trim();
 			return { url, title: titleMatch?.[1]?.trim() ?? url, content: content.slice(0, 8000), error: null };
 		}
-	} catch {
-		// fall through to raw fetch
-	}
+	} catch { /**/ }
 
 	// Fallback: raw fetch + strip HTML tags
 	try {

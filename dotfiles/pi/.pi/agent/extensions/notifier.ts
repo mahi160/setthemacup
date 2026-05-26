@@ -58,7 +58,6 @@ export default function (pi: ExtensionAPI): void {
     const duration = fmtDuration(durationMs);
     const subtitle = `${project} · ${duration}`;
 
-    // Find last assistant message to check status + get preview text
     const lastAssistant = (event.messages as AssistantMessage[])
       .slice()
       .reverse()
@@ -72,16 +71,18 @@ export default function (pi: ExtensionAPI): void {
       const errMsg = (lastAssistant?.errorMessage ?? "unknown error").slice(0, 100);
       notify("π ✗", subtitle, errMsg, ERROR_SOUND);
     } else {
-      // Extract visible text from last assistant message for preview
       const content = lastAssistant?.content;
-      const preview = Array.isArray(content)
+      const rawPreview = Array.isArray(content)
         ? (content as Array<{ type: string; text?: string }>)
             .filter((b) => b.type === "text" && b.text)
             .map((b) => b.text!)
             .join(" ")
             .trim()
-            .slice(0, 100)
         : "";
+      const preview = rawPreview
+        .replace(/\*\*Touched:\*\*[\s\S]*$/, "")
+        .trimEnd()
+        .slice(0, 100);
 
       notify("π ✓", subtitle, preview || "Ready for input", SUCCESS_SOUND);
     }

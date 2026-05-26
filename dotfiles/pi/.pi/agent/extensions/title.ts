@@ -112,15 +112,23 @@ function center(text: string, width: number): string {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
+let _asciiCache: { width: number; lines: string[] } | null = null;
+
 function renderHeader(
   width: number,
   modelId: string,
   cwd: string,
   quote: string,
 ): string[] {
-  const lines = TITLE_LINES.map((line, row) =>
-    gradientText(center(line, width), row * 0.045),
-  );
+  if (!_asciiCache || _asciiCache.width !== width) {
+    _asciiCache = {
+      width,
+      lines: TITLE_LINES.map((line, row) =>
+        gradientText(center(line, width), row * 0.045),
+      ),
+    };
+  }
+  const lines = _asciiCache.lines;
 
   const proj     = basename(cwd) || "session";
   const subtitle = `${modelId}  ·  ${proj}  ·  "${quote}"`;

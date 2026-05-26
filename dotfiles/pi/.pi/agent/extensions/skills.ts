@@ -1,13 +1,5 @@
-/**
- * skills.ts — Register skills as slash commands without loading them
- * into the system prompt. Saves ~2k tokens/turn while keeping
- * /skillname commands available.
- *
- * Scans ~/.pi/agent/skills/ and ~/.agents/skills/ for SKILL.md files,
- * parses frontmatter, and registers each as a /name command.
- */
-
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { bus } from "./shared/bus.js";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -81,6 +73,7 @@ export default function (pi: ExtensionAPI): void {
       description: skill.description || `Run ${skill.name} skill`,
       handler: async (args) => {
         const content = readFileSync(skill.path, "utf-8");
+        bus.emit("skill_invoked", { name: skill.name });
         pi.sendUserMessage(
           `[Skill directory: ${skill.dir}]\n` +
             `[Resolve all relative paths against the skill directory above]\n\n` +

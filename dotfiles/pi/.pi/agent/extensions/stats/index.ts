@@ -16,11 +16,13 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 import { spawn } from "node:child_process";
+
+import { bus } from "../shared/bus.js";
 
 import {
   closeDb,
@@ -77,6 +79,7 @@ interface SessionState {
   commands: Map<string, number>;
   skills: Map<string, number>;
   models: Array<{ provider: string; modelId: string; selectedAt: number }>;
+  requestCount: number;
 }
 
 interface InputState {
@@ -95,6 +98,7 @@ interface InputState {
   tokensCacheRead: number;
   tokensCacheWrite: number;
   costAccumulated: number;
+  requestCount: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -112,10 +116,7 @@ function parseInputPrefix(text: string): { skills: Map<string, number>; commands
   const skills = new Map<string, number>();
   const commands = new Map<string, number>();
   const trimmed = text.trim();
-  if (trimmed.startsWith("/skill:")) {
-    const name = trimmed.slice(7).split(" ")[0] ?? "";
-    if (name) inc(skills, name);
-  } else if (trimmed.startsWith("/")) {
+  if (trimmed.startsWith("/")) {
     const name = trimmed.slice(1).split(" ")[0] ?? "";
     if (name) inc(commands, name);
   }
@@ -123,6 +124,18 @@ function parseInputPrefix(text: string): { skills: Map<string, number>; commands
 }
 
 let _gitBranchAt = 0, _gitBranchVal = "";
+
+function seedGitBranch(): void {
+  try {
+    _gitBranchVal = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf8", timeout: 3_000,
+    }).trim();
+  } catch {
+    _gitBranchVal = "";
+  }
+  _gitBranchAt = Date.now();
+}
+
 function gitBranch(): string {
   const now = Date.now();
   if (now - _gitBranchAt < 5_000) return _gitBranchVal;
@@ -152,12 +165,14 @@ export default function (pi: ExtensionAPI): void {
   let session: SessionState | null = null;
   let currentInput: InputState | null = null;
   let lastCompactWarning = 0;
+  let pendingSlash: string | null = null;
 
   // ── Session lifecycle ───────────────────────────────────────────────────
 
   pi.on("session_start", (_, ctx: ExtensionContext) => {
     const id = resolveSessionId(ctx);
     const now = Date.now();
+    seedGitBranch();
     session = {
       id,
       startedAt: now,
@@ -169,9 +184,16 @@ export default function (pi: ExtensionAPI): void {
       models: ctx.model
         ? [{ provider: ctx.model.provider, modelId: ctx.model.id, selectedAt: now }]
         : [],
+      requestCount: 0,
     };
     upsertSession(id, now, ctx.cwd ?? "");
     lastCompactWarning = 0;
+  });
+
+  bus.on("skill_invoked", (data) => {
+    const { name } = data as { name: string };
+    if (session) inc(session.skills, name);
+    if (currentInput) inc(currentInput.skills, name);
   });
 
   pi.on("model_select", (event) => {
@@ -188,7 +210,9 @@ export default function (pi: ExtensionAPI): void {
     if (!session) return;
     currentInput = null;
 
-    const { skills, commands } = parseInputPrefix(event.prompt ?? "");
+    const rawText = pendingSlash ?? event.prompt ?? "";
+    pendingSlash = null;
+    const { skills, commands } = parseInputPrefix(rawText);
     const model = ctx.model;
 
     currentInput = {
@@ -207,6 +231,7 @@ export default function (pi: ExtensionAPI): void {
       tokensCacheRead: 0,
       tokensCacheWrite: 0,
       costAccumulated: 0,
+      requestCount: 0,
     };
 
     createInputRecord({
@@ -231,6 +256,7 @@ export default function (pi: ExtensionAPI): void {
     currentInput.tokensOutput += msg.usage.output ?? 0;
     currentInput.tokensCacheRead += msg.usage.cacheRead ?? 0;
     currentInput.tokensCacheWrite += msg.usage.cacheWrite ?? 0;
+    currentInput.requestCount++;
   });
 
   pi.on("tool_execution_start", (event) => {
@@ -258,16 +284,16 @@ export default function (pi: ExtensionAPI): void {
     if (!currentInput || !session) return;
     const endedAt = Date.now();
 
-    // Track errors
-    for (const msg of event.messages as AssistantMessage[]) {
-      if (msg.role === "assistant" && (msg.stopReason === "error" || msg.stopReason === "aborted")) {
-        recordError(
-          session.id,
-          msg.stopReason,
-          currentInput.modelId,
-          msg.errorMessage ?? "unknown",
-        );
-      }
+    const messages = event.messages as AssistantMessage[];
+    const lastAssistant = messages.slice().reverse().find((m) => m.role === "assistant");
+    const hadError = !!(lastAssistant && (lastAssistant.stopReason === "error" || lastAssistant.stopReason === "aborted"));
+    if (hadError) {
+      recordError(
+        session.id,
+        lastAssistant!.stopReason,
+        currentInput.modelId,
+        lastAssistant!.errorMessage ?? "unknown",
+      );
     }
 
     try {
@@ -284,6 +310,8 @@ export default function (pi: ExtensionAPI): void {
         currentInput.tokensOutput,
         currentInput.tokensCacheRead,
         currentInput.tokensCacheWrite,
+        currentInput.requestCount,
+        hadError,
       );
     } catch (e) {
       console.error("[pi-stats] finalizeInputRecord failed:", e);
@@ -309,11 +337,10 @@ export default function (pi: ExtensionAPI): void {
   // ── Command + skill tracking ────────────────────────────────────────────
 
   pi.on("input", (event) => {
-    if (!session) return;
     const text = event.text.trim();
-    if (text.startsWith("/skill:")) {
-      inc(session.skills, text.slice(7).split(" ")[0] ?? "");
-    } else if (text.startsWith("/")) {
+    if (text.startsWith("/")) pendingSlash = text;
+    if (!session) return;
+    if (text.startsWith("/")) {
       inc(session.commands, text.slice(1).split(" ")[0] ?? "");
     }
   });
@@ -323,6 +350,7 @@ export default function (pi: ExtensionAPI): void {
   pi.on("session_shutdown", () => {
     if (!session) return;
     currentInput = null;
+    pendingSlash = null;
 
     try {
       finalizeSession(

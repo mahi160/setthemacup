@@ -6,15 +6,6 @@ import { fmt, fmtCost, buildLine } from "./format";
 import { getGitDirty } from "./git";
 import { getModelDisplayName, getProviderDisplay } from "./models";
 
-/** Formats session elapsed time as "23m" or "1h 12m" — coarse, no sub-minute noise. */
-function fmtSession(ms: number): string {
-  const m = Math.floor(ms / 60_000);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m`;
-  return "<1m";
-}
-
 export function createTopWidget(
   ctx: ExtensionContext,
   pi: ExtensionAPI,
@@ -96,12 +87,12 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
         const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
         const modePart = theme.bg(bg, theme.fg("text", label));
 
-        const elapsedMs = Date.now() - state.sessionStartedAt;
-        const timePart = theme.fg("dim", fmtSession(elapsedMs));
         const costPart = state.sessionHasData ? theme.fg("dim", fmtCost(state.sessionCost)) : "";
+        const reqPart = state.sessionRequests > 0
+          ? theme.fg("dim", `\uD83D\uDCE8 ${state.sessionRequests}`)
+          : "";
 
-        // Order: BUILD | time | cost | context%         tools (right)
-        const left = [modePart, timePart, costPart, ctxPart]
+        const left = [modePart, costPart, reqPart, ctxPart]
           .filter(Boolean)
           .join(div);
         return [buildLine(left, toolPart, width), ""];

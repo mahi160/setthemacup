@@ -7,6 +7,7 @@ export interface FooterState {
   sessionStartedAt: number;  // wall time when session began — for elapsed display
   sessionCost: number;       // cumulative cost across all runs in this session
   sessionHasData: boolean;   // true after first assistant message — unlocks cost display
+  sessionRequests: number;   // count of assistant round-trips (LLM requests) this session
   idleTimer: ReturnType<typeof setInterval> | undefined;
   savedCtx: ExtensionContext | undefined;
   plannotatorPhase: "idle" | "planning" | "executing";
@@ -25,6 +26,7 @@ export function createState(): FooterState {
     sessionStartedAt: Date.now(),
     sessionCost: 0,
     sessionHasData: false,
+    sessionRequests: 0,
     idleTimer: undefined,
     savedCtx: undefined,
     plannotatorPhase: "idle",
@@ -45,6 +47,7 @@ export function resetState(state: FooterState): void {
   state.sessionStartedAt = Date.now(); // reset clock for new session
   state.sessionCost = 0;               // reset cost for new session
   state.sessionHasData = false;
+  state.sessionRequests = 0;
 }
 
 export function requestRender(state: FooterState): void {

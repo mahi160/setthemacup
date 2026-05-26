@@ -41,13 +41,12 @@ export default function (pi: ExtensionAPI): void {
     state.plannotatorPhase = "executing"; // Default to build
 
     clearInterval(state.idleTimer);
-    // 60s — only needed to tick session elapsed time display once per minute
     state.idleTimer = setInterval(() => {
       if (!state.agentRunning) {
         if (state.savedCtx) syncPlannotatorPhase(state.savedCtx);
         requestRender(state);
       }
-    }, 5_000);
+    }, 15_000);
 
     if (ctx.hasUI) {
       ctx.ui.setWidget("status-top", createTopWidget(ctx, pi, state), {
@@ -67,6 +66,7 @@ export default function (pi: ExtensionAPI): void {
     if (!u) return;
     state.sessionCost += u.cost?.total ?? 0;
     state.sessionHasData = true;
+    state.sessionRequests++;
   });
 
   pi.on("agent_end", (_, ctx) => {
@@ -89,11 +89,6 @@ export default function (pi: ExtensionAPI): void {
       event.toolName,
       (state.toolCounts.get(event.toolName) ?? 0) + 1,
     );
-    // Cap to 20 tools to prevent memory growth
-    if (state.toolCounts.size > 20) {
-      const firstKey = state.toolCounts.keys().next().value;
-      state.toolCounts.delete(firstKey);
-    }
     requestRender(state);
   });
 
