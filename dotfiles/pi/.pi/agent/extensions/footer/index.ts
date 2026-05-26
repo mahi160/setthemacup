@@ -41,7 +41,7 @@ export default function (pi: ExtensionAPI): void {
     state.plannotatorPhase = "executing"; // Default to build
 
     clearInterval(state.idleTimer);
-    // 5s — avoids hammering getEntries() + double render every second while idle
+    // 60s — only needed to tick session elapsed time display once per minute
     state.idleTimer = setInterval(() => {
       if (!state.agentRunning) {
         if (state.savedCtx) syncPlannotatorPhase(state.savedCtx);
@@ -61,20 +61,18 @@ export default function (pi: ExtensionAPI): void {
     state.agentRunning = true;
   });
 
-  pi.on("agent_end", (_, ctx) => {
-    state.agentRunning = false;
-    state.lastActivityAt = Date.now();
-    syncPlannotatorPhase(ctx);
-    requestRender(state);
-  });
-
   pi.on("message_end", (event) => {
     if (event.message.role !== "assistant") return;
     const u = (event.message as AssistantMessage).usage;
     if (!u) return;
-    state.totals.input += u.input ?? 0;
-    state.totals.output += u.output ?? 0;
-    state.totals.cost += u.cost?.total ?? 0;
+    state.sessionCost += u.cost?.total ?? 0;
+    state.sessionHasData = true;
+  });
+
+  pi.on("agent_end", (_, ctx) => {
+    state.agentRunning = false;
+    syncPlannotatorPhase(ctx);
+    requestRender(state);
   });
 
   pi.on("turn_end", (_, ctx) => {

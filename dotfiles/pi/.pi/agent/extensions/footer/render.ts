@@ -2,9 +2,18 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { basename } from "node:path";
 import type { FooterState } from "./state";
-import { fmt, fmtCost, fmtIdle, buildLine } from "./format";
+import { fmt, fmtCost, buildLine } from "./format";
 import { getGitDirty } from "./git";
 import { getModelDisplayName, getProviderDisplay } from "./models";
+
+/** Formats session elapsed time as "23m" or "1h 12m" — coarse, no sub-minute noise. */
+function fmtSession(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m`;
+  return "<1m";
+}
 
 export function createTopWidget(
   ctx: ExtensionContext,
@@ -58,14 +67,7 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
 
     return {
       render(width: number): string[] {
-        const t = state.totals;
         const div = theme.fg("borderMuted", " │ ");
-
-        // All muted tokens merged into one theme.fg call — fewer allocations
-        const tokPart = theme.fg(
-          "muted",
-          `↑${fmt(t.input)} ↓${fmt(t.output)} ${fmtCost(t.cost)}`,
-        );
 
         state.cachedUsage ??= ctx.getContextUsage();
         const pct = state.cachedUsage?.percent ?? null;
@@ -81,22 +83,6 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
             );
         }
 
-        const idleMs = !state.agentRunning
-          ? Date.now() - state.lastActivityAt
-          : -1;
-        let idlePart = "";
-        if (idleMs >= 0) {
-          const idleColor =
-            idleMs < 180_000
-              ? "success"
-              : idleMs < 270_000
-                ? "warning"
-                : idleMs < 300_000
-                  ? "error"
-                  : "dim";
-          idlePart = theme.fg(idleColor, `idle ${fmtIdle(idleMs)}`);
-        }
-
         // Array.from does one-pass iteration, avoids spread + map allocations
         const toolPart =
           state.toolCounts.size > 0
@@ -110,10 +96,14 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
         const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
         const modePart = theme.bg(bg, theme.fg("text", label));
 
-        const statsLeft = [tokPart, ctxPart, idlePart]
+        const elapsedMs = Date.now() - state.sessionStartedAt;
+        const timePart = theme.fg("dim", fmtSession(elapsedMs));
+        const costPart = state.sessionHasData ? theme.fg("dim", fmtCost(state.sessionCost)) : "";
+
+        // Order: BUILD | time | cost | context%         tools (right)
+        const left = [modePart, timePart, costPart, ctxPart]
           .filter(Boolean)
           .join(div);
-        const left = modePart + div + statsLeft;
         return [buildLine(left, toolPart, width), ""];
       },
       invalidate() {

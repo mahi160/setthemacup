@@ -22,14 +22,10 @@ import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { visibleWidth, truncateToWidth } from "@earendil-works/pi-tui";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 
 // ── Border helpers ───────────────────────────────────────────────────────────
-
-/** Visible character count — strips SGR escape codes used by theme.fg/bg. */
-function visibleLen(s: string): number {
-  return s.replace(/\x1b\[[0-9;]*m/g, "").length;
-}
 
 /**
  * Wraps an array of pre-styled lines in a rounded box.
@@ -39,12 +35,13 @@ function visibleLen(s: string): number {
 function bordered(lines: string[], width: number, theme: Theme): string[] {
   const b = (s: string) => theme.fg("borderMuted", s);
   const bar = "─".repeat(Math.max(0, width - 2));
+  const innerW = Math.max(0, width - 4);
   return [
     b("╭" + bar + "╮"),
     ...lines.map((line) => {
-      const innerW = Math.max(0, width - 4);
-      const pad = " ".repeat(Math.max(0, innerW - visibleLen(line)));
-      return b("│") + " " + line + pad + " " + b("│");
+      const displayLine = truncateToWidth(line, innerW);
+      const pad = " ".repeat(Math.max(0, innerW - visibleWidth(displayLine)));
+      return b("│") + " " + displayLine + pad + " " + b("│");
     }),
     b("╰" + bar + "╯"),
   ];
@@ -322,11 +319,11 @@ export default function (pi: ExtensionAPI): void {
                 if (widgetState.retrying) {
                   inner.push(theme.fg("warning", `↻ retry ${widgetState.retryAttempt}...`));
                 } else if (widgetState.currentTool) {
-                  inner.push(theme.fg("dim", `⟳ ${widgetState.currentTool.slice(0, iw - 2)}`));
+                  inner.push(theme.fg("dim", `⟳ ${truncateToWidth(widgetState.currentTool, iw - 2)}`));
                 }
 
                 for (const line of widgetState.recentText) {
-                  inner.push(theme.fg("dim", line.slice(0, iw)));
+                  inner.push(theme.fg("dim", truncateToWidth(line, iw)));
                 }
 
                 return bordered(inner, width, theme);

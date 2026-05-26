@@ -1,17 +1,12 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export interface Totals {
-  input: number;
-  output: number;
-  cost: number;
-}
-
 export interface FooterState {
   toolCounts: Map<string, number>;
-  totals: Totals;
   cachedUsage: ReturnType<ExtensionContext["getContextUsage"]>;
-  lastActivityAt: number;
   agentRunning: boolean;
+  sessionStartedAt: number;  // wall time when session began — for elapsed display
+  sessionCost: number;       // cumulative cost across all runs in this session
+  sessionHasData: boolean;   // true after first assistant message — unlocks cost display
   idleTimer: ReturnType<typeof setInterval> | undefined;
   savedCtx: ExtensionContext | undefined;
   plannotatorPhase: "idle" | "planning" | "executing";
@@ -25,10 +20,11 @@ export interface FooterState {
 export function createState(): FooterState {
   return {
     toolCounts: new Map<string, number>(),
-    totals: { input: 0, output: 0, cost: 0 },
     cachedUsage: undefined,
-    lastActivityAt: Date.now(),
     agentRunning: false,
+    sessionStartedAt: Date.now(),
+    sessionCost: 0,
+    sessionHasData: false,
     idleTimer: undefined,
     savedCtx: undefined,
     plannotatorPhase: "idle",
@@ -42,14 +38,13 @@ export function createState(): FooterState {
 
 export function resetState(state: FooterState): void {
   state.toolCounts.clear();
-  state.totals.input = 0;
-  state.totals.output = 0;
-  state.totals.cost = 0;
   state.cachedUsage = undefined;
-  state.lastActivityAt = Date.now();
   state.agentRunning = false;
   state.plannotatorPhase = "idle";
   state.lastEntryCount = 0;
+  state.sessionStartedAt = Date.now(); // reset clock for new session
+  state.sessionCost = 0;               // reset cost for new session
+  state.sessionHasData = false;
 }
 
 export function requestRender(state: FooterState): void {
