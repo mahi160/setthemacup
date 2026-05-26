@@ -38,10 +38,11 @@ if ! grep -q "^### $DAY $WEEKDAY" "$JOURNAL_FILE" 2>/dev/null; then
 fi
 
 # Format entry with checkbox
-ENTRY="- [ ] [$TIME] $NOTE_TEXT"
+export ENTRY="- [ ] [$TIME] $NOTE_TEXT"
 
 # Append the entry under today's section - macOS compatible version
-awk -v entry="$ENTRY" -v date_pattern="^### $DAY $WEEKDAY" '
+awk -v date_pattern="^### $DAY $WEEKDAY" '
+    BEGIN { entry = ENVIRON["ENTRY"] }
     $0 ~ date_pattern {
         print
         print entry

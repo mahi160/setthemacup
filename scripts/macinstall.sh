@@ -308,7 +308,7 @@ set_ssh() {
   for key in "${ssh_keys[@]}"; do
     IFS=':' read -r filename comment <<<"$key"
     if [[ ! -f "$HOME/.ssh/$filename" ]]; then
-      ssh-keygen -t ed25519 -C "$comment" -f "$HOME/.ssh/$filename" -N "" || {
+      ssh-keygen -t ed25519 -C "$comment" -f "$HOME/.ssh/$filename" || {
         warn "Failed to generate SSH key $filename."
         log_action "Failed to generate SSH key $filename"
       }

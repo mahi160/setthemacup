@@ -8,6 +8,10 @@ mkdir -p "$POKEMON_DIR"
 
 # Pick a specific ID if passed as arg, otherwise random
 if [[ -n "${1:-}" ]]; then
+  if [[ ! "${1}" =~ ^[0-9]+$ ]] || (( ${1} < 1 || ${1} > MAX_POKEMON )); then
+    printf "Error: Pokemon ID must be an integer between 1 and %d\n" "$MAX_POKEMON" >&2
+    exit 1
+  fi
   POKEMON_ID="$1"
 else
   POKEMON_ID=$(( RANDOM % MAX_POKEMON + 1 ))
