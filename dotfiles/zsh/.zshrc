@@ -28,9 +28,8 @@ alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat2
 alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
 
 # ─── Tools ────────────────────────────────────────────────────────────────────
-alias a="pi"
+alias a='command pi --no-skills'
 alias of="onefetch"
-alias setup="zc"
 alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
 alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
 alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
