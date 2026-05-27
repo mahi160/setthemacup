@@ -139,8 +139,8 @@ set_apps() {
     git clone --depth=1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$tmp_dir" 2>/dev/null && (
       cd "$tmp_dir"
       sudo ./install.sh
-    ) && success "pokemon-colorscripts installed." \
-      || warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
+    ) && success "pokemon-colorscripts installed." ||
+      warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
     rm -rf "$tmp_dir"
   else
     success "pokemon-colorscripts already installed."
@@ -331,14 +331,14 @@ set_nvim() {
   # Sync all lazy.nvim plugins (installs everything in lazy-lock.json)
   # This also triggers Mason to auto-install configured LSP servers
   info "Syncing plugins (this takes a few minutes on first run)..."
-  nvim --headless "+Lazy! sync" +qa 2>/dev/null \
-    && success "Neovim plugins synced." \
-    || warn "Plugin sync had warnings — check :Lazy on first launch."
+  nvim --headless "+Lazy! sync" +qa 2>/dev/null &&
+    success "Neovim plugins synced." ||
+    warn "Plugin sync had warnings — check :Lazy on first launch."
 
   # Remove disabled plugins from disk (e.g. markdown-preview.nvim, enabled=false)
-  nvim --headless "+Lazy! clean" +qa 2>/dev/null \
-    && success "Disabled plugins cleaned from disk." \
-    || warn "Lazy clean had warnings."
+  nvim --headless "+Lazy! clean" +qa 2>/dev/null &&
+    success "Disabled plugins cleaned from disk." ||
+    warn "Lazy clean had warnings."
 
   # Note: typescript-language-server is intentionally absent from lazyvim.json
   # (vtsls handles TS). Mason will never install it on a fresh setup.
@@ -624,9 +624,9 @@ set_crontab() {
   info "Installing maintenance cron jobs..."
   local script_dir
   script_dir="$(dirname "$(realpath "$0")")"
-  bash "${script_dir}/crontab-setup.sh" \
-    && success "Cron jobs installed." \
-    || warn "Cron setup failed — run scripts/crontab-setup.sh manually."
+  bash "${script_dir}/crontab-setup.sh" &&
+    success "Cron jobs installed." ||
+    warn "Cron setup failed — run scripts/crontab-setup.sh manually."
   log_action "Crontab setup complete"
 }
 
