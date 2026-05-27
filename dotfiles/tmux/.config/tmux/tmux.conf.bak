@@ -33,10 +33,12 @@
 # ============================================================================
 
 # Default terminal with true color support
-set -g default-terminal "tmux-256color"
+set -g default-terminal "${TERM}"
 set -ga terminal-overrides ",xterm-256color:Tc"
 set -ga terminal-overrides ",alacritty:Tc"
 set -ga terminal-overrides ",*256col*:Tc"
+set-option -g utf8-on on
+
 # Undercurl support
 set -as terminal-overrides ',*:Smulx=\E[4::%p1%dm'
 set -as terminal-overrides ',*:Setulc=\E[58::2::::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m'
@@ -49,7 +51,7 @@ set -g focus-events on
 # ============================================================================
 
 # Faster escape time (important for Neovim)
-set -sg escape-time 10
+set -sg escape-time 0
 
 # Increase scrollback buffer
 set -g history-limit 50000
@@ -57,8 +59,8 @@ set -g history-limit 50000
 # Display messages for 2 seconds
 set -g display-time 2000
 
-# Refresh status bar
-set -g status-interval 15
+# Refresh status more often
+set -g status-interval 5
 
 # Aggressive resize (useful when grouped sessions)
 setw -g aggressive-resize on
@@ -158,7 +160,11 @@ bind -T copy-mode-vi C-v send-keys -X rectangle-toggle
 # Don't exit copy mode on mouse drag end
 unbind -T copy-mode-vi MouseDragEnd1Pane
 
-# macOS clipboard handled by tmux-yank plugin
+# macOS clipboard integration
+if-shell "uname | grep -q Darwin" {
+  bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "pbcopy"
+  bind -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "pbcopy"
+}
 
 # ============================================================================
 # MOUSE CONFIGURATION
