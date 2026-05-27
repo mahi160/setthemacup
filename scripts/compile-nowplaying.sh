@@ -15,12 +15,13 @@
 
 set -euo pipefail
 
-SCRIPT="$HOME/.config/tmux/plugins/tmux-nowplaying/scripts/nowplaying_mediaremote.swift"
+# Swift source lives in the dotfiles scripts/ dir (no plugin dependency)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT="$SCRIPT_DIR/nowplaying_mediaremote.swift"
 BINARY="$HOME/.local/bin/nowplaying-mediaremote"
 
 if [[ ! -f "$SCRIPT" ]]; then
   echo "[compile-nowplaying] Swift source not found: $SCRIPT"
-  echo "[compile-nowplaying] Install tmux-nowplaying plugin first (prefix + I)"
   exit 1
 fi
 
