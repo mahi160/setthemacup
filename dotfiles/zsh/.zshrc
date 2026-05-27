@@ -68,11 +68,6 @@ esac
 # ─── Prompt & Tools ───────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
 
-# thefuck: lazy-load — only initialise on first use (avoids Python startup cost)
-fuck() {
-  eval "$(thefuck --alias)" && unset -f fuck && fuck "$@"
-}
-
 source <(fzf --zsh)
 
 # pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)

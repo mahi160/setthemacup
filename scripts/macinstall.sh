@@ -3,6 +3,42 @@
 set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/../dotfiles" && pwd)"
+APPS_JSON="$(cd "$(dirname "$0")" && pwd)/apps.json"
+
+# Read a top-level array of .name fields from apps.json
+# Usage: apps_names <key>   e.g. apps_names formulae
+apps_names() {
+  python3 -c "
+import json, sys
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for item in data.get('${1}', []):
+    print(item['name'])
+"
+}
+
+# Read a top-level array including a second field
+# Usage: apps_pairs <key> <field>   e.g. apps_pairs mas id
+apps_pairs() {
+  python3 -c "
+import json
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for item in data.get('${1}', []):
+    print(item['${2}'] + ':' + item['name'])
+"
+}
+
+# Read .url for dmg entries
+apps_dmg() {
+  python3 -c "
+import json
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for item in data.get('dmg', []):
+    print(item['name'] + '|' + item['url'])
+"
+}
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[31m'
@@ -45,102 +81,37 @@ set_apps() {
   info "Updating Homebrew..."
   brew update || warn "brew update failed, continuing with cached index."
 
-  info "Installing formulae..."
-
-  local formulae=(
-    # shell / terminal
-    zsh eza bat coreutils fastfetch onefetch starship fzf mas
-
-    # editors & dev tools
-    neovim tmux lazygit lazysql stow
-    git gh tree-sitter-cli
-    # git-filter-repo  # rewrite git history — uncomment if needed
-    # cobra-cli        # Go CLI scaffolding — uncomment if needed
-
-    # search & file navigation
-    ripgrep fd yazi
-
-    # media
-    ffmpeg
-    # espeak-ng  # text-to-speech — uncomment if needed
-
-    # languages & runtimes
-    uv docker-compose
-
-    # network & misc
-    tailscale sheets
-  )
-
-  local casks=(
-    # browsers
-    brave-browser zen
-
-    # terminal
-    ghostty
-
-    # editors & IDEs
-    zed
-    # raycast  # v2 not on brew — install manually from raycast.com
-
-    # communication
-    slack whatsapp telegram
-
-    # productivity & utilities
-    rectangle alt-tab caffeine mos
-    doll stats localsend shottr obsidian
-
-    # media & entertainment
-    iina jellyfin-media-player calibre qbittorrent
-
-    # design
-    affinity
-
-    # dev tools
-    orbstack ollama
-
-    # flashing
-    balenaetcher
-
-    # fonts
-    font-jetbrains-mono-nerd-font # primary coding font
-    font-monaspice-nerd-font      # includes Monaspace Radon (cursive italics)
-  )
-
-  for pkg in "${formulae[@]}"; do
+  info "Installing formulae from apps.json..."
+  while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
     if brew list --formula "$pkg" &>/dev/null; then
       success "$pkg already installed."
     else
       info "Installing $pkg..."
-      brew install "$pkg" || {
-        warn "Failed to install formula: $pkg"
-        log_action "Failed: $pkg"
-      }
+      brew install "$pkg" || { warn "Failed: $pkg"; log_action "Failed formula: $pkg"; }
     fi
-  done
+  done < <(apps_names formulae)
 
-  for pkg in "${casks[@]}"; do
+  info "Installing casks from apps.json..."
+  while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
     if brew list --cask "$pkg" &>/dev/null; then
       success "$pkg already installed."
     else
       info "Installing cask: $pkg..."
-      brew install --cask "$pkg" || {
-        warn "Failed to install cask: $pkg"
-        log_action "Failed cask: $pkg"
-      }
+      brew install --cask "$pkg" || { warn "Failed cask: $pkg"; log_action "Failed cask: $pkg"; }
     fi
-  done
+  done < <(apps_names casks)
 
-  # pokemon-colorscripts — used by the Neovim dashboard
-  # Installed from GitLab source (no stable brew tap on Apple Silicon)
+  # pokemon-colorscripts — nvim dashboard; not on any stable brew tap
   if ! command -v pokemon-colorscripts >/dev/null 2>&1; then
     info "Installing pokemon-colorscripts..."
     local tmp_dir
     tmp_dir="$(mktemp -d)"
     git clone --depth=1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$tmp_dir" 2>/dev/null && (
-      cd "$tmp_dir"
-      sudo ./install.sh
-    ) && success "pokemon-colorscripts installed." ||
-      warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
+      cd "$tmp_dir" && sudo ./install.sh
+    ) && success "pokemon-colorscripts installed." \
+      || warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
     rm -rf "$tmp_dir"
   else
     success "pokemon-colorscripts already installed."
@@ -459,34 +430,27 @@ install_dmg() {
 set_store_apps() {
   info "Installing App Store apps via mas..."
 
-  # requires being signed in to App Store
   if ! mas account &>/dev/null; then
     warn "Not signed in to App Store — skipping mas installs. Sign in via App Store app first."
     return 0
   fi
 
-  local store_apps=(
-    "682658836:GarageBand"
-    "408981434:iMovie"
-    "409183694:Keynote"
-    "409203825:Numbers"
-    "409201541:Pages"
-  )
-
-  for entry in "${store_apps[@]}"; do
-    IFS=':' read -r id name <<<"$entry"
+  while IFS=':' read -r id name; do
+    [[ -z "$id" ]] && continue
     if mas list | grep -q "^$id"; then
       success "$name already installed."
     else
       info "Installing $name..."
       mas install "$id" || warn "Failed to install $name."
     fi
-  done
+  done < <(apps_pairs mas id)
 
   info "Installing direct download apps..."
 
-  install_dmg "Raycast" "https://www.raycast.com/download"
-  install_dmg "FortiClient" "https://links.fortinet.com/forticlient/mac/vpnagent"
+  while IFS='|' read -r name url; do
+    [[ -z "$name" ]] && continue
+    install_dmg "$name" "$url"
+  done < <(apps_dmg)
 
   log_action "Store & direct apps complete"
 }
