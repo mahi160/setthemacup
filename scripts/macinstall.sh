@@ -325,6 +325,27 @@ set_pi() {
   log_action "pi installed"
 }
 
+# ─── AI Skills ──────────────────────────────────────────────────────────────────────
+set_ai() {
+  info "Installing AI skills via npx skills..."
+
+  while IFS='|' read -r source desc; do
+    [[ -z "$source" ]] && continue
+    info "  $source — $desc"
+    npx --yes skills add "$source" 2>/dev/null \
+      && success "Installed: $source" \
+      || warn "Failed: $source (can install manually: npx skills add $source)"
+  done < <(python3 -c "
+import json
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for s in data.get('ai_skills', []):
+    print(s['source'] + '|' + s['desc'])
+")
+
+  log_action "AI skills installed"
+}
+
 # ─── SSH ──────────────────────────────────────────────────────────────────────
 set_ssh() {
   info "Setting up SSH..."
@@ -666,6 +687,7 @@ main() {
     set_node
     set_nvim
     set_pi
+    set_ai
     set_ssh
     set_mac_cleanup
     set_mac_defaults

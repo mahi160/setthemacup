@@ -5,8 +5,36 @@
     "cask": "brew install --cask <name>",
     "mas": "Mac App Store — requires sign-in",
     "dmg": "Direct .dmg download and mount",
-    "smb": "Auto-mount on login via LaunchAgent; credentials stored in macOS Keychain"
+    "smb":       "Auto-mount on login via LaunchAgent; credentials stored in macOS Keychain",
+    "ai_skills": "npx skills add <github-source>"
   },
+
+  "ai_skills": [
+    {
+      "source": "vercel-labs/skills",
+      "desc":   "find-skills — discover and install agent skills"
+    },
+    {
+      "source": "anthropics/skills",
+      "desc":   "frontend-design — production-grade frontend interfaces"
+    },
+    {
+      "source": "vercel-labs/agent-skills",
+      "desc":   "vercel-react-best-practices, web-design-guidelines"
+    },
+    {
+      "source": "JuliusBrussee/caveman",
+      "desc":   "caveman, caveman-commit, caveman-compress, caveman-review"
+    },
+    {
+      "source": "mattpocock/skills",
+      "desc":   "grill-with-docs, grill-me, write-a-skill, to-prd"
+    },
+    {
+      "source": "github/awesome-copilot",
+      "desc":   "security-review"
+    }
+  ],
 
   "smb": [
     {

@@ -22,12 +22,13 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 | 6 | `set_node` | fnm → Node LTS → pnpm |
 | 7 | `set_nvim` | Lazy sync plugins, clean disabled ones |
 | 8 | `set_pi` | Pi coding agent + claude extension deps |
-| 9 | `set_ssh` | Generate ed25519 keys (personal + work), print for GitHub |
-| 10 | `set_mac_cleanup` | Clear dock, disable Siri/Game Center/analytics |
-| 11 | `set_mac_defaults` | Keyboard, Finder, trackpad, spaces |
-| 12 | `set_network_shares` | Auto-mount SMB shares on login via LaunchAgent |
-| 13 | `set_nowplaying_binary` | Compile Swift nowplaying binary for tmux status bar |
-| 14 | `set_crontab` | Weekly pi session pruning + fnm multishell cleanup |
+| 9 | `set_ai` | AI skills via `npx skills add` — vercel, anthropic, mattpocock, caveman, security-review |
+| 10 | `set_ssh` | Generate ed25519 keys (personal + work), print for GitHub |
+| 11 | `set_mac_cleanup` | Clear dock, disable Siri/Game Center/analytics |
+| 12 | `set_mac_defaults` | Keyboard, Finder, trackpad, spaces |
+| 13 | `set_network_shares` | Auto-mount SMB shares on login via LaunchAgent |
+| 14 | `set_nowplaying_binary` | Compile Swift nowplaying binary for tmux status bar |
+| 15 | `set_crontab` | Weekly pi session pruning + fnm multishell cleanup |
 
 ---
 
@@ -50,6 +51,7 @@ Three things need you:
 **Files:** yazi · eza · bat · fd · ripgrep · fzf  
 **Git:** lazygit · gh  
 **AI:** pi · Claude Code  
+**Skills:** frontend-design · security-review · vercel-react-best-practices · web-design-guidelines · caveman · grill-with-docs · to-prd · write-a-skill  
 **Runtimes:** Node (fnm) · pnpm · uv (Python)  
 **Infra:** OrbStack · docker-compose · tailscale  
 
@@ -63,7 +65,7 @@ All apps live in [`scripts/apps.json`](scripts/apps.json) — edit there, not in
 { "name": "some-tool", "desc": "What it does" }
 ```
 
-Sections: `formulae` (brew), `casks` (brew --cask), `mas` (App Store), `dmg` (direct download), `smb` (network shares).
+Sections: `formulae` (brew), `casks` (brew --cask), `mas` (App Store), `dmg` (direct download), `smb` (network shares), `ai_skills` (npx skills).
 
 ---
 
