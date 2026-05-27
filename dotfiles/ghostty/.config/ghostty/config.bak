@@ -45,7 +45,7 @@ window-padding-balance = true
 background-blur = true
 background-opacity = 0.96
 background = #282828
-background-blur-radius = 20
+background-blur-radius = 120
 background-image = /Users/mahi/Pictures/pokemon_bg/218.png
 # managed by scripts/pokemon-bg.sh — run it once to activate
 background-image-opacity = 0.15
@@ -96,7 +96,7 @@ copy-on-select = clipboard
 # ============================================================================
 
 # Enable OSC 52 for remote clipboard support
-clipboard-read = ask
+clipboard-read = allow
 clipboard-write = allow
 
 # ============================================================================
