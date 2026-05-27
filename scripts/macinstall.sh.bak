@@ -130,22 +130,6 @@ set_apps() {
     fi
   done
 
-  # pokemon-colorscripts — used by the Neovim dashboard
-  # Installed from GitLab source (no stable brew tap on Apple Silicon)
-  if ! command -v pokemon-colorscripts >/dev/null 2>&1; then
-    info "Installing pokemon-colorscripts..."
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-    git clone --depth=1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$tmp_dir" 2>/dev/null && (
-      cd "$tmp_dir"
-      sudo ./install.sh
-    ) && success "pokemon-colorscripts installed." \
-      || warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
-    rm -rf "$tmp_dir"
-  else
-    success "pokemon-colorscripts already installed."
-  fi
-
   log_action "Apps installation complete"
 }
 
@@ -198,7 +182,7 @@ set_dotfiles() {
 
   # stow dotfiles
   info "Stowing dotfiles from $DOTFILES_DIR..."
-  local packages=(fastfetch ghostty nvim pi starship stow tmux yazi zsh)
+  local packages=(fastfetch ghostty nvim pi starship stow tmux zsh)
   for pkg in "${packages[@]}"; do
     # backup any conflicting files before stowing
     local conflicts
@@ -232,39 +216,6 @@ set_dotfiles() {
   fi
 
   log_action "Dotfiles setup complete"
-}
-
-# ─── Runtimes (bun, rust) ───────────────────────────────────────────────────────────────────
-set_runtimes() {
-  info "Setting up additional runtimes..."
-
-  # bun — JS runtime/bundler; .zshrc expects the binary at ~/.bun/bin/bun
-  if ! command -v bun >/dev/null 2>&1; then
-    info "Installing bun..."
-    curl -fsSL https://bun.sh/install | bash || {
-      warn "bun installation failed."
-      log_action "bun installation failed"
-    }
-    success "bun installed."
-  else
-    success "bun $(bun --version) already installed."
-  fi
-
-  # rust / cargo — .zshenv sources ~/.cargo/env
-  if ! command -v cargo >/dev/null 2>&1; then
-    info "Installing rustup..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path || {
-      warn "rustup installation failed."
-      log_action "rustup installation failed"
-    }
-    # shellcheck disable=SC1091
-    [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
-    success "rust installed."
-  else
-    success "cargo $(cargo --version) already installed."
-  fi
-
-  log_action "Runtimes setup complete"
 }
 
 # ─── Git ─────────────────────────────────────────────────────────────────────
@@ -319,35 +270,7 @@ set_node() {
   log_action "Node setup complete"
 }
 
-# ─── Neovim Bootstrap ──────────────────────────────────────────────────────────────────
-set_nvim() {
-  info "Bootstrapping Neovim plugins..."
-
-  if ! command -v nvim >/dev/null 2>&1; then
-    error "nvim not found — ensure set_apps ran successfully."
-    return 1
-  fi
-
-  # Sync all lazy.nvim plugins (installs everything in lazy-lock.json)
-  # This also triggers Mason to auto-install configured LSP servers
-  info "Syncing plugins (this takes a few minutes on first run)..."
-  nvim --headless "+Lazy! sync" +qa 2>/dev/null \
-    && success "Neovim plugins synced." \
-    || warn "Plugin sync had warnings — check :Lazy on first launch."
-
-  # Remove disabled plugins from disk (e.g. markdown-preview.nvim, enabled=false)
-  nvim --headless "+Lazy! clean" +qa 2>/dev/null \
-    && success "Disabled plugins cleaned from disk." \
-    || warn "Lazy clean had warnings."
-
-  # Note: typescript-language-server is intentionally absent from lazyvim.json
-  # (vtsls handles TS). Mason will never install it on a fresh setup.
-  # On a migration from an older config, run manually: :MasonUninstall typescript-language-server
-
-  log_action "Neovim bootstrap complete"
-}
-
-# ─── Pi ──────────────────────────────────────────────────────────────────────────────────
+# ─── Pi ───────────────────────────────────────────────────────────────────────
 set_pi() {
   info "Installing pi (coding agent)..."
 
@@ -619,18 +542,6 @@ set_mac_defaults() {
   log_action "macOS defaults applied"
 }
 
-# ─── Crontab ─────────────────────────────────────────────────────────────────────────────
-set_crontab() {
-  info "Installing maintenance cron jobs..."
-  local script_dir
-  script_dir="$(dirname "$(realpath "$0")")"
-  bash "${script_dir}/crontab-setup.sh" \
-    && success "Cron jobs installed." \
-    || warn "Cron setup failed — run scripts/crontab-setup.sh manually."
-  log_action "Crontab setup complete"
-}
-
-# ─── Nowplaying Binary ────────────────────────────────────────────────────────────────
 set_nowplaying_binary() {
   info "Compiling tmux-nowplaying binary..."
   local script_dir
@@ -659,14 +570,11 @@ main() {
     set_dotfiles
     set_git
     set_node
-    set_runtimes
-    set_nvim
     set_pi
     set_ssh
     set_mac_cleanup
     set_mac_defaults
     set_nowplaying_binary
-    set_crontab
   )
 
   for step in "${steps[@]}"; do
