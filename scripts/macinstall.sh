@@ -542,6 +542,19 @@ set_mac_defaults() {
   log_action "macOS defaults applied"
 }
 
+set_nowplaying_binary() {
+  info "Compiling tmux-nowplaying binary..."
+  local script_dir
+  script_dir="$(dirname "$(realpath "$0")")"
+  if bash "${script_dir}/compile-nowplaying.sh"; then
+    success "nowplaying binary compiled."
+    log_action "nowplaying binary compiled"
+  else
+    warn "nowplaying binary compilation failed — will fall back to Swift interpreter."
+    log_action "nowplaying binary compilation failed (non-fatal)"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
   echo -e "${BLUE}"
@@ -561,6 +574,7 @@ main() {
     set_ssh
     set_mac_cleanup
     set_mac_defaults
+    set_nowplaying_binary
   )
 
   for step in "${steps[@]}"; do

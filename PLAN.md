@@ -72,7 +72,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
 
 ### Phase 1 — tmux (highest runtime impact)
 
-- [ ] **1.1 Pre-compile nowplaying Swift binary**
+- [x] **1.1 Pre-compile nowplaying Swift binary**
   - Create `scripts/compile-nowplaying.sh`:
     ```bash
     #!/usr/bin/env bash
@@ -101,14 +101,14 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - Run `compile-nowplaying.sh` once after setup, and add it to `macinstall.sh`.
   - **Expected win:** 155ms → ~5ms per status tick.
 
-- [ ] **1.2 Increase status-interval to 15**
+- [x] **1.2 Increase status-interval to 15**
   - `dotfiles/tmux/.config/tmux/tmux.conf`:
     ```
     set -g status-interval 15   # was 5
     ```
   - Battery and CPU scripts run every 15s instead of every 5s.
 
-- [ ] **1.3 Fix default-terminal**
+- [x] **1.3 Fix default-terminal**
   - Change:
     ```
     set -g default-terminal "${TERM}"
@@ -120,7 +120,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - The `${TERM}` interpolation is evaluated at config-load time, not per-pane.
     `tmux-256color` is the correct and consistent value for modern tmux.
 
-- [ ] **1.4 Remove duplicate pbcopy clipboard binding**
+- [x] **1.4 Remove duplicate pbcopy clipboard binding**
   - The manual `pbcopy` bindings on lines 165–166 duplicate what `tmux-yank` does.
     Remove these three lines:
     ```conf
@@ -131,10 +131,10 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - Keep the `if-shell` block wrapper, just empty it or remove the whole block.
     `tmux-yank` handles this correctly and respects OSC 52.
 
-- [ ] **1.5 Remove dead `set-option -g utf8-on on`**
+- [x] **1.5 Remove dead `set-option -g utf8-on on`**
   - This option was removed in tmux 2.2. It silently no-ops but clutters config.
 
-- [ ] **1.6 Adjust escape-time to 10**
+- [x] **1.6 Adjust escape-time to 10**
   - Change `set -sg escape-time 0` → `set -sg escape-time 10`
   - 0ms causes edge-case issues with non-Neovim TUI programs. 10ms is imperceptible
     to humans and safe for Neovim.
@@ -143,7 +143,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
 
 ### Phase 2 — Neovim (memory + startup)
 
-- [ ] **2.1 Set `defaults.lazy = true` in lazy.lua**
+- [x] **2.1 Set `defaults.lazy = true` in lazy.lua**
   - File: `lua/config/lazy.lua`
   - Change one character:
     ```lua
@@ -157,7 +157,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
     `gruvbox-material` (colorscheme) and `snacks.nvim` (dashboard). Both are already
     handled by LazyVim's own specs.
 
-- [ ] **2.2 Remove `lang.typescript` extra from lazyvim.json**
+- [x] **2.2 Remove `lang.typescript` extra from lazyvim.json**
   - Remove this line:
     ```json
     "lazyvim.plugins.extras.lang.typescript",
@@ -167,12 +167,12 @@ These `.bak` files are committed so the backup is in git history alongside the c
     after applying to reclaim disk.
   - **Expected win:** 200–500MB RAM per Neovim instance on TS projects.
 
-- [ ] **2.3 Remove `ui.smear-cursor` extra from lazyvim.json**
+- [x] **2.3 Remove `ui.smear-cursor` extra from lazyvim.json**
   - Remove: `"lazyvim.plugins.extras.ui.smear-cursor"`
   - `smear-cursor.nvim` conflicts with `noice.nvim` (both intercept redraws).
     Pure cosmetic, not worth the instability.
 
-- [ ] **2.4 Clean up misc.lua — remove lorem.nvim and better-escape.nvim**
+- [x] **2.4 Clean up misc.lua — remove lorem.nvim and better-escape.nvim**
   - `lorem.nvim` (23MB): no replacement needed. Use `:r !cat /dev/urandom | base64 | head -5`
     or just type it.
   - `better-escape.nvim`: LazyVim already handles `jk` escape mapping via its own
@@ -191,7 +191,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
     }
     ```
 
-- [ ] **2.5 Remove markdown-preview.nvim from lazy-lock.json + stop it loading**
+- [x] **2.5 Remove markdown-preview.nvim from lazy-lock.json + stop it loading**
   - `markdown-preview.nvim` (62MB Node.js app) is superseded by `live-preview.nvim`.
   - Add a disable spec to `misc.lua` (or a new `overrides.lua`):
     ```lua
@@ -201,7 +201,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - **Note:** If `markdown-preview.nvim` is brought in by a LazyVim extra, this
     disable spec is the correct removal mechanism. Check with `:Lazy` after applying.
 
-- [ ] **2.6 Fix double `gruvbox_material_enable_italic` in colorscheme.lua**
+- [x] **2.6 Fix double `gruvbox_material_enable_italic` in colorscheme.lua**
   - File: `lua/plugins/colorscheme.lua`
   - Remove the duplicate line (set twice in the same `config` function).
 
@@ -209,7 +209,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
 
 ### Phase 3 — Shell (startup time)
 
-- [ ] **3.1 Gate fastfetch to login shells only**
+- [x] **3.1 Gate fastfetch to login shells only**
   - Currently `fastfetch` is the first line of `.zshrc`, running on every shell
     invocation: tmux splits, subshells, agent-spawned processes.
   - Wrap it:
@@ -219,7 +219,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
     ```
   - **Expected win:** Every tmux split and agent subshell no longer forks fastfetch.
 
-- [ ] **3.2 Lazy-load thefuck**
+- [x] **3.2 Lazy-load thefuck**
   - `eval "$(thefuck --alias)"` spawns a Python interpreter at every shell start.
   - Replace with a lazy wrapper that only initialises thefuck the first time `fuck`
     is actually typed:
@@ -231,7 +231,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
     ```
   - This eliminates the Python startup cost from the shell critical path entirely.
 
-- [ ] **3.3 Fix duplicate PATH entries**
+- [x] **3.3 Fix duplicate PATH entries**
   - `.bun/bin`, `.opencode/bin`, `.orbstack/bin` appear twice (once in `.zshrc`,
     once from `.zprofile` / `orbstack init.zsh`).
   - The existing `pnpm` guard pattern already shows the fix:
@@ -248,7 +248,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
     esac
     ```
 
-- [ ] **3.4 Fix git identity aliases to use --local**
+- [x] **3.4 Fix git identity aliases to use --local**
   - Change:
     ```zsh
     alias gp="git config user.name \"mahi160\" && git config user.email \"...\""
@@ -265,7 +265,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
 
 ### Phase 4 — Ghostty (GPU overhead)
 
-- [ ] **4.1 Reduce blur-radius from 120 to 20**
+- [x] **4.1 Reduce blur-radius from 120 to 20**
   - File: `dotfiles/ghostty/.config/ghostty/config`
   - Change:
     ```
@@ -274,7 +274,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - Radius 120 operates on a huge pixel neighborhood per frame. 20 is visually
     indistinguishable from 120 at 96% opacity and cuts GPU compositing work significantly.
 
-- [ ] **4.2 Set clipboard-read to ask (security)**
+- [x] **4.2 Set clipboard-read to ask (security)**
   - Change:
     ```
     clipboard-read = ask    # was allow
@@ -286,7 +286,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
 
 ### Phase 5 — Filesystem Cleanup
 
-- [ ] **5.1 Remove 5 dead symlinks from ~/.config**
+- [x] **5.1 Remove 5 dead symlinks from ~/.config**
   - These all point to non-existent targets:
     ```bash
     rm ~/.config/nvim-0.12
@@ -297,14 +297,14 @@ These `.bak` files are committed so the backup is in git history alongside the c
     ```
   - The configs they pointed to no longer exist in dotfiles. No data loss.
 
-- [ ] **5.2 Remove dead nvim-chad data dir**
+- [x] **5.2 Remove dead nvim-chad data dir**
   - First create the tar backup (Step 2 above), then:
     ```bash
     rm -rf ~/.local/share/nvim-chad
     ```
   - Frees 172MB.
 
-- [ ] **5.3 Add cron setup script**
+- [x] **5.3 Add cron setup script**
   - Create `scripts/crontab-setup.sh`:
     ```bash
     #!/usr/bin/env bash
@@ -318,7 +318,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - Run once: `bash scripts/crontab-setup.sh`
   - This starts the pi session cleanup (30-day TTL) and fnm multishell drain (7-day TTL).
 
-- [ ] **5.4 Remove opencode**
+- [x] **5.4 Remove opencode**
   - Remove from PATH in `.zshrc`:
     ```zsh
     # DELETE this line:
@@ -332,7 +332,7 @@ These `.bak` files are committed so the backup is in git history alongside the c
   - This removes the third AI agent entirely. Pi is primary.
   - **Expected win:** 1 fewer entry in PATH (already duplicated), ~50MB freed, one less background connection.
 
-- [ ] **5.5 Initial fnm multishell cleanup (one-time)**
+- [x] **5.5 Initial fnm multishell cleanup (one-time)**
   - 3,095 stale symlinks, done now rather than waiting for cron:
     ```bash
     find ~/.local/state/fnm_multishells -mindepth 1 -maxdepth 1 -mtime +1 -exec rm -rf {} +
