@@ -223,13 +223,21 @@ set_dotfiles() {
     success "Stowed $pkg."
   done
 
-  # install tmux plugins via tpm
-  local tpm="$HOME/.config/tmux/plugins/tpm/bin/install_plugins"
-  if [[ -f "$tpm" ]]; then
+  # Bootstrap TPM (plugins/ is gitignored so tpm is never stowed)
+  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
+  if [[ ! -d "$tpm_dir" ]]; then
+    info "Cloning TPM..."
+    git clone --depth=1 https://github.com/tmux-plugins/tpm "$tpm_dir" || {
+      warn "TPM clone failed — tmux plugins will not be installed."
+      log_action "TPM clone failed"
+    }
+  fi
+
+  # Install all plugins listed in tmux.conf
+  local tpm_install="$tpm_dir/bin/install_plugins"
+  if [[ -f "$tpm_install" ]]; then
     info "Installing tmux plugins..."
-    "$tpm" && success "tmux plugins installed." || warn "tmux plugin install failed."
-  else
-    warn "tpm not found at $tpm — skipping tmux plugin install."
+    "$tpm_install" && success "tmux plugins installed." || warn "tmux plugin install failed."
   fi
 
   log_action "Dotfiles setup complete"
