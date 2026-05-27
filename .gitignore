@@ -25,3 +25,4 @@ dotfiles/pi/.pi/agent/stats.db
 
 # PI run history
 dotfiles/pi/.pi/agent/run-history.jsonl
+**/.pi/agent/*.log
