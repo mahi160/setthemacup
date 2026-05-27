@@ -1,5 +1,4 @@
-# Only show system info in login shells (not tmux splits / agent subshells)
-[[ -o login ]] && fastfetch
+fastfetch
 
 # ─── Oh My Zsh ────────────────────────────────────────────────────────────────
 export ZSH="$HOME/.oh-my-zsh"
@@ -25,8 +24,8 @@ alias zc='dev --dir "$HOME/Documents/Coding/Projects/setthemacup" --name config'
 alias zs="source ~/.zshrc"
 
 # ─── Git ──────────────────────────────────────────────────────────────────────
-alias gp="git config --local user.name \"mahi160\" && git config --local user.email \"omarsifat288@gmail.com\""
-alias gw="git config --local user.name \"salauddin-sifat-qp\" && git config --local user.email \"salauddin.sifat@questionpro.com\""
+alias gp="git config user.name \"mahi160\" && git config user.email \"omarsifat288@gmail.com\""
+alias gw="git config user.name \"salauddin-sifat-qp\" && git config user.email \"salauddin.sifat@questionpro.com\""
 
 # ─── Tools ────────────────────────────────────────────────────────────────────
 alias a='command pi --no-skills'
@@ -67,10 +66,7 @@ esac
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
-case ":$PATH:" in
-  *":$BUN_INSTALL/bin:"*) ;;
-  *) export PATH="$BUN_INSTALL/bin:$PATH" ;;
-esac
+export PATH="$BUN_INSTALL/bin:$PATH"
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # cargo
@@ -78,13 +74,14 @@ esac
 
 # ─── Prompt & Tools ───────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
-
-# thefuck: lazy-load — only initialise on first use (avoids Python startup cost)
-fuck() {
-  eval "$(thefuck --alias)" && unset -f fuck && fuck "$@"
-}
-
+eval "$(thefuck --alias)"
 source <(fzf --zsh)
+
+# bun completions
+[ -s "/Users/mahi/.bun/_bun" ] && source "/Users/mahi/.bun/_bun"
+
+# opencode
+export PATH=/Users/mahi/.opencode/bin:$PATH
 
 # pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)
 export PI_CACHE_RETENTION=long
