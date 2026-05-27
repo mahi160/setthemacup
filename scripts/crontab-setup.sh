@@ -13,7 +13,8 @@
 
 set -euo pipefail
 
-REPO="$HOME/Documents/Coding/Projects/setthemacup"
+# Use SETTHEMACUP env var if set, otherwise derive from this script's location
+REPO="${SETTHEMACUP:-$(cd "$(dirname "$(realpath "$0")")" && cd .. && pwd)}"
 
 PRUNE_JOB="0 3 * * 0 ${REPO}/scripts/pi-prune.sh >> /tmp/pi-prune.log 2>&1"
 FNM_JOB="0 4 * * 0 find \$HOME/.local/state/fnm_multishells -mindepth 1 -maxdepth 1 -mtime +7 -exec rm -rf {} + 2>/dev/null"

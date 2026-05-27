@@ -198,7 +198,8 @@ set_dotfiles() {
 
   # stow dotfiles
   info "Stowing dotfiles from $DOTFILES_DIR..."
-  local packages=(fastfetch ghostty nvim pi starship stow tmux yazi zsh)
+  # yazi omitted — dotfiles/yazi/ has no config yet; add when yazi is configured
+  local packages=(fastfetch ghostty nvim pi starship stow tmux zsh)
   for pkg in "${packages[@]}"; do
     # backup any conflicting files before stowing
     local conflicts
@@ -363,6 +364,17 @@ set_pi() {
   }
 
   success "pi installed."
+
+  # Install pi extension dependencies
+  # The claude extension uses @mariozechner/jiti (TypeScript runtime) which is gitignored
+  local claude_ext="$HOME/.pi/agent/extensions/claude"
+  if [[ -f "$claude_ext/package.json" ]]; then
+    info "Installing pi claude extension dependencies..."
+    (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null) \
+      && success "pi claude extension dependencies installed." \
+      || warn "pi claude extension pnpm install failed — extension may not load."
+  fi
+
   log_action "pi installed"
 }
 

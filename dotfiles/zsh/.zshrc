@@ -21,7 +21,7 @@ alias vm="NVIM_APPNAME=nvim.12 nvim"
 # ─── Shell ────────────────────────────────────────────────────────────────────
 alias ls="eza"
 alias ll="eza -la"
-alias zc='dev --dir "$HOME/Documents/Coding/Projects/setthemacup" --name config'
+alias zc='dev --dir "$SETTHEMACUP" --name config'
 alias zs="source ~/.zshrc"
 
 # ─── Git ──────────────────────────────────────────────────────────────────────
@@ -31,10 +31,10 @@ alias gw="git config --local user.name \"salauddin-sifat-qp\" && git config --lo
 # ─── Tools ────────────────────────────────────────────────────────────────────
 alias a='command pi --no-skills'
 alias of="onefetch"
-alias note="~/Documents/Coding/Projects/setthemacup/scripts/note.sh"
-alias dev="~/Documents/Coding/Projects/setthemacup/scripts/dev.sh"
+alias note="$SETTHEMACUP/scripts/note.sh"
+alias dev="$SETTHEMACUP/scripts/dev.sh"
 alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
-alias pokemon-bg="~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh"
+alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
 
 # yazi: cd into directory on exit
 function y() {
@@ -49,7 +49,7 @@ function y() {
 # ─── Keybindings ─────────────────────────────────────────────────────────────
 # Alt+Q: cycle Pokemon background
 _pokemon_bg_widget() {
-  ~/Documents/Coding/Projects/setthemacup/scripts/pokemon-bg.sh
+  "$SETTHEMACUP/scripts/pokemon-bg.sh"
   zle reset-prompt
 }
 zle -N _pokemon_bg_widget
