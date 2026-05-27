@@ -571,6 +571,59 @@ set_mac_defaults() {
   log_action "macOS defaults applied"
 }
 
+# ─── Network Shares ─────────────────────────────────────────────────────────────
+set_network_shares() {
+  info "Configuring network shares..."
+  mkdir -p "$HOME/Library/LaunchAgents"
+
+  while IFS='|' read -r name url; do
+    [[ -z "$name" ]] && continue
+    local label="com.mahi.mount.$(echo "$name" | tr '[:upper:]' '[:lower:]')"
+    local plist="$HOME/Library/LaunchAgents/${label}.plist"
+
+    # Generate the LaunchAgent plist.
+    # sleep 5 gives the network stack time to come up before attempting the mount.
+    # The || means: skip if already mounted, mount if not.
+    # osascript uses macOS Keychain — prompts for credentials on first run only.
+    cat > "$plist" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>sleep 5; mount | grep -q '${url}' || /usr/bin/osascript -e 'mount volume "${url}"'</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/${name}-mount.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/${name}-mount.log</string>
+</dict>
+</plist>
+PLIST
+
+    # Load it now (also runs at every login going forward)
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl load "$plist"
+    success "${name} (${url}) — will auto-mount on login. Enter credentials on first prompt."
+    log_action "Network share configured: $name"
+  done < <(python3 -c "
+import json
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for s in data.get('smb', []):
+    print(s['name'] + '|' + s['url'])
+")
+
+  log_action "Network shares complete"
+}
+
 # ─── Crontab ─────────────────────────────────────────────────────────────────────────────
 set_crontab() {
   info "Installing maintenance cron jobs..."
@@ -616,6 +669,7 @@ main() {
     set_ssh
     set_mac_cleanup
     set_mac_defaults
+    set_network_shares
     set_nowplaying_binary
     set_crontab
   )

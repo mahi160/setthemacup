@@ -4,8 +4,17 @@
     "formula": "brew install <name>",
     "cask": "brew install --cask <name>",
     "mas": "Mac App Store — requires sign-in",
-    "dmg": "Direct .dmg download and mount"
+    "dmg": "Direct .dmg download and mount",
+    "smb": "Auto-mount on login via LaunchAgent; credentials stored in macOS Keychain"
   },
+
+  "smb": [
+    {
+      "name": "terrorCastle",
+      "url":  "smb://192.168.0.103",
+      "desc": "Home server"
+    }
+  ],
 
   "formulae": [
     { "name": "zsh", "desc": "Shell" },
