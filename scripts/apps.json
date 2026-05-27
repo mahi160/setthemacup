@@ -82,8 +82,6 @@
 
     { "name": "ghostty", "desc": "Terminal emulator" },
 
-    { "name": "zed", "desc": "Fast GUI editor — fallback and pair sessions" },
-
     { "name": "slack", "desc": "Work chat" },
     { "name": "whatsapp", "desc": "Messaging" },
     { "name": "telegram", "desc": "Messaging" },
@@ -122,13 +120,7 @@
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],
 
-  "mas": [
-    { "id": "682658836", "name": "GarageBand", "desc": "Music production" },
-    { "id": "408981434", "name": "iMovie", "desc": "Video editing" },
-    { "id": "409183694", "name": "Keynote", "desc": "Presentations" },
-    { "id": "409203825", "name": "Numbers", "desc": "Spreadsheets" },
-    { "id": "409201541", "name": "Pages", "desc": "Word processing" }
-  ],
+  "mas": [],
 
   "dmg": [
     {
