@@ -2,98 +2,135 @@
   "_readme": "App manifest. Edit here to add/remove tools. macinstall.sh reads this file.",
   "_sources": {
     "formula": "brew install <name>",
-    "cask":    "brew install --cask <name>",
-    "mas":     "Mac App Store — requires sign-in",
-    "dmg":     "Direct .dmg download and mount"
+    "cask": "brew install --cask <name>",
+    "mas": "Mac App Store — requires sign-in",
+    "dmg": "Direct .dmg download and mount"
   },
 
   "formulae": [
-    { "name": "zsh",              "desc": "Shell" },
-    { "name": "eza",              "desc": "ls replacement — colors, icons, git status" },
-    { "name": "bat",              "desc": "cat replacement — syntax highlighting, line numbers" },
-    { "name": "coreutils",        "desc": "GNU core utils (realpath etc. used by scripts)" },
-    { "name": "fastfetch",        "desc": "System info on login" },
-    { "name": "onefetch",         "desc": "Git repo summary — run 'of' inside a project" },
-    { "name": "starship",         "desc": "Prompt — git branch, language version, timing" },
-    { "name": "fzf",              "desc": "Fuzzy finder — Ctrl+R history, file search" },
-    { "name": "mas",              "desc": "Mac App Store CLI — installs store apps from terminal" },
+    { "name": "zsh", "desc": "Shell" },
+    { "name": "eza", "desc": "ls replacement — colors, icons, git status" },
+    {
+      "name": "bat",
+      "desc": "cat replacement — syntax highlighting, line numbers"
+    },
+    {
+      "name": "coreutils",
+      "desc": "GNU core utils (realpath etc. used by scripts)"
+    },
+    { "name": "fastfetch", "desc": "System info on login" },
+    {
+      "name": "onefetch",
+      "desc": "Git repo summary — run 'of' inside a project"
+    },
+    {
+      "name": "starship",
+      "desc": "Prompt — git branch, language version, timing"
+    },
+    { "name": "fzf", "desc": "Fuzzy finder — Ctrl+R history, file search" },
+    {
+      "name": "mas",
+      "desc": "Mac App Store CLI — installs store apps from terminal"
+    },
 
-    { "name": "neovim",           "desc": "Editor" },
-    { "name": "tmux",             "desc": "Terminal multiplexer — sessions, windows, panes" },
-    { "name": "lazygit",          "desc": "Terminal git UI" },
-    { "name": "lazysql",          "desc": "Terminal SQL / database UI" },
-    { "name": "stow",             "desc": "Symlinks dotfiles from repo into ~" },
-    { "name": "git",              "desc": "Git" },
-    { "name": "gh",               "desc": "GitHub CLI — PRs, issues, auth" },
-    { "name": "tree-sitter-cli",  "desc": "Treesitter parser CLI (used by nvim treesitter)" },
-    { "name": "cobra-cli",        "desc": "Go CLI app scaffolding (go install equivalent)" },
+    { "name": "neovim", "desc": "Editor" },
+    {
+      "name": "tmux",
+      "desc": "Terminal multiplexer — sessions, windows, panes"
+    },
+    { "name": "lazygit", "desc": "Terminal git UI" },
+    { "name": "lazysql", "desc": "Terminal SQL / database UI" },
+    { "name": "stow", "desc": "Symlinks dotfiles from repo into ~" },
+    { "name": "git", "desc": "Git" },
+    { "name": "gh", "desc": "GitHub CLI — PRs, issues, auth" },
+    {
+      "name": "tree-sitter-cli",
+      "desc": "Treesitter parser CLI (used by nvim treesitter)"
+    },
+    {
+      "name": "cobra-cli",
+      "desc": "Go CLI app scaffolding (go install equivalent)"
+    },
 
-    { "name": "ripgrep",          "desc": "Fast grep — used by nvim live grep and fzf" },
-    { "name": "fd",               "desc": "Fast find — used by fzf and nvim file pickers" },
-    { "name": "yazi",             "desc": "Terminal file manager — 'y' command" },
+    { "name": "ripgrep", "desc": "Fast grep — used by nvim live grep and fzf" },
+    { "name": "fd", "desc": "Fast find — used by fzf and nvim file pickers" },
+    { "name": "yazi", "desc": "Terminal file manager — 'y' command" },
 
-    { "name": "ffmpeg",           "desc": "Video/audio processing — used by various tools" },
+    {
+      "name": "ffmpeg",
+      "desc": "Video/audio processing — used by various tools"
+    },
 
-    { "name": "uv",               "desc": "Fast Python package manager" },
-    { "name": "docker-compose",   "desc": "Multi-container Docker setups" },
+    { "name": "uv", "desc": "Fast Python package manager" },
+    { "name": "docker-compose", "desc": "Multi-container Docker setups" },
 
-    { "name": "tailscale",        "desc": "VPN — private network across devices" }
+    { "name": "tailscale", "desc": "VPN — private network across devices" }
   ],
 
   "casks": [
-    { "name": "brave-browser",          "desc": "Primary browser" },
-    { "name": "zen",                    "desc": "Firefox-based minimal browser" },
+    { "name": "brave-browser", "desc": "Primary browser" },
+    { "name": "zen", "desc": "Firefox-based minimal browser" },
 
-    { "name": "ghostty",                "desc": "Terminal emulator" },
+    { "name": "ghostty", "desc": "Terminal emulator" },
 
-    { "name": "zed",                    "desc": "Fast GUI editor — fallback and pair sessions" },
+    { "name": "zed", "desc": "Fast GUI editor — fallback and pair sessions" },
 
-    { "name": "slack",                  "desc": "Work chat" },
-    { "name": "whatsapp",               "desc": "Messaging" },
-    { "name": "telegram",               "desc": "Messaging" },
+    { "name": "slack", "desc": "Work chat" },
+    { "name": "whatsapp", "desc": "Messaging" },
+    { "name": "telegram", "desc": "Messaging" },
 
-    { "name": "rectangle",              "desc": "Window snapping via keyboard shortcuts" },
-    { "name": "alt-tab",                "desc": "Proper Cmd+Tab with window previews" },
-    { "name": "caffeine",               "desc": "Prevents Mac from sleeping" },
-    { "name": "mos",                    "desc": "Smooth scrolling for external mice" },
-    { "name": "doll",                   "desc": "Menu bar app icon manager" },
-    { "name": "stats",                  "desc": "CPU / RAM / network in menu bar" },
-    { "name": "localsend",              "desc": "Local file transfer — cross-platform AirDrop" },
-    { "name": "shottr",                 "desc": "Screenshot tool with annotations" },
-    { "name": "obsidian",               "desc": "Markdown notes" },
+    { "name": "rectangle", "desc": "Window snapping via keyboard shortcuts" },
+    { "name": "alt-tab", "desc": "Proper Cmd+Tab with window previews" },
+    { "name": "caffeine", "desc": "Prevents Mac from sleeping" },
+    { "name": "mos", "desc": "Smooth scrolling for external mice" },
+    { "name": "doll", "desc": "Menu bar app icon manager" },
+    { "name": "stats", "desc": "CPU / RAM / network in menu bar" },
+    {
+      "name": "localsend",
+      "desc": "Local file transfer — cross-platform AirDrop"
+    },
+    { "name": "shottr", "desc": "Screenshot tool with annotations" },
+    { "name": "obsidian", "desc": "Markdown notes" },
 
-    { "name": "iina",                   "desc": "Video player" },
-    { "name": "jellyfin-media-player",  "desc": "Jellyfin self-hosted media client" },
-    { "name": "calibre",                "desc": "Ebook manager and converter" },
-    { "name": "qbittorrent",            "desc": "Torrent client" },
+    { "name": "iina", "desc": "Video player" },
+    {
+      "name": "jellyfin-media-player",
+      "desc": "Jellyfin self-hosted media client"
+    },
+    { "name": "calibre", "desc": "Ebook manager and converter" },
+    { "name": "qbittorrent", "desc": "Torrent client" },
 
-    { "name": "affinity",               "desc": "Affinity suite — Photo, Designer, Publisher" },
+    {
+      "name": "affinity",
+      "desc": "Affinity suite — Photo, Designer, Publisher"
+    },
 
-    { "name": "orbstack",               "desc": "Docker Desktop replacement — lighter and faster" },
-
-    { "name": "balenaetcher",           "desc": "Flash OS images to USB drives" },
+    {
+      "name": "orbstack",
+      "desc": "Docker Desktop replacement — lighter and faster"
+    },
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],
 
   "mas": [
-    { "id": "682658836",  "name": "GarageBand",  "desc": "Music production" },
-    { "id": "408981434",  "name": "iMovie",       "desc": "Video editing" },
-    { "id": "409183694",  "name": "Keynote",      "desc": "Presentations" },
-    { "id": "409203825",  "name": "Numbers",      "desc": "Spreadsheets" },
-    { "id": "409201541",  "name": "Pages",        "desc": "Word processing" }
+    { "id": "682658836", "name": "GarageBand",  "desc": "Music production" },
+    { "id": "408981434", "name": "iMovie",       "desc": "Video editing" },
+    { "id": "409183694", "name": "Keynote",      "desc": "Presentations" },
+    { "id": "409203825", "name": "Numbers",      "desc": "Spreadsheets" },
+    { "id": "409201541", "name": "Pages",        "desc": "Word processing" }
   ],
 
   "dmg": [
     {
       "name": "Raycast",
       "desc": "App launcher + command palette",
-      "url":  "https://www.raycast.com/download"
+      "url": "https://www.raycast.com/download"
     },
     {
       "name": "FortiClient",
       "desc": "VPN client",
-      "url":  "https://links.fortinet.com/forticlient/mac/vpnagent"
+      "url": "https://links.fortinet.com/forticlient/mac/vpnagent"
     }
   ]
 }
