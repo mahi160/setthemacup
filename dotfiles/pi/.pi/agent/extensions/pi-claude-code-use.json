@@ -1,0 +1,8 @@
+{
+  "toolAliases": [
+    ["subagent_scout", "mcp__subagents__scout"],
+    ["subagent_review", "mcp__subagents__review"],
+    ["subagent_tests", "mcp__subagents__tests"],
+    ["subagent_security", "mcp__subagents__security"]
+  ]
+}

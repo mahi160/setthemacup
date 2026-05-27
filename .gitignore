@@ -1,5 +1,11 @@
 .DS_Store
 node_modules/
+
+# Provider-patch local deps
+dotfiles/pi/.pi/agent/extensions/provider-patch/node_modules/
+
+# npm lock file — machine-specific paths, managed by pi at runtime
+dotfiles/pi/.pi/agent/npm/package-lock.json
 dotfiles/pi/.pi/*/sessions/*
 dotfiles/pi/.pi/*/auth*
 

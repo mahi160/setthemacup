@@ -40,6 +40,7 @@ map("n", "N", "Nzzzv", o("Prev match centered"))
 map("n", "<leader>bd", function()
 	MiniBufremove.delete()
 end, o("Delete buffer"))
+
 map("n", "<leader>bo", function()
 	local cur = vim.fn.bufnr()
 	for _, buf in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
