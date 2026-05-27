@@ -49,7 +49,7 @@ set_apps() {
 
   local formulae=(
     # shell / terminal
-    zsh eza bat coreutils fastfetch onefetch starship thefuck fzf mas
+    zsh eza bat coreutils fastfetch onefetch starship fzf mas
 
     # editors & dev tools
     neovim tmux lazygit lazysql stow
@@ -244,38 +244,6 @@ set_dotfiles() {
 }
 
 # ─── Runtimes (bun, rust) ───────────────────────────────────────────────────────────────────
-set_runtimes() {
-  info "Setting up additional runtimes..."
-
-  # bun — JS runtime/bundler; .zshrc expects the binary at ~/.bun/bin/bun
-  if ! command -v bun >/dev/null 2>&1; then
-    info "Installing bun..."
-    curl -fsSL https://bun.sh/install | bash || {
-      warn "bun installation failed."
-      log_action "bun installation failed"
-    }
-    success "bun installed."
-  else
-    success "bun $(bun --version) already installed."
-  fi
-
-  # rust / cargo — .zshenv sources ~/.cargo/env
-  if ! command -v cargo >/dev/null 2>&1; then
-    info "Installing rustup..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path || {
-      warn "rustup installation failed."
-      log_action "rustup installation failed"
-    }
-    # shellcheck disable=SC1091
-    [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
-    success "rust installed."
-  else
-    success "cargo $(cargo --version) already installed."
-  fi
-
-  log_action "Runtimes setup complete"
-}
-
 # ─── Git ─────────────────────────────────────────────────────────────────────
 set_git() {
   info "Configuring git..."
@@ -378,9 +346,9 @@ set_pi() {
   local claude_ext="$HOME/.pi/agent/extensions/claude"
   if [[ -f "$claude_ext/package.json" ]]; then
     info "Installing pi claude extension dependencies..."
-    (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null) \
-      && success "pi claude extension dependencies installed." \
-      || warn "pi claude extension pnpm install failed — extension may not load."
+    (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null) &&
+      success "pi claude extension dependencies installed." ||
+      warn "pi claude extension pnpm install failed — extension may not load."
   fi
 
   log_action "pi installed"
@@ -679,7 +647,6 @@ main() {
     set_dotfiles
     set_git
     set_node
-    set_runtimes
     set_nvim
     set_pi
     set_ssh

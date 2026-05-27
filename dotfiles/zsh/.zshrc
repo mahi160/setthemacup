@@ -65,17 +65,6 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 
-# bun
-export BUN_INSTALL="$HOME/.bun"
-case ":$PATH:" in
-  *":$BUN_INSTALL/bin:"*) ;;
-  *) export PATH="$BUN_INSTALL/bin:$PATH" ;;
-esac
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
-
-# cargo
-[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
-
 # ─── Prompt & Tools ───────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
 
