@@ -31,6 +31,17 @@ set_dotfiles() {
     success "Stowed $pkg."
   done
 
+  # Seed Leader Key config
+  local lk_dir="$HOME/Library/Application Support/me.mikkelmalmberg.LeaderKey"
+  local lk_src="$SCRIPTS_DIR/leaderkey-config.json"
+  if [[ -f "$lk_src" && ! -f "$lk_dir/config.json" ]]; then
+    mkdir -p "$lk_dir"
+    cp "$lk_src" "$lk_dir/config.json"
+    success "Leader Key config seeded."; log "Leader Key config seeded"
+  else
+    success "Leader Key config already present — skipping seed."
+  fi
+
   # Seed pi settings — copy (not symlink) so pi can write lastChangelogVersion freely
   local pi_settings_src="$DOTFILES_DIR/pi/.pi/agent/settings.json"
   local pi_settings_dst="$HOME/.pi/agent/settings.json"

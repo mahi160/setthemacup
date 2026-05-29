@@ -117,7 +117,8 @@
     { "name": "affinity",                   "desc": "Affinity suite — Photo, Designer, Publisher" },
 
     { "name": "orbstack",                   "desc": "Docker Desktop replacement — lighter and faster" },
-    { "name": "karabiner-elements",          "desc": "Keyboard remapper — Right Cmd=Hyper, Caps Lock=Control" },
+    { "name": "karabiner-elements",          "desc": "Keyboard remapper — Right Cmd alone=F13 (Leader Key), Caps Lock=Control" },
+    { "name": "leader-key",                  "desc": "Vim-style leader key launcher — trigger=F13 (Right Cmd tap)" },
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],

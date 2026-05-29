@@ -1,0 +1,72 @@
+{
+  "type": "group",
+  "actions": [
+    {
+      "key": "t",
+      "label": "Terminal",
+      "type": "application",
+      "value": "/Applications/Ghostty.app"
+    },
+    {
+      "key": "b",
+      "label": "Browser",
+      "type": "application",
+      "value": "/Applications/Brave Browser.app"
+    },
+    {
+      "key": "o",
+      "label": "Obsidian",
+      "type": "application",
+      "value": "/Applications/Obsidian.app"
+    },
+    {
+      "key": "s",
+      "label": "Slack",
+      "type": "application",
+      "value": "/Applications/Slack.app"
+    },
+    {
+      "key": "f",
+      "label": "Finder",
+      "type": "application",
+      "value": "/System/Library/CoreServices/Finder.app"
+    },
+    {
+      "key": "m",
+      "label": "Mail",
+      "type": "application",
+      "value": "/System/Applications/Mail.app"
+    },
+    {
+      "key": "n",
+      "label": "Notes",
+      "type": "url",
+      "value": "obsidian://open"
+    },
+    {
+      "key": "z",
+      "label": "Zen Browser",
+      "type": "application",
+      "value": "/Applications/Zen.app"
+    },
+    {
+      "key": "g",
+      "label": "Git →",
+      "type": "group",
+      "actions": [
+        {
+          "key": "g",
+          "label": "Lazygit (new Ghostty)",
+          "type": "command",
+          "value": "open -a Ghostty"
+        },
+        {
+          "key": "h",
+          "label": "GitHub",
+          "type": "url",
+          "value": "https://github.com"
+        }
+      ]
+    }
+  ]
+}
