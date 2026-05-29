@@ -109,6 +109,7 @@
     { "name": "obsidian",                   "desc": "Markdown notes" },
 
     { "name": "iina",                       "desc": "Video player" },
+    { "name": "stremio",                    "desc": "Media center — stream movies/shows" },
     { "name": "jellyfin-media-player",      "desc": "Jellyfin self-hosted media client" },
     { "name": "calibre",                    "desc": "Ebook manager and converter" },
     { "name": "qbittorrent",                "desc": "Torrent client" },
