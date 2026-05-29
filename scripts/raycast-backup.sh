@@ -56,4 +56,5 @@ cd "$REPO"
 git add scripts/raycast-data/
 git diff --cached --quiet && { echo "[raycast-backup] Nothing to commit."; exit 0; }
 git commit -m "chore: raycast settings backup $(date '+%Y-%m-%d %H:%M')"
+git push --quiet 2>/dev/null || true  # best effort — silent if offline
 echo "[raycast-backup] Done."

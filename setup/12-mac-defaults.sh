@@ -150,6 +150,33 @@ PLIST
   /usr/bin/hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' 2>/dev/null || true
   success "Caps Lock → Control (active now + persists via LaunchAgent)."
 
+  # ── Raycast backup LaunchAgent (hourly, runs on wake — unlike cron) ────────────────
+  local raycast_plist="$HOME/Library/LaunchAgents/com.mahi.raycast-backup.plist"
+  cat >"$raycast_plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.mahi.raycast-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${REPO_DIR}/scripts/raycast-backup.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SETTHEMACUP</key><string>${REPO_DIR}</string>
+    <key>HOME</key><string>${HOME}</string>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>StandardOutPath</key><string>/tmp/raycast-backup.log</string>
+  <key>StandardErrorPath</key><string>/tmp/raycast-backup.log</string>
+</dict></plist>
+PLIST
+  launchctl unload "$raycast_plist" 2>/dev/null || true
+  launchctl load   "$raycast_plist"
+  success "Raycast backup LaunchAgent installed (hourly, runs on wake)."
+
   # ── Misc ────────────────────────────────────────────────────────────────────
   sudo nvram StartupMute=%01 2>/dev/null || true
   # Gatekeeper quarantine dialog left enabled (security default).
