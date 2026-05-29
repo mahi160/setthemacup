@@ -122,20 +122,6 @@ set_mac_defaults() {
     "$HOME/Library/Preferences/com.apple.symbolichotkeys.plist" 2>/dev/null || true
   success "Spotlight Cmd+Space disabled — Raycast will take over on first launch."
 
-  # ── Desktop names (Work / Personal / Media) ───────────────────────────────
-  python3 - <<'PYEOF'
-import subprocess, plistlib
-raw = subprocess.check_output(['defaults', 'export', 'com.apple.spaces', '-'])
-data = plistlib.loads(raw)
-props = data['SpacesDisplayConfiguration'].get('Space Properties', [])
-for i, name in enumerate(['Work', 'Personal', 'Media']):
-    if i < len(props):
-        props[i]['name'] = name
-subprocess.run(['defaults', 'import', 'com.apple.spaces', '-'],
-               input=plistlib.dumps(data), check=True)
-PYEOF
-  success "Desktop spaces named: Work, Personal, Media."
-
   # ── Handoff ────────────────────────────────────────────────────────────────
   defaults write com.apple.coreservices.useractivityd ActivityReceivingAllowed  -bool false
   defaults write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false

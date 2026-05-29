@@ -56,13 +56,6 @@ set_mac_cleanup() {
   defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false 2>/dev/null || true
   success "Analytics & crash reporting disabled."
 
-  # Widgets — clear all instances (Notification Center + desktop)
-  # SIGKILL first so NC can't save state on exit, then delete while it's down
-  killall -9 NotificationCenter 2>/dev/null || true
-  sleep 0.5
-  defaults delete com.apple.notificationcenterui widgets 2>/dev/null || true
-  success "Widgets cleared."
-
   # Hot corners — all disabled
   defaults write com.apple.dock wvous-tl-corner   -int 0
   defaults write com.apple.dock wvous-tr-corner   -int 0

@@ -22,7 +22,7 @@ _install_dmg() {
   }
 
   # Parse lines containing /Volumes/ — avoids picking up device nodes or blank trailing lines
-  local volume; volume="$(hdiutil attach "$tmp" -nobrowse -quiet | awk '/\/Volumes\//{vol=$NF} END{print vol}')"
+  local volume; volume="$(hdiutil attach "$tmp" -nobrowse 2>/dev/null | awk -F'\t' '/\/Volumes\//{print $NF}' | tail -1)"
   if [[ -z "$volume" ]]; then
     warn "Failed to mount DMG for $name."; rm -f "$tmp"; return 1
   fi
