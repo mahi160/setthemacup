@@ -50,7 +50,6 @@
     { "name": "starship",         "desc": "Prompt — git branch, language version, timing" },
     { "name": "fzf",              "desc": "Fuzzy finder — Ctrl+R history, file search" },
     { "name": "mas",              "desc": "Mac App Store CLI — installs store apps from terminal" },
-    { "name": "mysides",          "desc": "Finder sidebar manager — used by set_mac_defaults" },
     { "name": "catimg",           "desc": "Terminal image renderer — used by nvim dashboard" },
 
     { "name": "neovim",           "desc": "Editor" },

@@ -50,7 +50,10 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 
 ---
 
-## macinstall.sh — the 15 steps
+## setup/ — the 15 steps
+
+Entry point: `setup/main.sh`. Each step is a standalone file `setup/NN-name.sh` that sources `setup/lib.sh`.
+Single step: `bash setup/main.sh apps` or `bash setup/02-apps.sh` directly.
 
 | # | fn | what |
 |---|---|---|
@@ -70,11 +73,12 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 | 14 | `set_tmux_helpers` | compile nowplaying Swift binary + cp tmux-battery/cpu to ~/.local/bin/ |
 | 15 | `set_crontab` | weekly pi-prune + fnm-clean cron entries |
 
-**Adding a new step:** define `set_yourname()`, add to the `steps=()` array in `main()`. If it must not fail the whole install, it's non-critical (default). If critical, add to `CRITICAL_STEPS`.
+**Adding a new step:** create `setup/NN-name.sh` defining `set_name()` (follow existing pattern). Add `name` to the steps list in `setup/main.sh`. If critical, add to `CRITICAL_STEPS`.
 
 **Running one step:**
 ```bash
-bash ~/.setup/scripts/macinstall.sh set_apps
+bash ~/.setup/setup/main.sh apps
+bash ~/.setup/setup/02-apps.sh   # standalone
 ```
 
 ---
@@ -88,7 +92,8 @@ bash ~/.setup/scripts/macinstall.sh set_apps
 
 - Tap-prefixed formulas work: `"name": "owner/tap/formula"` → `brew install owner/tap/formula`
 - Font casks go in `casks`: `"name": "font-jetbrains-mono-nerd-font"`
-- No duplicate entries — macinstall checks `brew list` before installing
+- No duplicate entries — setup checks `brew list` before installing
+- File lives at `setup/apps.json` (not `scripts/apps.json`)
 
 ---
 

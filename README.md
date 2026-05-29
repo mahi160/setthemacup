@@ -48,9 +48,12 @@ bash ~/.setup/scripts/macinstall.sh set_apps   # single step
 ```
 setthemacup/
 ├── bootstrap.sh              # entry point (curl | bash)
-├── scripts/
-│   ├── macinstall.sh         # 15-step installer
+├── setup/
+│   ├── main.sh               # entry point — sources lib + all steps
+│   ├── lib.sh                # shared helpers (colors, log, apps_* fns)
 │   ├── apps.json             # app manifest (formulae, casks, mas, dmg, smb)
+│   └── 01-homebrew.sh … 15-crontab.sh  # one file per step
+├── scripts/                  # helper scripts called by setup steps
 │   ├── compile-nowplaying.sh # compile Swift nowplaying binary for tmux
 │   ├── tmux-battery.sh       # battery icon+% for tmux status bar (→ ~/.local/bin)
 │   ├── tmux-cpu.sh           # cpu icon+% for tmux status bar (→ ~/.local/bin)

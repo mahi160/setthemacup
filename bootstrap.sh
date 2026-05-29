@@ -7,7 +7,7 @@
 # What this does:
 #   1. Installs Xcode Command Line Tools (needed for git, swiftc, clang)
 #   2. Clones this repo to ~/.setup
-#   3. Hands off to scripts/macinstall.sh for everything else
+#   3. Hands off to setup/main.sh for everything else
 #
 # Safe to re-run: skips steps that are already done.
 
@@ -47,10 +47,10 @@ else
   success "Repo cloned to $REPO_DIR"
 fi
 
-# Export so macinstall.sh and every script it calls knows the repo root
+# Export so setup/main.sh and every script it sources knows the repo root
 export SETTHEMACUP="$REPO_DIR"
 
-# ─── 3. Hand off to macinstall.sh ─────────────────────────────────────────────
-info "Starting macinstall.sh..."
+# ─── 3. Hand off to setup/main.sh ────────────────────────────────────────────
+info "Starting setup/main.sh..."
 echo ""
-exec bash "$REPO_DIR/scripts/macinstall.sh"
+exec bash "$REPO_DIR/setup/main.sh"

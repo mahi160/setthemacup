@@ -1,0 +1,3 @@
+# SC1091: dynamic source paths (e.g. "$(cd "$(dirname "$0")" && pwd)/lib.sh")
+# cannot be statically resolved by shellcheck — suppress globally.
+disable=SC1091
