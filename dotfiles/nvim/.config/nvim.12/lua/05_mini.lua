@@ -13,7 +13,11 @@ require("mini.ai").setup({
 	},
 })
 
-require("mini.basics").setup()
+require("mini.basics").setup({
+	-- 01_core.lua owns all options — prevent mini.basics from overriding them
+	-- (default basic=true sets backup=true, creating .ext-bak files everywhere)
+	options = { basic = false, extra_ui = false, win_borders = "none" },
+})
 require("mini.cursorword").setup()
 require("mini.cmdline").setup()
 require("mini.diff").setup({ view = { style = "sign" } })

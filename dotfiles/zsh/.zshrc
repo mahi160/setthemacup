@@ -1,18 +1,32 @@
 # Only show system info in login shells (not tmux splits / agent subshells)
 [[ -o login ]] && fastfetch
 
-# ─── Oh My Zsh ────────────────────────────────────────────────────────────────
-export ZSH="$HOME/.oh-my-zsh"
-DISABLE_UNTRACKED_FILES_DIRTY="true"
-plugins=(git z zsh-autosuggestions zsh-syntax-highlighting)
-source $ZSH/oh-my-zsh.sh
+# ─── Homebrew prefix ──────────────────────────────────────────────────────────
+BREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
+
+# ─── Completion ───────────────────────────────────────────────────────────────
+autoload -Uz compinit
+# Regenerate dump at most once per day; skip security audit in between
+if [[ $(find "${HOME}/.zcompdump" -mtime +1 2>/dev/null) ]]; then
+  compinit
+else
+  compinit -C
+fi
+
+# ─── Zsh Options ──────────────────────────────────────────────────────────────
+setopt autocd autopushd pushdignoredups  # type dir name to cd; maintain dir stack
+setopt interactivecomments               # allow # comments in interactive shell
 
 # ─── History ──────────────────────────────────────────────────────────────────
 HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=50000
+SAVEHIST=50000
 setopt appendhistory sharehistory incappendhistory extendedhistory
 setopt histignorealldups histignorespace histignoredups histreduceblanks
+
+# ─── Plugins (direct from brew — zero plugin manager overhead) ────────────────
+source "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # ─── Editors ──────────────────────────────────────────────────────────────────
 alias v="nvim"
@@ -37,7 +51,7 @@ alias dev="$SETTHEMACUP/scripts/dev.sh"
 alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
 alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
 
-# yazi: cd into directory on exit
+# ─── yazi: cd into directory on exit ─────────────────────────────────────────
 function y() {
   local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
   yazi "$@" --cwd-file="$tmp"
@@ -68,7 +82,7 @@ esac
 
 # ─── Prompt & Tools ───────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
-
+eval "$(zoxide init zsh)"   # replaces OMZ z plugin — same 'z' command, smarter
 source <(fzf --zsh)
 
 # pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)

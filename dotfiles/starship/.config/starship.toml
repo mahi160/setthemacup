@@ -1,184 +1,109 @@
-[localip]
-ssh_only = false
-format = "[@$localipv4](italic) "
-disabled = false
+# ============================================================================
+# STARSHIP CONFIGURATION
+# Gruvbox Material themed — matches tmux, Neovim, Ghostty
+# ============================================================================
+# Explicit format = only listed modules are even checked — fastest possible
+# Colors: acc1=#d8a657 acc2=#a9b665 acc3=#e78a4e acc4=#7daea3 gray=#928374
+# ============================================================================
 
-[username]
-show_always = true
-format = "[$user]($style)"
-# Symbols
-[aws]
-symbol = "  "
+scan_timeout    = 10     # ms — prevents slow prompts in large repos
+command_timeout = 500    # ms — max time for any shell command module
+add_newline     = true
 
-[buf]
-symbol = " "
+# Two-line prompt:
+#   [os] ~/path/dir  branch ±status  node go py rust  ········  2.3s 14:22
+#   ❯
+format = """
+$os$directory$git_branch$git_status$nodejs$golang$python$rust$docker_context$fill$cmd_duration$time
+$character"""
 
-[c]
-symbol = " "
+# ─── Prompt Character ─────────────────────────────────────────────────────────
+[character]
+success_symbol = "[❯](bold #a9b665)"
+error_symbol   = "[❯](bold #e46876)"
 
-[cmake]
-symbol = " "
-
-[conda]
-symbol = " "
-
-[crystal]
-symbol = " "
-
-[dart]
-symbol = " "
-
+# ─── Directory ────────────────────────────────────────────────────────────────
 [directory]
-read_only = " 󰌾"
+style             = "bold #d8a657"
+read_only         = " 󰌾"
+truncation_length = 3
+truncate_to_repo  = true
 
-[docker_context]
-symbol = " "
-
-[elixir]
-symbol = " "
-
-[elm]
-symbol = " "
-
-[fennel]
-symbol = " "
-
-[fossil_branch]
-symbol = " "
-
+# ─── Git ──────────────────────────────────────────────────────────────────────
 [git_branch]
-symbol = " "
+symbol = " "
+style  = "bold #a9b665"
+format = "[$symbol$branch(:$remote_branch)]($style) "
+
+[git_status]
+style  = "bold #e78a4e"
+format = '([$all_status$ahead_behind]($style) )'
 
 [git_commit]
-tag_symbol = '  '
+tag_symbol = "  "
+style      = "#928374"
 
-[golang]
-symbol = " "
-
-[guix_shell]
-symbol = " "
-
-[haskell]
-symbol = " "
-
-[haxe]
-symbol = " "
-
-[hg_branch]
-symbol = " "
-
-[hostname]
-ssh_symbol = " "
-
-[java]
-symbol = " "
-
-[julia]
-symbol = " "
-
-[kotlin]
-symbol = " "
-
-[lua]
-symbol = " "
-
-[memory_usage]
-symbol = "󰍛 "
-
-[meson]
-symbol = "󰔷 "
-
-[nim]
-symbol = "󰆥 "
-
-[nix_shell]
-symbol = " "
-
-[nodejs]
-symbol = " "
-
-[ocaml]
-symbol = " "
+# ─── OS icon ──────────────────────────────────────────────────────────────────
+[os]
+disabled = false
+style    = "bold #7daea3"
+format   = "[$symbol]($style)"
 
 [os.symbols]
-Alpaquita = " "
-Alpine = " "
-AlmaLinux = " "
-Amazon = " "
-Android = " "
-Arch = " "
-Artix = " "
-CachyOS = " "
-CentOS = " "
-Debian = " "
-DragonFly = " "
-Emscripten = " "
-EndeavourOS = " "
-Fedora = " "
-FreeBSD = " "
-Garuda = "󰛓 "
-Gentoo = " "
-HardenedBSD = "󰞌 "
-Illumos = "󰈸 "
-Kali = " "
-Linux = " "
-Mabox = " "
-Macos = " "
-Manjaro = " "
-Mariner = " "
-MidnightBSD = " "
-Mint = " "
-NetBSD = " "
-NixOS = " "
-Nobara = " "
-OpenBSD = "󰈺 "
-openSUSE = " "
-OracleLinux = "󰌷 "
-Pop = " "
-Raspbian = " "
-Redhat = " "
-RedHatEnterprise = " "
-RockyLinux = " "
-Redox = "󰀘 "
-Solus = "󰠳 "
-SUSE = " "
-Ubuntu = " "
-Unknown = " "
-Void = " "
+Macos   = " "
+Linux   = " "
 Windows = "󰍲 "
+Unknown = " "
 
-[package]
-symbol = "󰏗 "
+# ─── Languages (shown only when inside a matching project) ───────────────────
+[nodejs]
+symbol = " "
+style  = "bold #a9b665"
+format = "[$symbol($version)]($style) "
 
-[perl]
-symbol = " "
-
-[php]
-symbol = " "
-
-[pijul_channel]
-symbol = " "
+[golang]
+symbol = " "
+style  = "bold #7daea3"
+format = "[$symbol($version)]($style) "
 
 [python]
-symbol = " "
-
-[rlang]
-symbol = "󰟔 "
-
-[ruby]
-symbol = " "
+symbol = " "
+style  = "bold #d8a657"
+format = "[$symbol($version)]($style) "
 
 [rust]
 symbol = "󱘗 "
+style  = "bold #e78a4e"
+format = "[$symbol($version)]($style) "
 
-[scala]
-symbol = " "
+[docker_context]
+symbol = " "
+style  = "bold #7daea3"
+format = "[$symbol$context]($style) "
+only_with_files = true
 
-[swift]
-symbol = " "
+# ─── Right side ───────────────────────────────────────────────────────────────
+[fill]
+symbol = " "
 
-[zig]
-symbol = " "
+[cmd_duration]
+min_time = 2000
+style    = "#928374"
+format   = "[$duration]($style) "
 
-[gradle]
-symbol = " "
+[time]
+disabled     = false
+style        = "#928374"
+format       = "[$time]($style)"
+time_format  = "%H:%M"
+
+# ─── Disabled — not needed on a personal machine ──────────────────────────────
+[username]
+show_always = false
+disabled    = true
+
+[hostname]
+disabled = true
+
+[localip]
+disabled = true

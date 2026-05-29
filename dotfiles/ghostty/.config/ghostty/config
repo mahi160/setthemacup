@@ -13,6 +13,7 @@ theme = Gruvbox Material Dark
 # ============================================================================
 
 # Primary font with ligatures enabled
+font-family = JetBrainsMono Nerd Font
 # font-family = Maple Mono NF
 # font-family = JetBrains Mono
 # font-family = Cascadia Code Mono
@@ -42,11 +43,10 @@ window-padding-x = 2
 window-padding-balance = true
 
 # Visual effects
-background-blur = true
+background-blur = 20
 background-opacity = 0.96
 background = #282828
-background-blur-radius = 20
-background-image = /Users/mahi/Pictures/pokemon_bg/218.png
+background-image = ~/Pictures/pokemon_bg/218.png
 # managed by scripts/pokemon-bg.sh — run it once to activate
 background-image-opacity = 0.15
 background-image-fit = none
@@ -61,6 +61,7 @@ title = " "
 # ============================================================================
 
 window-save-state = always
+confirm-close-surface = false
 
 # ============================================================================
 # SHELL INTEGRATION
@@ -74,7 +75,7 @@ auto-update = check
 # PERFORMANCE & RENDERING
 # ============================================================================
 
-macos-option-as-alt = true
+# Ghostty uses Metal renderer on macOS — no extra flags needed
 
 # ============================================================================
 # MOUSE & CURSOR
@@ -102,6 +103,8 @@ clipboard-write = allow
 # ============================================================================
 # KEYBINDINGS
 # ============================================================================
+
+macos-option-as-alt = true
 
 # Quick terminal toggle
 keybind = global:cmd+grave_accent=toggle_quick_terminal

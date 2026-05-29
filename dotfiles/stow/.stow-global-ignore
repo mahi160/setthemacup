@@ -1,6 +1,5 @@
-.DS_Store
-*.bak
-README.md
-.gitignore
-*.md
-LICENCE
+\.DS_Store$
+.*\.bak$
+.*\.md$
+\.gitignore$
+LICEN[CS]E$

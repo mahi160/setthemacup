@@ -10,124 +10,88 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 
 ## What it does
 
-`bootstrap.sh` clones this repo then hands off to `scripts/macinstall.sh`, which runs 14 steps in order:
+`bootstrap.sh` clones this repo to `~/.setup` then hands off to `scripts/macinstall.sh`, which runs 15 steps in order:
 
 | # | Step | What |
 |---|---|---|
-| 1 | `set_homebrew` | Installs Homebrew |
+| 1 | `set_homebrew` | Installs Homebrew, bootstraps PATH |
 | 2 | `set_apps` | All CLI tools, GUI apps, fonts — reads from `scripts/apps.json` |
 | 3 | `set_store_apps` | App Store apps via `mas` + Raycast + FortiClient DMG |
-| 4 | `set_dotfiles` | oh-my-zsh, stow all configs, TPM + tmux plugins |
+| 4 | `set_dotfiles` | Stow all configs (ghostty, tmux, nvim, zsh, starship, fastfetch, pi) |
 | 5 | `set_git` | Global git identity (personal) |
 | 6 | `set_node` | fnm → Node LTS → pnpm |
-| 7 | `set_nvim` | Lazy sync plugins, clean disabled ones |
+| 7 | `set_nvim` | Lazy sync (main nvim) + vim.pack bootstrap (nvim.12) |
 | 8 | `set_pi` | Pi coding agent + claude extension deps |
-| 9 | `set_ai` | AI skills via `npx skills add` — vercel, anthropic, mattpocock, caveman, security-review |
+| 9 | `set_ai` | AI skills via `npx skills add` |
 | 10 | `set_ssh` | Generate ed25519 keys (personal + work), print for GitHub |
-| 11 | `set_mac_cleanup` | Clear dock, disable Siri/Game Center/analytics |
-| 12 | `set_mac_defaults` | Keyboard, Finder, trackpad, spaces |
+| 11 | `set_mac_cleanup` | Clear dock, disable Siri / Game Center / analytics |
+| 12 | `set_mac_defaults` | Keyboard, Finder, trackpad, spaces, screenshots |
 | 13 | `set_network_shares` | Auto-mount SMB shares on login via LaunchAgent |
-| 14 | `set_nowplaying_binary` | Compile Swift nowplaying binary for tmux status bar |
-| 15 | `set_crontab` | Weekly pi session pruning + fnm multishell cleanup |
-
----
-
-## After it finishes
-
-Three things need you:
-
-1. **SSH keys** — script generates and prints them. Paste into [github.com/settings/keys](https://github.com/settings/keys)
-2. **API keys** — set `ANTHROPIC_API_KEY` etc. manually (never stored in dotfiles)
-3. **App Store** — sign in before running, or MAS step skips gracefully
-4. **terrorCastle** — first login prompts for SMB credentials, tick "Remember in Keychain"
-
----
-
-## Stack
-
-**Terminal:** Ghostty · tmux · zsh + oh-my-zsh  
-**Editor:** Neovim (LazyVim) · Zed  
-**Prompt:** Starship  
-**Files:** yazi · eza · bat · fd · ripgrep · fzf  
-**Git:** lazygit · gh  
-**AI:** pi · Claude Code  
-**Skills:** frontend-design · security-review · vercel-react-best-practices · web-design-guidelines · caveman · grill-with-docs · to-prd · write-a-skill  
-**Runtimes:** Node (fnm) · pnpm · uv (Python)  
-**Infra:** OrbStack · docker-compose · tailscale  
-
----
-
-## Customise apps
-
-All apps live in [`scripts/apps.json`](scripts/apps.json) — edit there, not in the script.
-
-```json
-{ "name": "some-tool", "desc": "What it does" }
-```
-
-Sections: `formulae` (brew), `casks` (brew --cask), `mas` (App Store), `dmg` (direct download), `smb` (network shares), `ai_skills` (npx skills).
-
----
-
-## Dotfiles structure
-
-```
-dotfiles/
-├── ghostty/   → ~/.config/ghostty/     Terminal config + Gruvbox theme
-├── nvim/      → ~/.config/nvim/        LazyVim + custom plugins
-├── tmux/      → ~/.config/tmux/        tmux config (plugins managed by TPM at runtime)
-├── zsh/       → ~/                     .zshrc + .zshenv
-├── pi/        → ~/.pi/                 Pi agent settings + extensions
-├── starship/  → ~/.config/             starship.toml
-├── fastfetch/ → ~/.config/fastfetch/   System info config
-└── stow/      → ~/                     .stow-global-ignore
-```
-
-Symlinked via [GNU stow](https://www.gnu.org/software/stow/).
-
----
-
-## Neovim
-
-LazyVim base with:
-
-- **LSPs:** TypeScript (vtsls), CSS, JSON, Go, Svelte, TailwindCSS, ESLint, Docker, Markdown
-- **Formatter:** Prettier + conform.nvim
-- **AI:** Supermaven
-- **Extras:** mini-diff, render-markdown, oil.nvim, grug-far, snacks dashboard
-- **Theme:** Gruvbox Material (hard, transparent)
-
----
-
-## tmux
-
-- Prefix: `C-a`
-- Plugins: tmux-sensible, tmux-cpu, tmux-battery, tmux-resurrect, tmux-continuum, tmux-yank
-- Now playing: compiled Swift binary calling macOS MediaRemote — no plugin, no recompile on every tick
-- Sessions persist across reboots via continuum (15 min autosave)
-
----
-
-## Scripts
-
-| Script | What |
-|---|---|
-| `bootstrap.sh` | curl entry point — Xcode CLT → clone → macinstall |
-| `scripts/macinstall.sh` | Full setup orchestrator |
-| `scripts/apps.json` | Declarative app manifest |
-| `scripts/dev.sh` | Spin up a dev tmux session: `dev --dir ~/project` |
-| `scripts/note.sh` | Append a timestamped note to yearly markdown file |
-| `scripts/pokemon-bg.sh` | Cycle Ghostty background to a random Pokémon (Alt+Q) |
-| `scripts/compile-nowplaying.sh` | Compile Swift nowplaying source to binary |
-| `scripts/crontab-setup.sh` | Install weekly maintenance cron jobs |
-| `scripts/pi-prune.sh` | Delete pi sessions older than 30 days, checkpoint WAL |
+| 14 | `set_tmux_helpers` | Compile Swift nowplaying binary + install tmux-battery/cpu scripts |
+| 15 | `set_crontab` | Weekly maintenance jobs (pi-prune, fnm-clean) |
 
 ---
 
 ## Re-running
 
-Safe to re-run on an existing machine — every step checks before acting. Useful after adding something to `apps.json`:
+Every step is idempotent — safe to re-run at any time.
 
 ```bash
-bash ~/Documents/Coding/Projects/setthemacup/scripts/macinstall.sh
+bash ~/.setup/scripts/macinstall.sh            # full run
+bash ~/.setup/scripts/macinstall.sh set_apps   # single step
 ```
+
+---
+
+## Structure
+
+```
+setthemacup/
+├── bootstrap.sh              # entry point (curl | bash)
+├── scripts/
+│   ├── macinstall.sh         # 15-step installer
+│   ├── apps.json             # app manifest (formulae, casks, mas, dmg, smb)
+│   ├── compile-nowplaying.sh # compile Swift nowplaying binary for tmux
+│   ├── tmux-battery.sh       # battery icon+% for tmux status bar (→ ~/.local/bin)
+│   ├── tmux-cpu.sh           # cpu icon+% for tmux status bar (→ ~/.local/bin)
+│   ├── dev.sh                # smart tmux dev session launcher
+│   ├── note.sh               # quick note/learn capture to Obsidian
+│   ├── pokemon-bg.sh         # cycle Ghostty background pokemon
+│   ├── crontab-setup.sh      # install weekly cron jobs
+│   └── pi-prune.sh           # delete old pi sessions (run by cron)
+└── dotfiles/
+    ├── ghostty/              # Ghostty terminal config
+    ├── tmux/                 # tmux config (no TPM — all native)
+    ├── nvim/
+    │   ├── .config/nvim/     # LazyVim-based config (alias: nvim)
+    │   └── .config/nvim.12/  # lean vim.pack + mini.nvim config (alias: vm)
+    ├── zsh/                  # .zshrc + .zshenv (no OMZ — direct brew plugins)
+    ├── starship/             # starship prompt (gruvbox material themed)
+    ├── fastfetch/            # fastfetch system info (login shells only)
+    ├── pi/                   # pi coding agent config
+    └── stow/                 # .stow-global-ignore
+```
+
+---
+
+## After install
+
+1. Paste SSH public keys into [github.com/settings/keys](https://github.com/settings/keys)
+2. Set `ANTHROPIC_API_KEY` in your shell environment
+3. Sign in to App Store (if skipped during install)
+4. Add SMB credentials to Keychain Access for auto-mount shares
+5. Run `pokemon-bg` to set your first Ghostty background
+
+---
+
+## Key aliases
+
+| Alias | What |
+|-------|------|
+| `v` | nvim (LazyVim) |
+| `vm` | nvim.12 (lean vim.pack config) |
+| `dev` | smart tmux session launcher |
+| `y` | yazi (cd on exit) |
+| `zc` | open this repo in a tmux config session |
+| `a` | pi coding agent |
+| `note` / `of` | quick note capture / onefetch |

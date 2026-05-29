@@ -72,7 +72,12 @@
     { "name": "uv",               "desc": "Fast Python package manager" },
     { "name": "docker-compose",   "desc": "Multi-container Docker setups" },
 
-    { "name": "tailscale",        "desc": "VPN — private network across devices" }
+    { "name": "tailscale",        "desc": "VPN — private network across devices" },
+
+    { "name": "zsh-autosuggestions",         "desc": "Fish-like inline suggestions for zsh" },
+    { "name": "zsh-syntax-highlighting",      "desc": "Fish-like syntax highlighting for zsh" },
+    { "name": "zoxide",                       "desc": "Smarter cd — replaces OMZ z plugin" },
+    { "name": "nicowillis/programs/pokemon-colorscripts-mac", "desc": "Colorful Pokemon sprites in terminal — used by fastfetch logo" }
   ],
 
   "casks": [

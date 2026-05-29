@@ -59,6 +59,9 @@ export default function (pi: ExtensionAPI): void {
   });
 
   pi.on("agent_end", (event, ctx: ExtensionContext) => {
+    // Don't notify on auto-retried failures — wait for the final outcome
+    if ((event as unknown as { willRetry?: boolean }).willRetry) return;
+
     const durationMs = Date.now() - agentStartedAt;
     if (durationMs < MIN_DURATION_MS) return;
 

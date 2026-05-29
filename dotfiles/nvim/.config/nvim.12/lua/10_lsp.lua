@@ -46,8 +46,7 @@ require("mason-tool-installer").setup({
 		"emmet-language-server",
 		"prettier",
 		"eslint_d",
-		"oxlint",
-		"oxfmt",
+		"oxlint", -- fast Rust linter; wired in 11_format.lua alongside eslint_d
 		"stylua",
 		"shfmt",
 		"gofumpt",

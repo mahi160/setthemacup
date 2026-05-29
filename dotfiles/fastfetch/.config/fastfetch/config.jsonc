@@ -30,12 +30,6 @@
       "keyColor": "33",
     },
     {
-      "type": "packages",
-      "format": "{} (brew)",
-      "key": "pkgs  ",
-      "keyColor": "34",
-    },
-    {
       "type": "uptime",
       "format": "{2}h {3}m",
       "key": "uptime",

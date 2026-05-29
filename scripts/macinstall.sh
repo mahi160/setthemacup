@@ -176,28 +176,10 @@ set_dotfiles() {
   (set -euo pipefail
   step "Dotfiles"
 
-  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
-    info "Installing oh-my-zsh..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended || {
-      error "oh-my-zsh installation failed."; log "oh-my-zsh installation failed"; return 1
-    }
-    success "oh-my-zsh installed."; log "oh-my-zsh installed"
-  else
-    success "oh-my-zsh already installed."
-  fi
-
-  local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-  for plugin in "zsh-users/zsh-autosuggestions" "zsh-users/zsh-syntax-highlighting"; do
-    local dest="$zsh_custom/plugins/${plugin##*/}"
-    if [[ ! -d "$dest" ]]; then
-      git clone "https://github.com/$plugin" "$dest" || { warn "Failed to clone $plugin."; log "Failed to clone $plugin"; }
-    else
-      success "Plugin ${plugin##*/} already installed."
-    fi
-  done
-
   info "Stowing dotfiles from $DOTFILES_DIR..."
-  local packages=(fastfetch ghostty nvim pi starship stow tmux zsh)
+  # pi excluded from stow — settings.json is managed by pi at runtime (written on every update).
+  # macinstall copies it once as a seed; pi owns it after that.
+  local packages=(fastfetch ghostty nvim starship stow tmux zsh)
   for pkg in "${packages[@]}"; do
     local conflicts
     conflicts=$(stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 | grep "existing target" | awk '{print $NF}' || true)
@@ -211,16 +193,6 @@ set_dotfiles() {
     success "Stowed $pkg."
   done
 
-  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
-  if [[ ! -d "$tpm_dir" ]]; then
-    info "Cloning TPM..."
-    git clone --depth=1 https://github.com/tmux-plugins/tpm "$tpm_dir" || { warn "TPM clone failed."; log "TPM clone failed"; }
-  fi
-  if [[ -f "$tpm_dir/bin/install_plugins" ]]; then
-    info "Installing tmux plugins..."
-    "$tpm_dir/bin/install_plugins" && success "tmux plugins installed." || warn "tmux plugin install failed."
-  fi
-
   # Ensure pokemon current.png exists for fastfetch & nvim dashboard
   local pokemon_dir="$HOME/Pictures/pokemon_bg"
   mkdir -p "$pokemon_dir"
@@ -232,6 +204,17 @@ set_dotfiles() {
       -o "$pokemon_dir/${starter_id}.png" 2>/dev/null && \
       ln -sf "$pokemon_dir/${starter_id}.png" "$pokemon_dir/current.png" && \
       success "Pokemon logo ready." || warn "Pokemon fetch failed — fastfetch will show no logo on first run."
+  fi
+
+  # Seed pi settings — copy (not symlink) so pi can write lastChangelogVersion freely
+  local pi_settings_src="$DOTFILES_DIR/pi/.pi/agent/settings.json"
+  local pi_settings_dst="$HOME/.pi/agent/settings.json"
+  if [[ -f "$pi_settings_src" && ! -f "$pi_settings_dst" ]]; then
+    mkdir -p "$(dirname "$pi_settings_dst")"
+    cp "$pi_settings_src" "$pi_settings_dst"
+    success "Pi settings seeded."; log "Pi settings seeded"
+  else
+    success "Pi settings already present — skipping seed."
   fi
 
   log "Dotfiles setup complete"
@@ -279,9 +262,14 @@ set_nvim() {
   (set -euo pipefail
   step "Neovim"
   if ! command -v nvim >/dev/null 2>&1; then error "nvim not found."; return 1; fi
-  info "Syncing lazy.nvim plugins (first run may take a few minutes)..."
+  info "Syncing lazy.nvim plugins (main config)..."
   nvim --headless "+Lazy! sync" +qa 2>/dev/null && success "Neovim plugins synced." || warn "Plugin sync had warnings — check :Lazy on first launch."
   nvim --headless "+Lazy! clean" +qa 2>/dev/null && success "Disabled plugins cleaned." || warn "Lazy clean had warnings."
+
+  info "Bootstrapping nvim.12 (vim.pack + blink.cmp Rust build — first run may be slow)..."
+  NVIM_APPNAME=nvim.12 nvim --headless +qa 2>/dev/null \
+    && success "nvim.12 bootstrapped." \
+    || warn "nvim.12 bootstrap had issues — open 'vm' once to complete."
   log "Neovim bootstrap complete"
   )
 }
@@ -620,15 +608,30 @@ for s in data.get('smb', []):
   )
 }
 
-# ─── 14. Nowplaying Binary ────────────────────────────────────────────────────
-set_nowplaying_binary() {
-  step "Nowplaying Binary"
+# ─── 14. Tmux Helpers (nowplaying + cpu/battery status scripts) ──────────────
+set_tmux_helpers() {
+  step "Tmux Helpers"
+
+  # Compile Swift nowplaying binary
   if bash "${SCRIPT_DIR}/compile-nowplaying.sh"; then
     success "nowplaying binary compiled."; log "nowplaying binary compiled"
   else
     warn "nowplaying binary compilation failed — tmux will fall back to Swift interpreter."
     log "nowplaying binary compilation failed (non-fatal)"
   fi
+
+  # Install tmux-battery and tmux-cpu scripts
+  mkdir -p "$HOME/.local/bin"
+  for script in tmux-battery tmux-cpu; do
+    src="${SCRIPT_DIR}/${script}.sh"
+    dst="$HOME/.local/bin/${script}"
+    if [[ -f "$src" ]]; then
+      cp "$src" "$dst" && chmod +x "$dst"
+      success "${script} installed to ~/.local/bin/"; log "${script} installed"
+    else
+      warn "${script}.sh not found in scripts/ — skipping."; log "${script}.sh missing"
+    fi
+  done
 }
 
 # ─── 15. Crontab ──────────────────────────────────────────────────────────────
@@ -673,7 +676,7 @@ main() {
   local steps=(
     set_homebrew set_apps set_store_apps set_dotfiles set_git set_node
     set_nvim set_pi set_ai set_ssh set_mac_cleanup set_mac_defaults
-    set_network_shares set_nowplaying_binary set_crontab
+    set_network_shares set_tmux_helpers set_crontab
   )
   local total=${#steps[@]} current=0
   for s in "${steps[@]}"; do

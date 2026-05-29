@@ -1,6 +1,7 @@
 return {
   {
     "stevearc/oil.nvim",
+    lazy = false, -- must load at startup to intercept `nvim .` directory opens
     config = function()
       require("oil").setup({
         default_file_explorer = true,
