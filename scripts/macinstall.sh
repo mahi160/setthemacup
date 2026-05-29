@@ -1,12 +1,43 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# macinstall.sh — Full macOS dev environment setup.
+#
+# Runs 15 steps in order. Safe to re-run — every step checks before acting.
+#
+# Usage:
+#   bash scripts/macinstall.sh            # full run
+#   bash scripts/macinstall.sh set_node   # single step
 
-set -euo pipefail
+# ─── Strict mode (applied per-function, not globally) ─────────────────────────
+# We DON'T use `set -euo pipefail` at top level — it causes the whole script to
+# abort on the first warning in any subshell. Each function sets it locally, so
+# errors inside a step are contained and handled gracefully.
 
 DOTFILES_DIR="$(cd "$(dirname "$0")/../dotfiles" && pwd)"
 APPS_JSON="$(cd "$(dirname "$0")" && pwd)/apps.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+export SETTHEMACUP="$REPO_DIR"
 
-# Read a top-level array of .name fields from apps.json
-# Usage: apps_names <key>   e.g. apps_names formulae
+# ─── Colors ───────────────────────────────────────────────────────────────────
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+info()    { echo -e "${BLUE}==> $*${RESET}"; }
+success() { echo -e "${GREEN}✓ $*${RESET}"; }
+warn()    { echo -e "${YELLOW}! $*${RESET}"; }
+error()   { echo -e "${RED}✗ $*${RESET}"; }
+step()    { echo -e "\n${BOLD}${CYAN}── $* ──${RESET}"; }
+
+# ─── Logging ──────────────────────────────────────────────────────────────────
+LOG_FILE="$HOME/setup.log"
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$LOG_FILE" 2>/dev/null || true; }
+
+# ─── JSON helpers ─────────────────────────────────────────────────────────────
 apps_names() {
   python3 -c "
 import json, sys
@@ -17,8 +48,6 @@ for item in data.get('${1}', []):
 "
 }
 
-# Read a top-level array including a second field
-# Usage: apps_pairs <key> <field>   e.g. apps_pairs mas id
 apps_pairs() {
   python3 -c "
 import json
@@ -29,7 +58,6 @@ for item in data.get('${1}', []):
 "
 }
 
-# Read .url for dmg entries
 apps_dmg() {
   python3 -c "
 import json
@@ -40,386 +68,103 @@ for item in data.get('dmg', []):
 "
 }
 
-# ─── Colors ───────────────────────────────────────────────────────────────────
-RED='\033[31m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-RESET='\033[0m'
-
-info() { echo -e "${BLUE}==> $*${RESET}"; }
-success() { echo -e "${GREEN}✓ $*${RESET}"; }
-warn() { echo -e "${YELLOW}! $*${RESET}"; }
-error() { echo -e "${RED}✗ $*${RESET}"; }
-
-# ─── Logging ──────────────────────────────────────────────────────────────────
-log_action() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >>"$HOME/setup.log" 2>/dev/null || true
-}
-
-# ─── Homebrew ─────────────────────────────────────────────────────────────────
-set_homebrew() {
-  info "Setting up Homebrew..."
-  if ! command -v brew >/dev/null 2>&1; then
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
-      error "Homebrew installation failed."
-      log_action "Homebrew installation failed"
-      return 1
-    }
-    echo >>"$HOME/.zprofile"
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >>"$HOME/.zprofile"
+# ─── Environment bootstrap ────────────────────────────────────────────────────
+# Ensures brew, fnm, pnpm, and npm globals are on PATH for the duration of this
+# script, regardless of what's in .zshrc (which isn't sourced in bash).
+bootstrap_env() {
+  # Homebrew
+  if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
-    success "Homebrew installed."
-    log_action "Homebrew installed"
-  else
-    success "Homebrew already installed."
+  elif [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+
+  # fnm
+  if command -v fnm >/dev/null 2>&1; then
+    eval "$(fnm env --use-on-cd --shell bash 2>/dev/null)" || true
+  fi
+
+  # pnpm
+  export PNPM_HOME="$HOME/Library/pnpm"
+  case ":$PATH:" in
+    *":$PNPM_HOME/bin:"*) ;;
+    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+  esac
+
+  # npm global bin (fallback for pnpm if it was installed via npm -g)
+  if command -v npm >/dev/null 2>&1; then
+    local npm_bin
+    npm_bin="$(npm config get prefix 2>/dev/null)/bin"
+    case ":$PATH:" in
+      *":$npm_bin:"*) ;;
+      *) export PATH="$npm_bin:$PATH" ;;
+    esac
   fi
 }
 
-# ─── Apps ─────────────────────────────────────────────────────────────────────
-set_apps() {
-  info "Updating Homebrew..."
-  brew update || warn "brew update failed, continuing with cached index."
+# ─── 1. Homebrew ──────────────────────────────────────────────────────────────
+set_homebrew() {
+  (set -euo pipefail
+  step "Homebrew"
 
-  info "Installing formulae from apps.json..."
+  if ! command -v brew >/dev/null 2>&1; then
+    info "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
+      error "Homebrew installation failed."
+      log "Homebrew installation failed"
+      return 1
+    }
+    # Write to .zprofile so brew is on PATH in future interactive shells
+    {
+      echo
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"'
+    } >>"$HOME/.zprofile"
+    success "Homebrew installed."
+    log "Homebrew installed"
+  else
+    success "Homebrew already installed."
+  fi
+
+  # Make brew available for the rest of this script immediately
+  bootstrap_env
+  )
+}
+
+# ─── 2. Apps ──────────────────────────────────────────────────────────────────
+set_apps() {
+  (set -euo pipefail
+  step "Apps"
+
+  info "Updating Homebrew..."
+  brew update || warn "brew update failed — continuing with cached index."
+
+  info "Installing formulae..."
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     if brew list --formula "$pkg" &>/dev/null; then
       success "$pkg already installed."
     else
       info "Installing $pkg..."
-      brew install "$pkg" || { warn "Failed: $pkg"; log_action "Failed formula: $pkg"; }
+      brew install "$pkg" || { warn "Failed: $pkg"; log "Failed formula: $pkg"; }
     fi
   done < <(apps_names formulae)
 
-  info "Installing casks from apps.json..."
+  info "Installing casks..."
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     if brew list --cask "$pkg" &>/dev/null; then
       success "$pkg already installed."
     else
       info "Installing cask: $pkg..."
-      brew install --cask "$pkg" || { warn "Failed cask: $pkg"; log_action "Failed cask: $pkg"; }
+      brew install --cask "$pkg" || { warn "Failed cask: $pkg"; log "Failed cask: $pkg"; }
     fi
   done < <(apps_names casks)
 
-  # pokemon-colorscripts — nvim dashboard; not on any stable brew tap
-  if ! command -v pokemon-colorscripts >/dev/null 2>&1; then
-    info "Installing pokemon-colorscripts..."
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-    git clone --depth=1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git "$tmp_dir" 2>/dev/null && (
-      cd "$tmp_dir" && sudo ./install.sh
-    ) && success "pokemon-colorscripts installed." \
-      || warn "pokemon-colorscripts install failed — Neovim dashboard will show an error."
-    rm -rf "$tmp_dir"
-  else
-    success "pokemon-colorscripts already installed."
-  fi
-
-  log_action "Apps installation complete"
-}
-
-# ─── Dotfiles ─────────────────────────────────────────────────────────────────
-set_dotfiles() {
-  info "Setting up dotfiles and Zsh..."
-
-  # oh-my-zsh
-  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended || {
-      error "oh-my-zsh installation failed."
-      log_action "oh-my-zsh installation failed"
-      return 1
-    }
-    success "oh-my-zsh installed."
-  else
-    success "oh-my-zsh already installed."
-  fi
-
-  # set zsh as default shell
-  if [[ "$(dscl . -read "/Users/$USER" UserShell | awk '{print $2}')" != "$(which zsh)" ]]; then
-    chsh -s "$(which zsh)" "$USER" || {
-      error "Failed to set zsh as default shell."
-      log_action "Failed to set zsh as default shell"
-      return 1
-    }
-    success "zsh set as default shell."
-  else
-    success "zsh already default shell."
-  fi
-
-  # zsh plugins
-  local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-  local plugins=(
-    "zsh-users/zsh-autosuggestions"
-    "zsh-users/zsh-syntax-highlighting"
+  log "Apps installation complete"
   )
-
-  for plugin in "${plugins[@]}"; do
-    local dest="$zsh_custom/plugins/${plugin##*/}"
-    if [[ ! -d "$dest" ]]; then
-      git clone "https://github.com/$plugin" "$dest" || {
-        warn "Failed to clone $plugin."
-        log_action "Failed to clone $plugin"
-      }
-    else
-      success "Plugin ${plugin##*/} already installed."
-    fi
-  done
-
-  # stow dotfiles
-  info "Stowing dotfiles from $DOTFILES_DIR..."
-  # yazi omitted — dotfiles/yazi/ has no config yet; add when yazi is configured
-  local packages=(fastfetch ghostty nvim pi starship stow tmux zsh)
-  for pkg in "${packages[@]}"; do
-    # backup any conflicting files before stowing
-    local conflicts
-    conflicts=$(
-      stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 |
-        grep "existing target" |
-        awk '{print $NF}' ||
-        true
-    )
-    for f in $conflicts; do
-      if [[ -e "$HOME/$f" ]]; then
-        mv "$HOME/$f" "$HOME/$f.bak"
-        warn "Backed up ~/$f → ~/$f.bak"
-      fi
-    done
-
-    stow --dir="$DOTFILES_DIR" --target="$HOME" "$pkg" || {
-      warn "Failed to stow $pkg."
-      log_action "Failed to stow $pkg"
-    }
-    success "Stowed $pkg."
-  done
-
-  # Bootstrap TPM (plugins/ is gitignored so tpm is never stowed)
-  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
-  if [[ ! -d "$tpm_dir" ]]; then
-    info "Cloning TPM..."
-    git clone --depth=1 https://github.com/tmux-plugins/tpm "$tpm_dir" || {
-      warn "TPM clone failed — tmux plugins will not be installed."
-      log_action "TPM clone failed"
-    }
-  fi
-
-  # Install all plugins listed in tmux.conf
-  local tpm_install="$tpm_dir/bin/install_plugins"
-  if [[ -f "$tpm_install" ]]; then
-    info "Installing tmux plugins..."
-    "$tpm_install" && success "tmux plugins installed." || warn "tmux plugin install failed."
-  fi
-
-  log_action "Dotfiles setup complete"
 }
 
-# ─── Runtimes (bun, rust) ───────────────────────────────────────────────────────────────────
-# ─── Git ─────────────────────────────────────────────────────────────────────
-set_git() {
-  info "Configuring git..."
-
-  git config --global user.name "mahi160"
-  git config --global user.email "omarsifat288@gmail.com"
-  git config --global core.editor "nvim"
-  git config --global init.defaultBranch "main"
-
-  success "Git configured (personal identity as global)."
-  log_action "Git configured"
-}
-
-# ─── Node ─────────────────────────────────────────────────────────────────────
-set_node() {
-  info "Setting up Node via fnm..."
-
-  if ! command -v fnm >/dev/null 2>&1; then
-    brew install fnm || {
-      error "Failed to install fnm."
-      log_action "Failed to install fnm"
-      return 1
-    }
-  fi
-
-  eval "$(fnm env --use-on-cd --shell zsh)"
-
-  fnm install --lts || {
-    error "Failed to install LTS Node."
-    log_action "Failed to install LTS Node"
-    return 1
-  }
-
-  fnm use lts-latest
-  fnm alias default lts-latest
-  success "Node $(node -v) active."
-
-  # pnpm
-  if ! command -v pnpm >/dev/null 2>&1; then
-    npm install -g pnpm || {
-      error "Failed to install pnpm."
-      log_action "Failed to install pnpm"
-      return 1
-    }
-    success "pnpm installed."
-  else
-    success "pnpm already installed."
-  fi
-
-  log_action "Node setup complete"
-}
-
-# ─── Neovim Bootstrap ──────────────────────────────────────────────────────────────────
-set_nvim() {
-  info "Bootstrapping Neovim plugins..."
-
-  if ! command -v nvim >/dev/null 2>&1; then
-    error "nvim not found — ensure set_apps ran successfully."
-    return 1
-  fi
-
-  # Sync all lazy.nvim plugins (installs everything in lazy-lock.json)
-  # This also triggers Mason to auto-install configured LSP servers
-  info "Syncing plugins (this takes a few minutes on first run)..."
-  nvim --headless "+Lazy! sync" +qa 2>/dev/null &&
-    success "Neovim plugins synced." ||
-    warn "Plugin sync had warnings — check :Lazy on first launch."
-
-  # Remove disabled plugins from disk (e.g. markdown-preview.nvim, enabled=false)
-  nvim --headless "+Lazy! clean" +qa 2>/dev/null &&
-    success "Disabled plugins cleaned from disk." ||
-    warn "Lazy clean had warnings."
-
-  # Note: typescript-language-server is intentionally absent from lazyvim.json
-  # (vtsls handles TS). Mason will never install it on a fresh setup.
-  # On a migration from an older config, run manually: :MasonUninstall typescript-language-server
-
-  log_action "Neovim bootstrap complete"
-}
-
-# ─── Pi ──────────────────────────────────────────────────────────────────────────────────
-set_pi() {
-  info "Installing pi (coding agent)..."
-
-  if ! command -v pnpm >/dev/null 2>&1; then
-    error "pnpm not found. Run set_node first."
-    return 1
-  fi
-
-  pnpm add -g @earendil-works/pi-coding-agent || {
-    error "Failed to install pi."
-    log_action "Failed to install pi"
-    return 1
-  }
-
-  success "pi installed."
-
-  # Install pi extension dependencies
-  # The claude extension uses @mariozechner/jiti (TypeScript runtime) which is gitignored
-  local claude_ext="$HOME/.pi/agent/extensions/claude"
-  if [[ -f "$claude_ext/package.json" ]]; then
-    info "Installing pi claude extension dependencies..."
-    (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null) &&
-      success "pi claude extension dependencies installed." ||
-      warn "pi claude extension pnpm install failed — extension may not load."
-  fi
-
-  log_action "pi installed"
-}
-
-# ─── AI Skills ──────────────────────────────────────────────────────────────────────
-set_ai() {
-  info "Installing AI skills via npx skills..."
-
-  while IFS='|' read -r source desc; do
-    [[ -z "$source" ]] && continue
-    info "  $source — $desc"
-    npx --yes skills add "$source" 2>/dev/null \
-      && success "Installed: $source" \
-      || warn "Failed: $source (can install manually: npx skills add $source)"
-  done < <(python3 -c "
-import json
-with open('${APPS_JSON}') as f:
-    data = json.load(f)
-for s in data.get('ai_skills', []):
-    print(s['source'] + '|' + s['desc'])
-")
-
-  log_action "AI skills installed"
-}
-
-# ─── SSH ──────────────────────────────────────────────────────────────────────
-set_ssh() {
-  info "Setting up SSH..."
-
-  mkdir -p "$HOME/.ssh" || {
-    error "Failed to create ~/.ssh directory."
-    log_action "Failed to create ~/.ssh"
-    return 1
-  }
-  chmod 700 "$HOME/.ssh"
-
-  local ssh_keys=(
-    "id_ed25519:omarsifat288@gmail.com"
-    "qp_ed25519:salauddin.sifat@questionpro.com"
-  )
-
-  for key in "${ssh_keys[@]}"; do
-    IFS=':' read -r filename comment <<<"$key"
-    if [[ ! -f "$HOME/.ssh/$filename" ]]; then
-      ssh-keygen -t ed25519 -C "$comment" -f "$HOME/.ssh/$filename" || {
-        warn "Failed to generate SSH key $filename."
-        log_action "Failed to generate SSH key $filename"
-      }
-      success "Generated $filename."
-    else
-      success "SSH key $filename already exists."
-    fi
-  done
-
-  cat >"$HOME/.ssh/config" <<'EOF'
-Host github.com
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/id_ed25519
-
-Host qp.github.com
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/qp_ed25519
-EOF
-
-  chmod 600 "$HOME/.ssh/config" || {
-    error "Failed to set permissions on ~/.ssh/config."
-    log_action "Failed to set permissions on ~/.ssh/config"
-    return 1
-  }
-
-  # add keys to agent (macOS keychain)
-  eval "$(ssh-agent -s)" >/dev/null
-  for key in "${ssh_keys[@]}"; do
-    IFS=':' read -r filename _ <<<"$key"
-    if [[ -f "$HOME/.ssh/$filename" ]]; then
-      ssh-add --apple-use-keychain "$HOME/.ssh/$filename" 2>/dev/null ||
-        ssh-add "$HOME/.ssh/$filename" 2>/dev/null ||
-        warn "Could not add $filename to agent."
-    fi
-  done
-
-  echo ""
-  info "Add these public keys to GitHub:"
-  for key in "${ssh_keys[@]}"; do
-    IFS=':' read -r filename comment <<<"$key"
-    if [[ -f "$HOME/.ssh/$filename.pub" ]]; then
-      echo -e "  ${YELLOW}[$comment]${RESET}"
-      echo "  $(cat "$HOME/.ssh/$filename.pub")"
-      echo ""
-    fi
-  done
-
-  success "SSH setup complete."
-  log_action "SSH setup complete"
-}
-
-# ─── Store & Direct Apps ──────────────────────────────────────────────────────────
+# ─── 3. Store & Direct Apps ───────────────────────────────────────────────────
 install_dmg() {
   local name="$1" url="$2"
   if [[ -d "/Applications/$name.app" ]]; then
@@ -449,54 +194,350 @@ install_dmg() {
 }
 
 set_store_apps() {
-  info "Installing App Store apps via mas..."
+  (set -euo pipefail
+  step "Store & Direct Apps"
 
   if ! mas account &>/dev/null; then
     warn "Not signed in to App Store — skipping mas installs. Sign in via App Store app first."
+  else
+    while IFS=':' read -r id name; do
+      [[ -z "$id" ]] && continue
+      if mas list | grep -q "^$id"; then
+        success "$name already installed."
+      else
+        info "Installing $name..."
+        mas install "$id" || warn "Failed to install $name."
+      fi
+    done < <(apps_pairs mas id)
+  fi
+
+  info "Installing direct download apps..."
+  while IFS='|' read -r name url; do
+    [[ -z "$name" ]] && continue
+    install_dmg "$name" "$url" || true
+  done < <(apps_dmg)
+
+  log "Store & direct apps complete"
+  )
+}
+
+# ─── 4. Dotfiles ──────────────────────────────────────────────────────────────
+set_dotfiles() {
+  (set -euo pipefail
+  step "Dotfiles"
+
+  # oh-my-zsh
+  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+    info "Installing oh-my-zsh..."
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended || {
+      error "oh-my-zsh installation failed."
+      log "oh-my-zsh installation failed"
+      return 1
+    }
+    success "oh-my-zsh installed."
+    log "oh-my-zsh installed"
+  else
+    success "oh-my-zsh already installed."
+  fi
+
+  # zsh plugins
+  local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+  local plugins=(
+    "zsh-users/zsh-autosuggestions"
+    "zsh-users/zsh-syntax-highlighting"
+  )
+  for plugin in "${plugins[@]}"; do
+    local dest="$zsh_custom/plugins/${plugin##*/}"
+    if [[ ! -d "$dest" ]]; then
+      git clone "https://github.com/$plugin" "$dest" || {
+        warn "Failed to clone $plugin."
+        log "Failed to clone $plugin"
+      }
+    else
+      success "Plugin ${plugin##*/} already installed."
+    fi
+  done
+
+  # stow dotfiles
+  info "Stowing dotfiles from $DOTFILES_DIR..."
+  local packages=(fastfetch ghostty nvim pi starship stow tmux zsh)
+  for pkg in "${packages[@]}"; do
+    # Back up any files that would conflict
+    local conflicts
+    conflicts=$(
+      stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 |
+        grep "existing target" |
+        awk '{print $NF}' ||
+        true
+    )
+    for f in $conflicts; do
+      if [[ -e "$HOME/$f" && ! -L "$HOME/$f" ]]; then
+        mv "$HOME/$f" "$HOME/$f.bak"
+        warn "Backed up ~/$f → ~/$f.bak"
+      fi
+    done
+    stow --dir="$DOTFILES_DIR" --target="$HOME" "$pkg" || {
+      warn "Failed to stow $pkg."
+      log "Failed to stow $pkg"
+    }
+    success "Stowed $pkg."
+  done
+
+  # TPM
+  local tpm_dir="$HOME/.config/tmux/plugins/tpm"
+  if [[ ! -d "$tpm_dir" ]]; then
+    info "Cloning TPM..."
+    git clone --depth=1 https://github.com/tmux-plugins/tpm "$tpm_dir" || {
+      warn "TPM clone failed — tmux plugins will not be installed."
+      log "TPM clone failed"
+    }
+  fi
+  local tpm_install="$tpm_dir/bin/install_plugins"
+  if [[ -f "$tpm_install" ]]; then
+    info "Installing tmux plugins..."
+    "$tpm_install" && success "tmux plugins installed." || warn "tmux plugin install failed."
+  fi
+
+  log "Dotfiles setup complete"
+  )
+}
+
+# ─── 5. Git ───────────────────────────────────────────────────────────────────
+set_git() {
+  (set -euo pipefail
+  step "Git"
+
+  git config --global user.name  "mahi160"
+  git config --global user.email "omarsifat288@gmail.com"
+  git config --global core.editor "nvim"
+  git config --global init.defaultBranch "main"
+  git config --global pull.rebase false
+  git config --global core.autocrlf false
+
+  success "Git configured."
+  log "Git configured"
+  )
+}
+
+# ─── 6. Node ──────────────────────────────────────────────────────────────────
+set_node() {
+  (set -euo pipefail
+  step "Node"
+
+  if ! command -v fnm >/dev/null 2>&1; then
+    info "Installing fnm..."
+    brew install fnm || {
+      error "Failed to install fnm."
+      log "Failed to install fnm"
+      return 1
+    }
+  fi
+
+  # Init fnm in bash (not zsh — this script runs in bash)
+  eval "$(fnm env --use-on-cd --shell bash)"
+
+  fnm install --lts || {
+    error "Failed to install LTS Node."
+    log "Failed to install LTS Node"
+    return 1
+  }
+  fnm use lts-latest
+  fnm alias default lts-latest
+  success "Node $(node -v) active."
+
+  # pnpm
+  if ! command -v pnpm >/dev/null 2>&1; then
+    npm install -g pnpm || {
+      error "Failed to install pnpm."
+      log "Failed to install pnpm"
+      return 1
+    }
+    success "pnpm installed."
+  else
+    success "pnpm $(pnpm -v) already installed."
+  fi
+
+  # Make pnpm available for subsequent steps in this script
+  export PNPM_HOME="$HOME/Library/pnpm"
+  case ":$PATH:" in
+    *":$PNPM_HOME/bin:"*) ;;
+    *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+  esac
+
+  log "Node setup complete"
+  )
+
+  # Re-run bootstrap_env so the outer shell picks up the newly installed tools
+  bootstrap_env
+}
+
+# ─── 7. Neovim ────────────────────────────────────────────────────────────────
+set_nvim() {
+  (set -euo pipefail
+  step "Neovim"
+
+  if ! command -v nvim >/dev/null 2>&1; then
+    error "nvim not found — ensure set_apps ran successfully."
+    return 1
+  fi
+
+  info "Syncing lazy.nvim plugins (first run may take a few minutes)..."
+  nvim --headless "+Lazy! sync" +qa 2>/dev/null &&
+    success "Neovim plugins synced." ||
+    warn "Plugin sync had warnings — check :Lazy on first launch."
+
+  nvim --headless "+Lazy! clean" +qa 2>/dev/null &&
+    success "Disabled plugins cleaned." ||
+    warn "Lazy clean had warnings."
+
+  log "Neovim bootstrap complete"
+  )
+}
+
+# ─── 8. Pi ────────────────────────────────────────────────────────────────────
+set_pi() {
+  (set -euo pipefail
+  step "Pi"
+
+  if ! command -v pnpm >/dev/null 2>&1; then
+    error "pnpm not found — set_node may have failed."
+    return 1
+  fi
+
+  info "Installing pi coding agent..."
+  pnpm add -g @earendil-works/pi-coding-agent || {
+    error "Failed to install pi."
+    log "Failed to install pi"
+    return 1
+  }
+  success "pi installed."
+
+  # Install pi claude extension dependencies (gitignored, must be installed at setup time)
+  local claude_ext="$HOME/.pi/agent/extensions/claude"
+  if [[ -f "$claude_ext/package.json" ]]; then
+    info "Installing pi claude extension dependencies..."
+    (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null) &&
+      success "pi claude extension ready." ||
+      warn "pi claude extension pnpm install failed — extension may not load."
+  fi
+
+  log "pi installed"
+  )
+}
+
+# ─── 9. AI Skills ─────────────────────────────────────────────────────────────
+set_ai() {
+  (set -euo pipefail
+  step "AI Skills"
+
+  if ! command -v npx >/dev/null 2>&1; then
+    warn "npx not found — skipping AI skills. Run 'npx skills add <source>' manually."
     return 0
   fi
 
-  while IFS=':' read -r id name; do
-    [[ -z "$id" ]] && continue
-    if mas list | grep -q "^$id"; then
-      success "$name already installed."
-    else
-      info "Installing $name..."
-      mas install "$id" || warn "Failed to install $name."
-    fi
-  done < <(apps_pairs mas id)
+  while IFS='|' read -r source desc; do
+    [[ -z "$source" ]] && continue
+    info "  $source — $desc"
+    npx --yes skills add "$source" 2>/dev/null \
+      && success "Installed: $source" \
+      || warn "Failed: $source  →  retry manually: npx skills add $source"
+  done < <(python3 -c "
+import json
+with open('${APPS_JSON}') as f:
+    data = json.load(f)
+for s in data.get('ai_skills', []):
+    print(s['source'] + '|' + s['desc'])
+")
 
-  info "Installing direct download apps..."
-
-  while IFS='|' read -r name url; do
-    [[ -z "$name" ]] && continue
-    install_dmg "$name" "$url"
-  done < <(apps_dmg)
-
-  log_action "Store & direct apps complete"
+  log "AI skills installed"
+  )
 }
 
-# ─── Mac Cleanup ─────────────────────────────────────────────────────────────
-set_mac_cleanup() {
-  info "Cleaning up macOS..."
+# ─── 10. SSH ──────────────────────────────────────────────────────────────────
+set_ssh() {
+  (set -euo pipefail
+  step "SSH"
 
-  # reset dock to empty (your apps only, no Apple defaults)
-  defaults write com.apple.dock persistent-apps -array
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  local ssh_keys=(
+    "id_ed25519:omarsifat288@gmail.com"
+    "qp_ed25519:salauddin.sifat@questionpro.com"
+  )
+
+  for key in "${ssh_keys[@]}"; do
+    IFS=':' read -r filename comment <<<"$key"
+    if [[ ! -f "$HOME/.ssh/$filename" ]]; then
+      # -N "" = no passphrase; remove if you want one
+      ssh-keygen -t ed25519 -C "$comment" -f "$HOME/.ssh/$filename" -N "" || {
+        warn "Failed to generate SSH key $filename."
+        log "Failed to generate SSH key $filename"
+      }
+      success "Generated $filename."
+    else
+      success "SSH key $filename already exists."
+    fi
+  done
+
+  cat >"$HOME/.ssh/config" <<'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+
+Host qp.github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/qp_ed25519
+EOF
+  chmod 600 "$HOME/.ssh/config"
+
+  # Add keys to macOS Keychain agent
+  eval "$(ssh-agent -s)" >/dev/null
+  for key in "${ssh_keys[@]}"; do
+    IFS=':' read -r filename _ <<<"$key"
+    if [[ -f "$HOME/.ssh/$filename" ]]; then
+      ssh-add --apple-use-keychain "$HOME/.ssh/$filename" 2>/dev/null ||
+        ssh-add "$HOME/.ssh/$filename" 2>/dev/null ||
+        warn "Could not add $filename to agent."
+    fi
+  done
+
+  echo ""
+  info "Add these public keys to GitHub:"
+  for key in "${ssh_keys[@]}"; do
+    IFS=':' read -r filename comment <<<"$key"
+    if [[ -f "$HOME/.ssh/$filename.pub" ]]; then
+      echo -e "  ${YELLOW}[$comment]${RESET}"
+      echo "  $(cat "$HOME/.ssh/$filename.pub")"
+      echo ""
+    fi
+  done
+
+  success "SSH setup complete."
+  log "SSH setup complete"
+  )
+}
+
+# ─── 11. Mac Cleanup ──────────────────────────────────────────────────────────
+set_mac_cleanup() {
+  (set -euo pipefail
+  step "Mac Cleanup"
+
+  defaults write com.apple.dock persistent-apps   -array
   defaults write com.apple.dock persistent-others -array
-  killall Dock
+  killall Dock 2>/dev/null || true
   success "Dock cleared."
 
-  # disable Siri
   defaults write com.apple.assistant.support "Assistant Enabled" -bool false
-  defaults write com.apple.Siri StatusMenuVisible -bool false
+  defaults write com.apple.Siri StatusMenuVisible     -bool false
   defaults write com.apple.Siri UserHasDeclinedEnable -bool true
   success "Siri disabled."
 
-  # disable Game Center
   defaults write com.apple.gamed Disabled -bool true
   success "Game Center disabled."
 
-  # disable Spotlight suggestions & telemetry
   defaults write com.apple.spotlight orderedItems -array \
     '{"enabled"=1;"name"="APPLICATIONS";}' \
     '{"enabled"=1;"name"="SYSTEM_PREFS";}' \
@@ -523,78 +564,84 @@ set_mac_cleanup() {
   killall mds 2>/dev/null || true
   success "Spotlight suggestions disabled."
 
-  # disable analytics & diagnostics
   defaults write com.apple.DiagnosticReportingSupport AutoSubmit -bool false
   defaults write com.apple.CrashReporter DialogType -string "none"
   defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false 2>/dev/null || true
   success "Analytics & crash reporting disabled."
 
-  # disable iCloud sign-in nag
-  defaults write com.apple.systempreferences TMShowUnsupportedNetworkVolumes -bool false
-  success "iCloud nudges disabled."
-
-  # remove default junk directories if empty
   for dir in "$HOME/Public" "$HOME/Sites"; do
     if [[ -d "$dir" && -z "$(ls -A "$dir")" ]]; then
-      rmdir "$dir"
-      success "Removed empty $dir."
+      rmdir "$dir" && success "Removed empty $dir."
     elif [[ -d "$dir" ]]; then
       warn "$dir not empty, skipping."
     fi
   done
 
-  log_action "Mac cleanup complete"
+  log "Mac cleanup complete"
+  )
 }
 
-# ─── Mac Defaults ─────────────────────────────────────────────────────────────
+# ─── 12. Mac Defaults ─────────────────────────────────────────────────────────
 set_mac_defaults() {
-  info "Applying macOS defaults..."
+  (set -euo pipefail
+  step "Mac Defaults"
 
   # Dock
-  defaults write com.apple.dock autohide -bool true
-  defaults write com.apple.dock autohide-delay -float 0
-  defaults write com.apple.dock autohide-time-modifier -int 0
-  defaults write com.apple.dock show-recents -bool false
-  defaults write com.apple.dock static-only -bool true
-  defaults write com.apple.dock expose-group-apps -bool true
-  defaults write com.apple.dock tilesize -int 42
-  killall Dock
+  defaults write com.apple.dock autohide               -bool true
+  defaults write com.apple.dock autohide-delay          -float 0
+  defaults write com.apple.dock autohide-time-modifier  -int 0
+  defaults write com.apple.dock show-recents            -bool false
+  defaults write com.apple.dock static-only             -bool true
+  defaults write com.apple.dock expose-group-apps       -bool true
+  defaults write com.apple.dock tilesize                -int 42
+  killall Dock 2>/dev/null || true
 
   # Finder
-  defaults write com.apple.finder FXPreferredViewStyle -string "icnv"
-  defaults write com.apple.finder ShowPathbar -bool true
-  defaults write com.apple.finder ShowStatusBar -bool true
-  defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-  defaults write com.apple.finder AppleShowAllFiles -bool true
-  defaults write com.apple.finder NewWindowTarget -string "PfHm"
-  defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-  killall Finder
+  defaults write com.apple.finder FXPreferredViewStyle  -string "icnv"
+  defaults write com.apple.finder ShowPathbar           -bool true
+  defaults write com.apple.finder ShowStatusBar         -bool true
+  defaults write NSGlobalDomain AppleShowAllExtensions  -bool true
+  defaults write com.apple.finder AppleShowAllFiles     -bool true
+  defaults write com.apple.finder NewWindowTarget       -string "PfHm"
+  defaults write com.apple.finder FXDefaultSearchScope  -string "SCcf"
+  # Don't create .DS_Store on network or USB volumes
+  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+  defaults write com.apple.desktopservices DSDontWriteUSBStores     -bool true
+  killall Finder 2>/dev/null || true
 
   # Keyboard
   defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
-  defaults write NSGlobalDomain InitialKeyRepeat -int 15
-  defaults write NSGlobalDomain KeyRepeat -int 2
-  defaults write NSGlobalDomain AppleKeyboardUIMode -int 2
+  defaults write NSGlobalDomain InitialKeyRepeat         -int 15
+  defaults write NSGlobalDomain KeyRepeat                -int 2
+  defaults write NSGlobalDomain AppleKeyboardUIMode      -int 2
 
   # Trackpad
-  defaults write NSGlobalDomain com.apple.trackpad.scaling -float 2
-  defaults write NSGlobalDomain com.apple.trackpad.forceClick -bool true
+  defaults write NSGlobalDomain com.apple.trackpad.scaling      -float 2
+  defaults write NSGlobalDomain com.apple.trackpad.forceClick   -bool true
   defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false
+
+  # Screenshots — save to ~/Downloads instead of desktop
+  defaults write com.apple.screencapture location -string "$HOME/Downloads"
+  defaults write com.apple.screencapture type     -string "png"
+  defaults write com.apple.screencapture disable-shadow -bool true
 
   # Menu bar
   defaults write NSGlobalDomain _HIHideMenuBar -bool false
 
   # Spaces
   defaults write com.apple.spaces spans-displays -bool false
-  killall SystemUIServer
+  killall SystemUIServer 2>/dev/null || true
 
   success "macOS defaults applied."
-  log_action "macOS defaults applied"
+  log "macOS defaults applied"
+  )
 }
 
-# ─── Network Shares ─────────────────────────────────────────────────────────────
+# ─── 13. Network Shares ───────────────────────────────────────────────────────
 set_network_shares() {
-  info "Configuring network shares..."
+  (set -euo pipefail
+  step "Network Shares"
+
   mkdir -p "$HOME/Library/LaunchAgents"
 
   while IFS='|' read -r name url; do
@@ -602,11 +649,7 @@ set_network_shares() {
     local label="com.mahi.mount.$(echo "$name" | tr '[:upper:]' '[:lower:]')"
     local plist="$HOME/Library/LaunchAgents/${label}.plist"
 
-    # Generate the LaunchAgent plist.
-    # sleep 5 gives the network stack time to come up before attempting the mount.
-    # The || means: skip if already mounted, mount if not.
-    # osascript uses macOS Keychain — prompts for credentials on first run only.
-    cat > "$plist" << PLIST
+    cat >"$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -629,11 +672,10 @@ set_network_shares() {
 </plist>
 PLIST
 
-    # Load it now (also runs at every login going forward)
     launchctl unload "$plist" 2>/dev/null || true
-    launchctl load "$plist"
-    success "${name} (${url}) — will auto-mount on login. Enter credentials on first prompt."
-    log_action "Network share configured: $name"
+    launchctl load  "$plist"
+    success "${name} (${url}) — auto-mounts on login."
+    log "Network share configured: $name"
   done < <(python3 -c "
 import json
 with open('${APPS_JSON}') as f:
@@ -642,41 +684,82 @@ for s in data.get('smb', []):
     print(s['name'] + '|' + s['url'])
 ")
 
-  log_action "Network shares complete"
+  log "Network shares complete"
+  )
 }
 
-# ─── Crontab ─────────────────────────────────────────────────────────────────────────────
+# ─── 14. Nowplaying Binary ────────────────────────────────────────────────────
+set_nowplaying_binary() {
+  step "Nowplaying Binary"
+  if bash "${SCRIPT_DIR}/compile-nowplaying.sh"; then
+    success "nowplaying binary compiled."
+    log "nowplaying binary compiled"
+  else
+    warn "nowplaying binary compilation failed — tmux will fall back to Swift interpreter."
+    log "nowplaying binary compilation failed (non-fatal)"
+  fi
+}
+
+# ─── 15. Crontab ──────────────────────────────────────────────────────────────
 set_crontab() {
-  info "Installing maintenance cron jobs..."
-  local script_dir
-  script_dir="$(dirname "$(realpath "$0")")"
-  bash "${script_dir}/crontab-setup.sh" &&
+  step "Crontab"
+  bash "${SCRIPT_DIR}/crontab-setup.sh" &&
     success "Cron jobs installed." ||
     warn "Cron setup failed — run scripts/crontab-setup.sh manually."
-  log_action "Crontab setup complete"
+  log "Crontab setup complete"
 }
 
-# ─── Nowplaying Binary ────────────────────────────────────────────────────────────────
-set_nowplaying_binary() {
-  info "Compiling tmux-nowplaying binary..."
-  local script_dir
-  script_dir="$(dirname "$(realpath "$0")")"
-  if bash "${script_dir}/compile-nowplaying.sh"; then
-    success "nowplaying binary compiled."
-    log_action "nowplaying binary compiled"
+# ─── Step runner ──────────────────────────────────────────────────────────────
+# Critical steps abort on failure. Non-critical steps warn and continue.
+CRITICAL_STEPS=(set_homebrew set_apps set_dotfiles set_node)
+
+is_critical() {
+  local step="$1"
+  for s in "${CRITICAL_STEPS[@]}"; do
+    [[ "$s" == "$step" ]] && return 0
+  done
+  return 1
+}
+
+run_step() {
+  local fn="$1"
+  if is_critical "$fn"; then
+    $fn || {
+      error "Critical step '$fn' failed — aborting."
+      log "Aborted at critical step: $fn"
+      exit 1
+    }
   else
-    warn "nowplaying binary compilation failed — will fall back to Swift interpreter."
-    log_action "nowplaying binary compilation failed (non-fatal)"
+    $fn || warn "Step '$fn' failed — continuing with remaining steps."
   fi
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 main() {
-  echo -e "${BLUE}"
+  echo -e "${BOLD}${BLUE}"
   echo "╔══════════════════════════════════════╗"
   echo "║         macOS Setup Script           ║"
   echo "╚══════════════════════════════════════╝"
   echo -e "${RESET}"
+  log "Setup started"
+
+  # Bootstrap env early so brew/fnm/pnpm are available if re-running on
+  # a machine that already has them installed
+  bootstrap_env
+
+  # If a single step name is passed as an argument, run only that step
+  if [[ $# -gt 0 ]]; then
+    if declare -f "$1" >/dev/null 2>&1; then
+      info "Running single step: $1"
+      "$1"
+      exit $?
+    else
+      error "Unknown step: $1"
+      echo "Available steps:"
+      declare -F | awk '{print "  "$3}' | grep "^  set_"
+      exit 1
+    fi
+  fi
 
   local steps=(
     set_homebrew
@@ -696,18 +779,29 @@ main() {
     set_crontab
   )
 
+  local total=${#steps[@]}
+  local current=0
+
   for step in "${steps[@]}"; do
-    echo ""
-    $step || {
-      error "Step '$step' failed. Aborting setup."
-      log_action "Aborted at step: $step"
-      exit 1
-    }
+    ((current++)) || true
+    echo -e "\n${CYAN}[${current}/${total}]${RESET}"
+    run_step "$step"
   done
 
   echo ""
-  success "Setup complete! Restart your terminal."
-  log_action "Setup complete"
+  echo -e "${BOLD}${GREEN}╔══════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}${GREEN}║   ✓  Setup complete!                 ║${RESET}"
+  echo -e "${BOLD}${GREEN}╚══════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  ${YELLOW}Next steps:${RESET}"
+  echo -e "  1. Paste SSH keys above into ${BLUE}github.com/settings/keys${RESET}"
+  echo -e "  2. Set ${BLUE}ANTHROPIC_API_KEY${RESET} (and others) manually"
+  echo -e "  3. Sign in to App Store if you skipped it"
+  echo -e "  4. Open terrorCastle share — enter SMB credentials once"
+  echo ""
+  echo -e "  Log: ${BLUE}~/setup.log${RESET}"
+  echo ""
+  log "Setup complete"
 }
 
 main "$@"
