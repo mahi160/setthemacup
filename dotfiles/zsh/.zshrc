@@ -5,6 +5,9 @@
 BREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
 
 # ─── Completion ───────────────────────────────────────────────────────────────
+# Extra completion definitions (must be before compinit)
+fpath=("$BREW_PREFIX/share/zsh/site-functions" "$BREW_PREFIX/share/zsh-completions" $fpath)
+
 autoload -Uz compinit
 # Regenerate dump at most once per day; skip security audit in between
 if [[ $(find "${HOME}/.zcompdump" -mtime +1 2>/dev/null) ]]; then
@@ -31,6 +34,8 @@ source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 # ─── Editors ──────────────────────────────────────────────────────────────────
 alias v="nvim"
 alias vm="NVIM_APPNAME=nvim.12 nvim"
+alias lg="lazygit"
+alias ld="lazydocker"
 
 # ─── Shell ────────────────────────────────────────────────────────────────────
 alias ls="eza"
@@ -83,7 +88,8 @@ esac
 # ─── Prompt & Tools ───────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"   # replaces OMZ z plugin — same 'z' command, smarter
-source <(fzf --zsh)
+source <(fzf --zsh)         # Ctrl+T file search, Alt+C cd — history handled by atuin
+eval "$(atuin init zsh --disable-up-arrow)"  # Ctrl+R → fuzzy history (replaces fzf Ctrl+R)
 
 # pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)
 export PI_CACHE_RETENTION=long

@@ -75,6 +75,13 @@
 
     { "name": "rust",                       "desc": "Rust toolchain (cargo) — required for blink.cmp Rust fuzzy binary in nvim.12" },
 
+    { "name": "git-delta",                  "desc": "Syntax-highlighted, side-by-side git diffs" },
+    { "name": "lazydocker",                 "desc": "Docker TUI — browse containers/logs/images" },
+    { "name": "atuin",                      "desc": "Shell history with fuzzy search + sync" },
+    { "name": "tealdeer",                   "desc": "Fast tldr — cheatsheets instead of man pages" },
+    { "name": "jq",                         "desc": "JSON processor — query/transform JSON on CLI" },
+    { "name": "zsh-completions",             "desc": "Extra zsh completion definitions" },
+
     { "name": "zsh-autosuggestions",         "desc": "Fish-like inline suggestions for zsh" },
     { "name": "zsh-syntax-highlighting",      "desc": "Fish-like syntax highlighting for zsh" },
     { "name": "zoxide",                       "desc": "Smarter cd — replaces OMZ z plugin" },

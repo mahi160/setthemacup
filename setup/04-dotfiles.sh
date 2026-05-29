@@ -11,7 +11,7 @@ set_dotfiles() {
   # pi excluded — settings.json is managed by pi at runtime (written on every update).
   # macinstall copies it once as a seed; pi owns it after that.
   info "Stowing dotfiles from $DOTFILES_DIR..."
-  local packages=(fastfetch ghostty nvim starship stow tmux zsh)
+  local packages=(fastfetch git ghostty nvim starship stow tmux zsh)
   for pkg in "${packages[@]}"; do
     local conflicts
     conflicts=$(stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 \
