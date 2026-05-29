@@ -101,7 +101,7 @@
     { "name": "alt-tab",                    "desc": "Proper Cmd+Tab with window previews" },
     { "name": "caffeine",                   "desc": "Prevents Mac from sleeping" },
     { "name": "mos",                        "desc": "Smooth scrolling for external mice" },
-    { "name": "doll",                       "desc": "Menu bar app icon manager" },
+    { "name": "jordanbaird-ice",           "desc": "Menu bar manager — hide/show icons, sections, hotkey reveal" },
     { "name": "stats",                      "desc": "CPU / RAM / network in menu bar" },
     { "name": "localsend",                  "desc": "Local file transfer — cross-platform AirDrop" },
     { "name": "shottr",                     "desc": "Screenshot tool with annotations" },
