@@ -26,7 +26,7 @@ FNM_JOB="0 4 * * 0 find ${FNM_DIR} -mindepth 1 -maxdepth 1 -mtime +7 -exec rm -r
 # Strip any existing entries for these jobs, then append fresh ones
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
-crontab -l 2>/dev/null | grep -v "pi-prune\|fnm_multishells\|fnm-clean" > "$TMPFILE" || true
+crontab -l 2>/dev/null | grep -v "pi-prune\|fnm_multishells\|fnm-clean\|raycast-backup" > "$TMPFILE" || true
 echo "$PRUNE_JOB" >> "$TMPFILE"
 echo "$FNM_JOB"   >> "$TMPFILE"
 crontab "$TMPFILE"
