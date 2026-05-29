@@ -5,10 +5,16 @@ vim.pack.add({
 	"https://github.com/supermaven-inc/supermaven-nvim",
 })
 
-require("blink.cmp").build():wait(60000)
+-- Build Rust fuzzy binary only if cargo is available.
+-- prefer_rust falls back to Lua gracefully when binary is absent.
+if vim.fn.executable("cargo") == 1 then
+	require("blink.cmp").build():wait(60000)
+end
 
 require("blink.cmp").setup({
-	fuzzy = { implementation = "rust" },
+	-- prefer_rust: use Rust binary if available, fall back to Lua gracefully
+	-- (requires cargo on first install — see apps.json; lua fallback works without it)
+	fuzzy = { implementation = "prefer_rust" },
 	snippets = { preset = "mini_snippets" },
 	keymap = {
 		preset = "default",
