@@ -1,109 +1,157 @@
-# ============================================================================
-# STARSHIP CONFIGURATION
-# Gruvbox Material themed — matches tmux, Neovim, Ghostty
-# ============================================================================
-# Explicit format = only listed modules are even checked — fastest possible
-# Colors: acc1=#d8a657 acc2=#a9b665 acc3=#e78a4e acc4=#7daea3 gray=#928374
-# ============================================================================
-
-scan_timeout    = 10     # ms — prevents slow prompts in large repos
-command_timeout = 500    # ms — max time for any shell command module
+scan_timeout    = 10
+command_timeout = 500
 add_newline     = true
 
-# Two-line prompt:
-#   [os] ~/path/dir  branch ±status  node go py rust  ········  2.3s 14:22
-#   ❯
+# Explicit format — only listed modules are scanned (fast).
+# Colors: inherited from terminal theme (Ghostty Gruvbox Material Dark)
+# yellow=3 green=2 red=1 cyan=6 bright-black=8
 format = """
-$os$directory$git_branch$git_status$nodejs$golang$python$rust$docker_context$fill$cmd_duration$time
-$character"""
+$username$localip$directory$git_branch$git_commit$git_status\
+$nodejs$golang$python$rust$java$kotlin$lua$php$ruby$swift$zig\
+$docker_context$package$aws$conda$nix_shell$buf\
+$line_break$character"""
 
-# ─── Prompt Character ─────────────────────────────────────────────────────────
+# Right prompt — auto-hides when cursor gets close (no width = invisible)
+right_format = "$cmd_duration"
+
+# ─── Prompt character ─────────────────────────────────────────────────────────
 [character]
 success_symbol = "[❯](bold #a9b665)"
 error_symbol   = "[❯](bold #e46876)"
 
+# ─── Identity ─────────────────────────────────────────────────────────────────
+[username]
+show_always = true
+style_user  = "bold green"
+style_root  = "bold red"
+format      = "[$user]($style)"
+
+[localip]
+ssh_only = false
+style    = "italic bright-black"
+format   = "[@$localipv4]($style) "
+disabled = false
+
+[hostname]
+disabled = true
+
 # ─── Directory ────────────────────────────────────────────────────────────────
 [directory]
-style             = "bold #d8a657"
-read_only         = " 󰌾"
+style             = "bold yellow"
+read_only         = "None"
 truncation_length = 3
 truncate_to_repo  = true
 
 # ─── Git ──────────────────────────────────────────────────────────────────────
 [git_branch]
-symbol = " "
-style  = "bold #a9b665"
+style  = "bold cyan"
+symbol = " "
 format = "[$symbol$branch(:$remote_branch)]($style) "
 
-[git_status]
-style  = "bold #e78a4e"
-format = '([$all_status$ahead_behind]($style) )'
-
 [git_commit]
-tag_symbol = "  "
-style      = "#928374"
+tag_symbol = '  '
+style      = "bright-black"
 
-# ─── OS icon ──────────────────────────────────────────────────────────────────
-[os]
-disabled = false
-style    = "bold #7daea3"
-format   = "[$symbol]($style)"
+[git_status]
+style  = "bold red"
+format = '([\[$all_status$ahead_behind\]]($style) )'
 
-[os.symbols]
-Macos   = " "
-Linux   = " "
-Windows = "󰍲 "
-Unknown = " "
-
-# ─── Languages (shown only when inside a matching project) ───────────────────
+# ─── Languages ────────────────────────────────────────────────────────────────
 [nodejs]
-symbol = " "
-style  = "bold #a9b665"
+symbol = " "
+style  = "bold green"
 format = "[$symbol($version)]($style) "
 
 [golang]
-symbol = " "
-style  = "bold #7daea3"
+symbol = " "
+style  = "bold cyan"
 format = "[$symbol($version)]($style) "
 
 [python]
-symbol = " "
-style  = "bold #d8a657"
+symbol = " "
+style  = "bold yellow"
 format = "[$symbol($version)]($style) "
 
 [rust]
 symbol = "󱘗 "
-style  = "bold #e78a4e"
+style  = "bold red"
 format = "[$symbol($version)]($style) "
 
+[java]
+symbol = " "
+style  = "bold red"
+format = "[$symbol($version)]($style) "
+
+[kotlin]
+symbol = " "
+style  = "bold cyan"
+format = "[$symbol($version)]($style) "
+
+[lua]
+symbol = " "
+style  = "bold cyan"
+format = "[$symbol($version)]($style) "
+
+[php]
+symbol = " "
+style  = "bold cyan"
+format = "[$symbol($version)]($style) "
+
+[ruby]
+symbol = " "
+style  = "bold red"
+format = "[$symbol($version)]($style) "
+
+[swift]
+symbol = " "
+style  = "bold red"
+format = "[$symbol($version)]($style) "
+
+[zig]
+symbol = " "
+style  = "bold yellow"
+format = "[$symbol($version)]($style) "
+
+# ─── Tools ────────────────────────────────────────────────────────────────────
 [docker_context]
-symbol = " "
-style  = "bold #7daea3"
-format = "[$symbol$context]($style) "
+symbol          = " "
+style           = "bold cyan"
+format          = "[$symbol$context]($style) "
 only_with_files = true
 
-# ─── Right side ───────────────────────────────────────────────────────────────
-[fill]
-symbol = " "
+[package]
+symbol = "󰏗 "
+style  = "bright-black"
+format = "[$symbol$version]($style) "
 
+[aws]
+symbol = "  "
+style  = "bold yellow"
+format = '[$symbol($profile)(\($region\))]($style) '
+
+[conda]
+symbol = " "
+style  = "bold green"
+format = "[$symbol$environment]($style) "
+
+[nix_shell]
+symbol = " "
+style  = "bold cyan"
+format = '[$symbol$state(\($name\))]($style) '
+
+[buf]
+symbol = " "
+style  = "bold cyan"
+format = "[$symbol($version)]($style) "
+
+# ─── Right ────────────────────────────────────────────────────────────────────
 [cmd_duration]
 min_time = 2000
-style    = "#928374"
+style    = "bright-black"
 format   = "[$duration]($style) "
 
 [time]
-disabled     = false
-style        = "#928374"
-format       = "[$time]($style)"
-time_format  = "%H:%M"
-
-# ─── Disabled — not needed on a personal machine ──────────────────────────────
-[username]
-show_always = false
-disabled    = true
-
-[hostname]
-disabled = true
-
-[localip]
-disabled = true
+disabled    = false
+style       = "bright-black"
+format      = "[$time]($style)"
+time_format = "%H:%M"

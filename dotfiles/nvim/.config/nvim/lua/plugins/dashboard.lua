@@ -4,15 +4,6 @@ return {
     opts = {
       dashboard = {
         sections = {
-          {
-            section = "terminal",
-            -- Uses the cached pokemon PNG (set by scripts/pokemon-bg.sh).
-            -- catimg is a brew formula that renders images in the terminal.
-            -- Fallback: shows nothing (no error) if catimg isn't installed.
-            cmd = "command -v catimg &>/dev/null && catimg -w 40 ~/Pictures/pokemon_bg/current.png 2>/dev/null || true; sleep .1",
-            indent = 20,
-            height = 14,
-          },
           { section = "keys", gap = 1, padding = 1 },
           { section = "startup" },
         },

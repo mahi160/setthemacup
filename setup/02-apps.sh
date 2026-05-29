@@ -4,7 +4,9 @@
 [[ -z "${SETUP_LIB_LOADED:-}" ]] && source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 set_apps() {
-  (set -euo pipefail
+  # Subshell scopes set -uo pipefail so it doesn't leak into main shell.
+  # No -e: individual failures handled per-package via ||; loop must never abort early.
+  (set -uo pipefail
   step "Apps"
   info "Updating Homebrew..."
   brew update || warn "brew update failed — continuing with cached index."
@@ -16,7 +18,7 @@ set_apps() {
       success "$pkg already installed."
     else
       info "Installing $pkg..."
-      brew install "$pkg" || { warn "Failed: $pkg"; log "Failed formula: $pkg"; }
+      brew install "$pkg" || { warn "Failed: $pkg"; log "Failed formula: $pkg"; true; }
     fi
   done < <(apps_names formulae)
 
@@ -27,7 +29,7 @@ set_apps() {
       success "$pkg already installed."
     else
       info "Installing cask: $pkg..."
-      brew install --cask "$pkg" || { warn "Failed cask: $pkg"; log "Failed cask: $pkg"; }
+      brew install --cask "$pkg" || { warn "Failed cask: $pkg"; log "Failed cask: $pkg"; true; }
     fi
   done < <(apps_names casks)
 

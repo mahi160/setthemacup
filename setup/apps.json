@@ -41,82 +41,137 @@
   ],
 
   "formulae": [
-    { "name": "zsh",              "desc": "Shell" },
-    { "name": "eza",              "desc": "ls replacement — colors, icons, git status" },
-    { "name": "bat",              "desc": "cat replacement — syntax highlighting, line numbers" },
-    { "name": "coreutils",        "desc": "GNU core utils (realpath etc. used by scripts)" },
-    { "name": "fastfetch",        "desc": "System info on login" },
-    { "name": "onefetch",         "desc": "Git repo summary — run 'of' inside a project" },
-    { "name": "starship",         "desc": "Prompt — git branch, language version, timing" },
-    { "name": "fzf",              "desc": "Fuzzy finder — Ctrl+R history, file search" },
-    { "name": "mas",              "desc": "Mac App Store CLI — installs store apps from terminal" },
-    { "name": "catimg",           "desc": "Terminal image renderer — used by nvim dashboard" },
+    { "name": "zsh", "desc": "Shell" },
+    { "name": "eza", "desc": "ls replacement — colors, icons, git status" },
+    {
+      "name": "bat",
+      "desc": "cat replacement — syntax highlighting, line numbers"
+    },
+    {
+      "name": "coreutils",
+      "desc": "GNU core utils (realpath etc. used by scripts)"
+    },
+    { "name": "fastfetch", "desc": "System info on login" },
+    {
+      "name": "onefetch",
+      "desc": "Git repo summary — run 'of' inside a project"
+    },
+    {
+      "name": "starship",
+      "desc": "Prompt — git branch, language version, timing"
+    },
+    { "name": "fzf", "desc": "Fuzzy finder — Ctrl+R history, file search" },
+    {
+      "name": "mas",
+      "desc": "Mac App Store CLI — installs store apps from terminal"
+    },
+    {
+      "name": "catimg",
+      "desc": "Terminal image renderer — used by nvim dashboard"
+    },
 
-    { "name": "neovim",           "desc": "Editor" },
-    { "name": "tmux",             "desc": "Terminal multiplexer — sessions, windows, panes" },
-    { "name": "lazygit",          "desc": "Terminal git UI" },
-    { "name": "lazysql",          "desc": "Terminal SQL / database UI" },
-    { "name": "stow",             "desc": "Symlinks dotfiles from repo into ~" },
-    { "name": "git",              "desc": "Git" },
-    { "name": "gh",               "desc": "GitHub CLI — PRs, issues, auth" },
-    { "name": "tree-sitter-cli",  "desc": "Treesitter parser CLI (used by nvim treesitter)" },
-    { "name": "cobra-cli",        "desc": "Go CLI app scaffolding" },
+    { "name": "neovim", "desc": "Editor" },
+    {
+      "name": "tmux",
+      "desc": "Terminal multiplexer — sessions, windows, panes"
+    },
+    { "name": "lazygit", "desc": "Terminal git UI" },
+    { "name": "lazysql", "desc": "Terminal SQL / database UI" },
+    { "name": "stow", "desc": "Symlinks dotfiles from repo into ~" },
+    { "name": "git", "desc": "Git" },
+    { "name": "gh", "desc": "GitHub CLI — PRs, issues, auth" },
+    {
+      "name": "tree-sitter-cli",
+      "desc": "Treesitter parser CLI (used by nvim treesitter)"
+    },
+    { "name": "cobra-cli", "desc": "Go CLI app scaffolding" },
 
-    { "name": "ripgrep",          "desc": "Fast grep — used by nvim live grep and fzf" },
-    { "name": "fd",               "desc": "Fast find — used by fzf and nvim file pickers" },
-    { "name": "yazi",             "desc": "Terminal file manager — 'y' command" },
+    { "name": "ripgrep", "desc": "Fast grep — used by nvim live grep and fzf" },
+    { "name": "fd", "desc": "Fast find — used by fzf and nvim file pickers" },
+    { "name": "yazi", "desc": "Terminal file manager — 'y' command" },
 
-    { "name": "ffmpeg",           "desc": "Video/audio processing" },
+    { "name": "ffmpeg", "desc": "Video/audio processing" },
 
-    { "name": "uv",               "desc": "Fast Python package manager" },
-    { "name": "docker-compose",   "desc": "Multi-container Docker setups" },
+    { "name": "uv", "desc": "Fast Python package manager" },
+    { "name": "docker-compose", "desc": "Multi-container Docker setups" },
 
-    { "name": "tailscale",        "desc": "VPN — private network across devices" },
+    { "name": "tailscale", "desc": "VPN — private network across devices" },
 
-    { "name": "rust",                       "desc": "Rust toolchain (cargo) — required for blink.cmp Rust fuzzy binary in nvim.12" },
+    {
+      "name": "rust",
+      "desc": "Rust toolchain (cargo) — required for blink.cmp Rust fuzzy binary in nvim.12"
+    },
 
-    { "name": "git-delta",                  "desc": "Syntax-highlighted, side-by-side git diffs" },
-    { "name": "lazydocker",                 "desc": "Docker TUI — browse containers/logs/images" },
-    { "name": "atuin",                      "desc": "Shell history with fuzzy search + sync" },
-    { "name": "tealdeer",                   "desc": "Fast tldr — cheatsheets instead of man pages" },
-    { "name": "jq",                         "desc": "JSON processor — query/transform JSON on CLI" },
-    { "name": "zsh-completions",             "desc": "Extra zsh completion definitions" },
+    {
+      "name": "git-delta",
+      "desc": "Syntax-highlighted, side-by-side git diffs"
+    },
+    {
+      "name": "lazydocker",
+      "desc": "Docker TUI — browse containers/logs/images"
+    },
+    { "name": "atuin", "desc": "Shell history with fuzzy search + sync" },
+    {
+      "name": "tealdeer",
+      "desc": "Fast tldr — cheatsheets instead of man pages"
+    },
+    { "name": "jq", "desc": "JSON processor — query/transform JSON on CLI" },
+    { "name": "zsh-completions", "desc": "Extra zsh completion definitions" },
 
-    { "name": "zsh-autosuggestions",         "desc": "Fish-like inline suggestions for zsh" },
-    { "name": "zsh-syntax-highlighting",      "desc": "Fish-like syntax highlighting for zsh" },
-    { "name": "zoxide",                       "desc": "Smarter cd — replaces OMZ z plugin" },
-    { "name": "nicowillis/programs/pokemon-colorscripts-mac", "desc": "Colorful Pokemon sprites in terminal — used by fastfetch logo" }
+    {
+      "name": "zsh-autosuggestions",
+      "desc": "Fish-like inline suggestions for zsh"
+    },
+    {
+      "name": "zsh-syntax-highlighting",
+      "desc": "Fish-like syntax highlighting for zsh"
+    },
+    { "name": "zoxide", "desc": "Smarter cd — replaces OMZ z plugin" },
   ],
 
   "casks": [
-    { "name": "brave-browser",              "desc": "Primary browser" },
-    { "name": "zen",                        "desc": "Firefox-based minimal browser" },
+    { "name": "brave-browser", "desc": "Primary browser" },
+    { "name": "zen", "desc": "Firefox-based minimal browser" },
 
-    { "name": "ghostty",                    "desc": "Terminal emulator" },
+    { "name": "ghostty", "desc": "Terminal emulator" },
 
-    { "name": "slack",                      "desc": "Work chat" },
-    { "name": "whatsapp",                   "desc": "Messaging" },
-    { "name": "telegram",                   "desc": "Messaging" },
+    { "name": "slack", "desc": "Work chat" },
+    { "name": "whatsapp", "desc": "Messaging" },
+    { "name": "telegram", "desc": "Messaging" },
 
-    { "name": "alt-tab",                    "desc": "Proper Cmd+Tab with window previews" },
-    { "name": "caffeine",                   "desc": "Prevents Mac from sleeping" },
-    { "name": "mos",                        "desc": "Smooth scrolling for external mice" },
-    { "name": "jordanbaird-ice",           "desc": "Menu bar manager — hide/show icons, sections, hotkey reveal" },
-    { "name": "stats",                      "desc": "CPU / RAM / network in menu bar" },
-    { "name": "localsend",                  "desc": "Local file transfer — cross-platform AirDrop" },
-    { "name": "shottr",                     "desc": "Screenshot tool with annotations" },
-    { "name": "obsidian",                   "desc": "Markdown notes" },
+    { "name": "alt-tab", "desc": "Proper Cmd+Tab with window previews" },
+    { "name": "caffeine", "desc": "Prevents Mac from sleeping" },
+    { "name": "mos", "desc": "Smooth scrolling for external mice" },
+    { "name": "doll", "desc": "Menu bar manager — notification dots on hidden icons" },
+    { "name": "stats", "desc": "CPU / RAM / network in menu bar" },
+    {
+      "name": "localsend",
+      "desc": "Local file transfer — cross-platform AirDrop"
+    },
+    { "name": "shottr", "desc": "Screenshot tool with annotations" },
+    { "name": "obsidian", "desc": "Markdown notes" },
 
-    { "name": "iina",                       "desc": "Video player" },
-    { "name": "stremioservice",             "desc": "Stremio Web companion server — for web.strem.io" },
-    { "name": "jellyfin-media-player",      "desc": "Jellyfin self-hosted media client" },
-    { "name": "calibre",                    "desc": "Ebook manager and converter" },
-    { "name": "qbittorrent",                "desc": "Torrent client" },
+    { "name": "iina", "desc": "Video player" },
+    {
+      "name": "stremioservice",
+      "desc": "Stremio Web companion server — for web.strem.io"
+    },
+    {
+      "name": "jellyfin-media-player",
+      "desc": "Jellyfin self-hosted media client"
+    },
+    { "name": "calibre", "desc": "Ebook manager and converter" },
+    { "name": "qbittorrent", "desc": "Torrent client" },
 
-    { "name": "affinity",                   "desc": "Affinity suite — Photo, Designer, Publisher" },
+    {
+      "name": "affinity",
+      "desc": "Affinity suite — Photo, Designer, Publisher"
+    },
 
-    { "name": "orbstack",                   "desc": "Docker Desktop replacement — lighter and faster" },
-
+    {
+      "name": "orbstack",
+      "desc": "Docker Desktop replacement — lighter and faster"
+    },
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],
@@ -134,5 +189,21 @@
       "desc": "VPN client",
       "url": "https://links.fortinet.com/forticlient/mac/vpnagent"
     }
+  ],
+
+  "webapps": [
+    {
+      "name": "YouTube Music",
+      "id": "youtube-music",
+      "url": "https://music.youtube.com",
+      "icon": "https://www.gstatic.com/youtube/media/ytm/images/applauncher/music_icon_144x144.png"
+    },
+    {
+      "name": "Jellyfin",
+      "id": "jellyfin",
+      "url": "http://192.168.0.103:8096",
+      "icon": "https://raw.githubusercontent.com/jellyfin/jellyfin-web/release-10.10.z/src/assets/img/icon-transparent.png"
+    }
   ]
 }
+

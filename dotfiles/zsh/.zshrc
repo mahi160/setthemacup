@@ -1,6 +1,3 @@
-# Only show system info in login shells (not tmux splits / agent subshells)
-[[ -o login ]] && fastfetch
-
 # ─── Homebrew prefix ──────────────────────────────────────────────────────────
 BREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
 
@@ -53,8 +50,8 @@ alias a='command pi --no-skills'
 alias of="onefetch"
 alias note="$SETTHEMACUP/scripts/note.sh"
 alias dev="$SETTHEMACUP/scripts/dev.sh"
-alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
 alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
+alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
 
 # ─── Dev utilities ────────────────────────────────────────────────────────────────────────────
 
@@ -104,7 +101,6 @@ _pokemon_bg_widget() {
 }
 zle -N _pokemon_bg_widget
 bindkey '\eq' _pokemon_bg_widget
-
 # ─── Runtimes ─────────────────────────────────────────────────────────────────
 eval "$(fnm env --use-on-cd --shell zsh)"
 

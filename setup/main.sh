@@ -50,7 +50,7 @@ STEPS=(
   homebrew      # 01 — Homebrew
   apps          # 02 — Formulae & casks
   store_apps    # 03 — App Store + DMG
-  dotfiles      # 04 — stow dotfiles, seed pi + raycast settings, fetch pokemon
+  dotfiles      # 04 — stow dotfiles, seed pi + raycast settings
   git           # 05 — Global git config
   node          # 06 — fnm, Node LTS, pnpm
   nvim          # 07 — Neovim lazy.nvim bootstrap
@@ -62,6 +62,8 @@ STEPS=(
   network       # 13 — SMB LaunchAgents
   tmux_helpers  # 14 — Compile nowplaying binary + install tmux-battery/cpu scripts
   crontab       # 15 — Weekly maintenance crons
+  display        # 16 — Display scaling (More Space)
+  webapps        # 17 — Web app bundles (Zen Browser wrappers)
 )
 
 main() {
@@ -96,10 +98,9 @@ main() {
   echo ""
   echo -e "  ${YELLOW}Next steps:${RESET}"
   echo -e "  1. Paste SSH keys above into ${BLUE}github.com/settings/keys${RESET}"
-  echo -e "  2. Set ${BLUE}ANTHROPIC_API_KEY${RESET} in your shell environment"
-  echo -e "  3. Sign in to App Store if you skipped it"
-  echo -e "  4. Open terrorCastle share — enter SMB credentials once in Keychain"
-  echo -e "  5. Run ${BLUE}pokemon-bg${RESET} to set your first Ghostty background"
+  echo -e "  2. Sign in to App Store if you skipped it"
+  echo -e "  3. Open terrorCastle share — enter SMB credentials once in Keychain"
+  echo -e "  4. Run ${BLUE}pokemon-bg${RESET} to set a custom Ghostty background (or press Alt+Q)"
   echo ""
   echo -e "  Log: ${BLUE}~/setup.log${RESET}"
   echo ""

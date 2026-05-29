@@ -16,6 +16,12 @@ set_mac_defaults() {
   defaults write com.apple.dock expose-group-apps         -bool  true
   defaults write com.apple.dock tilesize                  -int   42
   defaults write com.apple.dock mru-spaces                -bool  false
+  defaults write com.apple.dock show-process-indicators   -bool  false  # no dots under running apps
+  defaults write com.apple.dock showhidden                -bool  false  # don't dim hidden apps
+  defaults write com.apple.dock magnification             -bool  true
+  defaults write com.apple.dock largesize                 -int   54
+  defaults write com.apple.dock minimize-to-application  -bool  true   # minimise into app icon
+  defaults write com.apple.dock mineffect                 -string scale # faster than genie
   killall Dock 2>/dev/null || true
   success "Dock configured."
 
@@ -49,8 +55,8 @@ set_mac_defaults() {
 
   # ── Keyboard ────────────────────────────────────────────────────────────────
   defaults write NSGlobalDomain ApplePressAndHoldEnabled              -bool  false
-  defaults write NSGlobalDomain InitialKeyRepeat                      -int   10
-  defaults write NSGlobalDomain KeyRepeat                             -int   1
+  defaults write NSGlobalDomain InitialKeyRepeat                      -int   25
+  defaults write NSGlobalDomain KeyRepeat                             -int   2
   defaults write NSGlobalDomain AppleKeyboardUIMode                   -int   2
   defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled  -bool  false
   defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled      -bool  false
@@ -64,13 +70,17 @@ set_mac_defaults() {
   defaults write com.apple.AppleMultitouchTrackpad                   Clicking             -bool  true
   defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior                 -int   1
   defaults write NSGlobalDomain             com.apple.mouse.tapBehavior                  -int   1
-  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool false
-  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadThreeFingerDrag -bool false
-  defaults write com.apple.AppleMultitouchTrackpad                   DragLock             -bool  false
-  defaults write com.apple.AppleMultitouchTrackpad                   Dragging             -bool  false
-  defaults write com.apple.universalaccess.trackpadOptions TapToClickLockout              -bool  false
-  defaults -currentHost write -g com.apple.trackpad.threeFingerDragGesture -bool true 2>/dev/null || true
-  defaults write NSGlobalDomain com.apple.trackpad.scaling  -float 2.5
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag    -bool false
+  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadThreeFingerDrag    -bool false
+  defaults write com.apple.AppleMultitouchTrackpad                   DragLock                   -bool false
+  defaults write com.apple.AppleMultitouchTrackpad                   Dragging                   -bool false
+  defaults write com.apple.universalaccess.trackpadOptions           TapToClickLockout          -bool false
+  defaults -currentHost write -g com.apple.trackpad.threeFingerDragGesture                     -bool true 2>/dev/null || true
+  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadScroll             -bool true
+  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadRightClick         -bool true
+  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadPinch              -bool true
+  defaults write com.apple.AppleMultitouchTrackpad                   TrackpadTwoFingerDoubleTapGesture -int 1
+  defaults write NSGlobalDomain com.apple.trackpad.scaling  -float 2
   defaults write NSGlobalDomain com.apple.trackpad.forceClick -bool true
   defaults write NSGlobalDomain com.apple.swipescrolldirection        -bool  false
   defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls   -bool  false
@@ -105,6 +115,20 @@ set_mac_defaults() {
     -c "Set :AppleSymbolicHotKeys:64:enabled false" \
     "$HOME/Library/Preferences/com.apple.symbolichotkeys.plist" 2>/dev/null || true
   success "Spotlight Cmd+Space disabled — Raycast will take over on first launch."
+
+  # ── Desktop names (Work / Personal / Media) ───────────────────────────────
+  python3 - <<'PYEOF'
+import subprocess, plistlib
+raw = subprocess.check_output(['defaults', 'export', 'com.apple.spaces', '-'])
+data = plistlib.loads(raw)
+props = data['SpacesDisplayConfiguration'].get('Space Properties', [])
+for i, name in enumerate(['Work', 'Personal', 'Media']):
+    if i < len(props):
+        props[i]['name'] = name
+subprocess.run(['defaults', 'import', 'com.apple.spaces', '-'],
+               input=plistlib.dumps(data), check=True)
+PYEOF
+  success "Desktop spaces named: Work, Personal, Media."
 
   # ── Handoff ────────────────────────────────────────────────────────────────
   defaults write com.apple.coreservices.useractivityd ActivityReceivingAllowed  -bool false
@@ -146,36 +170,10 @@ set_mac_defaults() {
 </dict></plist>
 PLIST
   launchctl unload "$agent_plist" 2>/dev/null || true
+  sleep 0.2
   launchctl load   "$agent_plist"
   /usr/bin/hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' 2>/dev/null || true
   success "Caps Lock → Control (active now + persists via LaunchAgent)."
-
-  # ── Raycast backup LaunchAgent (hourly, runs on wake — unlike cron) ────────────────
-  local raycast_plist="$HOME/Library/LaunchAgents/com.mahi.raycast-backup.plist"
-  cat >"$raycast_plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>com.mahi.raycast-backup</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>${REPO_DIR}/scripts/raycast-backup.sh</string>
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>SETTHEMACUP</key><string>${REPO_DIR}</string>
-    <key>HOME</key><string>${HOME}</string>
-    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-  </dict>
-  <key>StartInterval</key><integer>3600</integer>
-  <key>StandardOutPath</key><string>/tmp/raycast-backup.log</string>
-  <key>StandardErrorPath</key><string>/tmp/raycast-backup.log</string>
-</dict></plist>
-PLIST
-  launchctl unload "$raycast_plist" 2>/dev/null || true
-  launchctl load   "$raycast_plist"
-  success "Raycast backup LaunchAgent installed (hourly, runs on wake)."
 
   # ── Misc ────────────────────────────────────────────────────────────────────
   sudo nvram StartupMute=%01 2>/dev/null || true

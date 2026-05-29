@@ -1,11 +1,7 @@
 # ============================================================================
 # THEME CONFIGURATION
 # ============================================================================
-# theme = Everforest Dark Hard
-# theme = Kanagawa Wave
-# theme = Kanagawa Dragon
 theme = Gruvbox Material Dark
-# theme = TokyoNight Night
 
 
 # ============================================================================
@@ -46,8 +42,8 @@ window-padding-balance = true
 background-blur = 20
 background-opacity = 0.96
 background = #282828
-background-image = ~/Pictures/pokemon_bg/218.png
-# managed by scripts/pokemon-bg.sh — run it once to activate
+background-image = ~/Pictures/pokemon_bg/current.png
+# managed by scripts/pokemon-bg.sh — run pokemon-bg or press Alt+Q to cycle
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right

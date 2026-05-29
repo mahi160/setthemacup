@@ -24,8 +24,9 @@ set_crontab() {
   local prune_job="0 3 * * 0 '${pi_prune}' >> /tmp/pi-prune.log 2>&1"
   local fnm_job="0 4 * * 0 find '${fnm_dir}' -mindepth 1 -maxdepth 1 -mtime +7 -exec rm -rf {} + 2>/dev/null"
 
-  local tmpfile; tmpfile="$(mktemp)"
-  trap 'rm -f "$tmpfile"' RETURN
+  local tmpfile="$(mktemp)"
+  # shellcheck disable=SC2064
+  trap "rm -f '$tmpfile'" RETURN
 
   # Strip old entries, append fresh ones
   crontab -l 2>/dev/null \
