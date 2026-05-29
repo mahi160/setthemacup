@@ -11,7 +11,7 @@
 # Usage:
 #   bash scripts/compile-nowplaying.sh
 #
-# Re-run if the Swift source is updated. Safe to call from macinstall.sh.
+# Re-run if the Swift source is updated. Called by setup/14-nowplaying.sh.
 
 set -euo pipefail
 

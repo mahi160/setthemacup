@@ -50,7 +50,7 @@ STEPS=(
   homebrew      # 01 — Homebrew
   apps          # 02 — Formulae & casks
   store_apps    # 03 — App Store + DMG
-  dotfiles      # 04 — oh-my-zsh, stow, tmux plugins
+  dotfiles      # 04 — stow dotfiles, seed pi + raycast settings, fetch pokemon
   git           # 05 — Global git config
   node          # 06 — fnm, Node LTS, pnpm
   nvim          # 07 — Neovim lazy.nvim bootstrap

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tmux-battery — battery icon + percentage for tmux status bar (macOS)
-# Installed to ~/.local/bin/tmux-battery by macinstall.sh
+# Installed to ~/.local/bin/tmux-battery by setup/14-nowplaying.sh
 
 output=$(pmset -g batt 2>/dev/null)
 pct=$(echo "$output" | grep -Eo '[0-9]+%' | head -1)

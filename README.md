@@ -10,7 +10,7 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 
 ## What it does
 
-`bootstrap.sh` clones this repo to `~/.setup` then hands off to `scripts/macinstall.sh`, which runs 15 steps in order:
+`bootstrap.sh` clones this repo to `~/.setup` then hands off to `setup/main.sh`, which runs 15 steps in order:
 
 | # | Step | What |
 |---|---|---|
@@ -37,8 +37,9 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 Every step is idempotent — safe to re-run at any time.
 
 ```bash
-bash ~/.setup/scripts/macinstall.sh            # full run
-bash ~/.setup/scripts/macinstall.sh set_apps   # single step
+bash ~/.setup/setup/main.sh          # full run
+bash ~/.setup/setup/main.sh apps     # single step by name
+bash ~/.setup/setup/02-apps.sh       # or run a step file directly
 ```
 
 ---

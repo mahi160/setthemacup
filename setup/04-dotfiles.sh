@@ -9,7 +9,7 @@ set_dotfiles() {
 
   # Stow dotfiles
   # pi excluded — settings.json is managed by pi at runtime (written on every update).
-  # macinstall copies it once as a seed; pi owns it after that.
+  # setup seeds it once via cp below; pi owns it after that.
   info "Stowing dotfiles from $DOTFILES_DIR..."
   local packages=(fastfetch git ghostty lazygit nvim starship stow tmux yazi zsh)
   for pkg in "${packages[@]}"; do

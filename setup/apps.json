@@ -1,5 +1,5 @@
 {
-  "_readme": "App manifest. Edit here to add/remove tools. macinstall.sh reads this file.",
+  "_readme": "App manifest. Edit here to add/remove tools. setup/main.sh → 02-apps.sh reads this file.",
   "_sources": {
     "formula": "brew install <name>",
     "cask": "brew install --cask <name>",

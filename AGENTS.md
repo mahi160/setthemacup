@@ -12,7 +12,7 @@ Full macOS dev environment. One command from a fresh machine:
 curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash
 ```
 
-`bootstrap.sh` → clones repo to `~/.setup` → runs `scripts/macinstall.sh` (15 idempotent steps).
+`bootstrap.sh` → clones repo to `~/.setup` → runs `setup/main.sh` (15 idempotent steps).
 
 ---
 
@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 ├── AGENTS.md                 # ← you are here
 ├── README.md                 # human-facing docs
 ├── scripts/
-│   ├── macinstall.sh         # 15-step installer (source of truth for install order)
+│   ├── main.sh               # entry point — sources lib + all 15 steps
 │   ├── apps.json             # all brew formulae, casks, mas, dmg, smb mounts
 │   ├── compile-nowplaying.sh # compile Swift → ~/.local/bin/nowplaying-mediaremote
 │   ├── tmux-battery.sh       # battery icon+% → installed to ~/.local/bin/tmux-battery
