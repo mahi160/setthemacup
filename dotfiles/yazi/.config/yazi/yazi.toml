@@ -1,0 +1,52 @@
+# ── Manager ───────────────────────────────────────────────────────────────────
+[mgr]
+ratio          = [1, 2, 5]   # sidebar : current dir : preview
+sort_by        = "natural"
+sort_sensitive = false
+sort_reverse   = false
+sort_dir_first = true        # directories always on top
+show_hidden    = true        # show dotfiles
+show_symlink   = true
+linemode       = "size"      # show file sizes inline
+scrolloff      = 5
+
+# ── Preview ───────────────────────────────────────────────────────────────────
+[preview]
+wrap         = "no"
+tab_size     = 2
+max_width    = 1000
+max_height   = 1000
+image_delay  = 30            # ms before showing image previews
+
+# ── Openers ───────────────────────────────────────────────────────────────────
+[opener]
+edit = [
+  { run = 'nvim "$@"', desc = "Neovim", block = true },
+]
+open = [
+  { run = 'open "$@"', desc = "Open with macOS", orphan = true },
+]
+reveal = [
+  { run = 'open -R "$1"', desc = "Reveal in Finder" },
+]
+extract = [
+  { run = 'unar "$1"', desc = "Extract here" },
+]
+
+# ── Open rules ────────────────────────────────────────────────────────────────
+[open]
+rules = [
+  { mime = "text/*",             use = ["edit", "open"] },
+  { mime = "application/json",   use = ["edit", "open"] },
+  { mime = "application/toml",   use = ["edit", "open"] },
+  { mime = "application/xml",    use = ["edit", "open"] },
+  { mime = "application/yaml",   use = ["edit", "open"] },
+  { mime = "inode/x-empty",      use = ["edit", "open"] },
+  { mime = "image/*",            use = ["open"] },
+  { mime = "video/*",            use = ["open"] },
+  { mime = "audio/*",            use = ["open"] },
+  { mime = "application/pdf",    use = ["open"] },
+  { mime = "application/zip",    use = ["extract", "open"] },
+  { name = "*/",                 use = ["edit", "open", "reveal"] },
+  { mime = "*",                  use = ["open", "reveal"] },
+]

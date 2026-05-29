@@ -1,0 +1,104 @@
+{
+  "global": {
+    "show_in_menu_bar": true,
+    "check_for_updates_on_startup": false
+  },
+  "profiles": [
+    {
+      "name": "Default",
+      "selected": true,
+      "simple_modifications": [],
+      "complex_modifications": {
+        "rules": [
+          {
+            "description": "Caps Lock → Left Control",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "caps_lock",
+                  "modifiers": { "optional": ["any"] }
+                },
+                "to": [{ "key_code": "left_control" }]
+              }
+            ]
+          },
+          {
+            "description": "Right Command → Hyper Key (⌃⌥⇧⌘) — tap alone stays as Right Command",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "right_command",
+                  "modifiers": { "optional": ["any"] }
+                },
+                "to": [
+                  {
+                    "key_code": "left_shift",
+                    "modifiers": ["left_control", "left_option", "left_command"]
+                  }
+                ],
+                "to_if_alone": [{ "key_code": "right_command" }]
+              }
+            ]
+          },
+          {
+            "description": "Hyper + Enter → Open Ghostty",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "return_or_enter",
+                  "modifiers": {
+                    "mandatory": ["command", "control", "option", "shift"]
+                  }
+                },
+                "to": [{ "shell_command": "open -a 'Ghostty'" }]
+              }
+            ]
+          },
+          {
+            "description": "Hyper + B → Open Brave Browser",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "b",
+                  "modifiers": {
+                    "mandatory": ["command", "control", "option", "shift"]
+                  }
+                },
+                "to": [{ "shell_command": "open -a 'Brave Browser'" }]
+              }
+            ]
+          },
+          {
+            "description": "Hyper + O → Open Obsidian",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "o",
+                  "modifiers": {
+                    "mandatory": ["command", "control", "option", "shift"]
+                  }
+                },
+                "to": [{ "shell_command": "open -a 'Obsidian'" }]
+              }
+            ]
+          }
+        ]
+      },
+      "devices": [],
+      "fn_function_keys": [],
+      "parameters": {
+        "delay_milliseconds_before_open_device": 1000
+      },
+      "virtual_hid_keyboard": {
+        "country_code": 0,
+        "indicate_sticky_modifier_keys_state": true,
+        "mouse_key_xy_scale": 100
+      }
+    }
+  ]
+}

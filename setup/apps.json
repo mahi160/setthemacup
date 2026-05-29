@@ -109,7 +109,7 @@
     { "name": "obsidian",                   "desc": "Markdown notes" },
 
     { "name": "iina",                       "desc": "Video player" },
-    { "name": "stremio",                    "desc": "Media center — stream movies/shows" },
+    { "name": "stremioservice",             "desc": "Stremio Web companion server — for web.strem.io" },
     { "name": "jellyfin-media-player",      "desc": "Jellyfin self-hosted media client" },
     { "name": "calibre",                    "desc": "Ebook manager and converter" },
     { "name": "qbittorrent",                "desc": "Torrent client" },
@@ -117,6 +117,7 @@
     { "name": "affinity",                   "desc": "Affinity suite — Photo, Designer, Publisher" },
 
     { "name": "orbstack",                   "desc": "Docker Desktop replacement — lighter and faster" },
+    { "name": "karabiner-elements",          "desc": "Keyboard remapper — Right Cmd=Hyper, Caps Lock=Control" },
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],

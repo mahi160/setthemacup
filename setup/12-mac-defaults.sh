@@ -88,7 +88,30 @@ set_mac_defaults() {
   defaults write com.apple.menuextra.clock   DateFormat     -string "EEE d MMM  HH:mm"
   success "Menu bar configured."
 
-  # ── Spaces ──────────────────────────────────────────────────────────────────
+  # ── Animations (performance) ──────────────────────────────────────────────────
+  defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool  false
+  defaults write NSGlobalDomain NSWindowResizeTime                  -float 0.001
+  defaults write NSGlobalDomain QLPanelAnimationDuration            -float 0
+  defaults write com.apple.finder DisableAllAnimations              -bool  true
+  defaults write com.apple.dock   launchanim                        -bool  false
+  defaults write com.apple.dock   expose-animation-duration         -float 0.1
+  defaults write com.apple.Accessibility   ReduceMotionEnabled      -bool  true
+  defaults write com.apple.Accessibility   ReduceTransparencyEnabled -bool  true
+  success "Animations reduced."
+
+  # ── Spotlight ──────────────────────────────────────────────────────────────
+  # Disable Cmd+Space for Spotlight — Raycast will claim it on first launch
+  /usr/libexec/PlistBuddy \
+    -c "Set :AppleSymbolicHotKeys:64:enabled false" \
+    "$HOME/Library/Preferences/com.apple.symbolichotkeys.plist" 2>/dev/null || true
+  success "Spotlight Cmd+Space disabled — Raycast will take over on first launch."
+
+  # ── Handoff ────────────────────────────────────────────────────────────────
+  defaults write com.apple.coreservices.useractivityd ActivityReceivingAllowed  -bool false
+  defaults write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false
+  success "Handoff disabled."
+
+  # ── Spaces ────────────────────────────────────────────────────────────────
   defaults write com.apple.spaces spans-displays -bool false
   killall SystemUIServer 2>/dev/null || true
 

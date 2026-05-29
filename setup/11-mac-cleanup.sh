@@ -56,6 +56,18 @@ set_mac_cleanup() {
   defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false 2>/dev/null || true
   success "Analytics & crash reporting disabled."
 
+  # Hot corners — all disabled
+  defaults write com.apple.dock wvous-tl-corner   -int 0
+  defaults write com.apple.dock wvous-tr-corner   -int 0
+  defaults write com.apple.dock wvous-bl-corner   -int 0
+  defaults write com.apple.dock wvous-br-corner   -int 0
+  defaults write com.apple.dock wvous-tl-modifier -int 0
+  defaults write com.apple.dock wvous-tr-modifier -int 0
+  defaults write com.apple.dock wvous-bl-modifier -int 0
+  defaults write com.apple.dock wvous-br-modifier -int 0
+  killall Dock 2>/dev/null || true
+  success "Hot corners disabled."
+
   # Remove empty default dirs
   for dir in "$HOME/Public" "$HOME/Sites"; do
     if [[ -d "$dir" && -z "$(ls -A "$dir")" ]]; then
