@@ -1,11 +1,11 @@
 # ─── Dotfiles repo location ───────────────────────────────────────────────────
-# Update this if you clone the repo to a different path.
-# Used by .zshrc aliases (note, dev, pokemon-bg, etc.) and crontab-setup.sh.
-export SETTHEMACUP="$HOME/Documents/Coding/Projects/setthemacup"
+# Cloned here by bootstrap.sh. Change if you move the repo.
+# Used by .zshrc aliases (note, dev, pokemon-bg, zc) and crontab-setup.sh.
+export SETTHEMACUP="$HOME/.setup"
 
 # ─── PATH additions ───────────────────────────────────────────────────────────
 # ~/.local/bin — compiled binaries (e.g. nowplaying-mediaremote for tmux)
-export PATH="$HOME/.local/bin:$PATH"
-
-# ─── uv (Python package manager) ──────────────────────────────────────────────
-# uv installs tools to ~/.local/bin — already in PATH above
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac

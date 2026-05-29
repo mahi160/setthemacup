@@ -25,6 +25,7 @@ alias zc='dev --dir "$SETTHEMACUP" --name config'
 alias zs="source ~/.zshrc"
 
 # ─── Git ──────────────────────────────────────────────────────────────────────
+# --local scope: only affects the current repo, never bleeds across projects
 alias gp="git config --local user.name \"mahi160\" && git config --local user.email \"omarsifat288@gmail.com\""
 alias gw="git config --local user.name \"salauddin-sifat-qp\" && git config --local user.email \"salauddin.sifat@questionpro.com\""
 
@@ -46,7 +47,7 @@ function y() {
   rm -f -- "$tmp"
 }
 
-# ─── Keybindings ─────────────────────────────────────────────────────────────
+# ─── Keybindings ──────────────────────────────────────────────────────────────
 # Alt+Q: cycle Pokemon background
 _pokemon_bg_widget() {
   "$SETTHEMACUP/scripts/pokemon-bg.sh"
@@ -58,7 +59,7 @@ bindkey '\eq' _pokemon_bg_widget
 # ─── Runtimes ─────────────────────────────────────────────────────────────────
 eval "$(fnm env --use-on-cd --shell zsh)"
 
-# pnpm
+# pnpm — guarded to avoid duplicate PATH entries on re-source
 export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;

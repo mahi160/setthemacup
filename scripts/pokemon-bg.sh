@@ -26,11 +26,13 @@ if [[ ! -f "$IMAGE_PATH" ]]; then
     "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${POKEMON_ID}.png" \
     -o "$IMAGE_PATH" \
     || { printf "Failed to download Pokemon #%d\n" "$POKEMON_ID" >&2; rm -f "$IMAGE_PATH"; exit 1; }
-  # Resize to 300x300 so it stays compact as a corner watermark
   sips -z 1000 1000 "$IMAGE_PATH" --out "$IMAGE_PATH" >/dev/null 2>&1
 fi
 
-# Update background-image in Ghostty config (handles commented and uncommented)
+# Update current.png symlink — used by fastfetch logo and nvim dashboard
+ln -sf "$IMAGE_PATH" "${POKEMON_DIR}/current.png"
+
+# Update background-image in Ghostty config
 if grep -qE "^#?[[:space:]]*background-image[[:space:]]*=" "$GHOSTTY_CONFIG"; then
   sed -i '' -E "s|^#?[[:space:]]*background-image[[:space:]]*=.*|background-image = ${IMAGE_PATH}|" "$GHOSTTY_CONFIG"
 else

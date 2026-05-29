@@ -6,7 +6,10 @@ return {
         sections = {
           {
             section = "terminal",
-            cmd = "pokemon-colorscripts -r --no-title; sleep .1",
+            -- Uses the cached pokemon PNG (set by scripts/pokemon-bg.sh).
+            -- catimg is a brew formula that renders images in the terminal.
+            -- Fallback: shows nothing (no error) if catimg isn't installed.
+            cmd = "command -v catimg &>/dev/null && catimg -w 40 ~/Pictures/pokemon_bg/current.png 2>/dev/null || true; sleep .1",
             indent = 20,
             height = 14,
           },
@@ -28,15 +31,11 @@ return {
         -- stylua: ignore
         ---@type snacks.dashboard.Item[]
         keys = {
-          { icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
-          -- { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
-          -- { icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
-          { icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
-          { icon = " ", key = "c", desc = "Config", action = ":lua Snacks.dashboard.pick('files', {cwd = vim.fn.stdpath('config')})" },
-          { icon = " ", key = "s", desc = "Restore Session", section = "session" },
-          -- { icon = " ", key = "x", desc = "Lazy Extras", action = ":LazyExtras" },
-          -- { icon = "󰒲 ", key = "l", desc = "Lazy", action = ":Lazy" },
-          { icon = " ", key = "q", desc = "Quit", action = ":qa" },
+          { icon = " ", key = "f", desc = "Find File",      action = ":lua Snacks.dashboard.pick('files')" },
+          { icon = " ", key = "r", desc = "Recent Files",   action = ":lua Snacks.dashboard.pick('oldfiles')" },
+          { icon = " ", key = "c", desc = "Config",         action = ":lua Snacks.dashboard.pick('files', {cwd = vim.fn.stdpath('config')})" },
+          { icon = " ", key = "s", desc = "Restore Session", section = "session" },
+          { icon = " ", key = "q", desc = "Quit",           action = ":qa" },
         },
         },
       },
