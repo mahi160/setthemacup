@@ -189,21 +189,6 @@
       "desc": "VPN client",
       "url": "https://links.fortinet.com/forticlient/mac/vpnagent"
     }
-  ],
-
-  "webapps": [
-    {
-      "name": "YouTube Music",
-      "id": "youtube-music",
-      "url": "https://music.youtube.com",
-      "icon": "https://www.gstatic.com/youtube/media/ytm/images/applauncher/music_icon_144x144.png"
-    },
-    {
-      "name": "Jellyfin",
-      "id": "jellyfin",
-      "url": "http://192.168.0.103:8096",
-      "icon": "https://raw.githubusercontent.com/jellyfin/jellyfin-web/release-10.10.z/src/assets/img/icon-transparent.png"
-    }
   ]
 }
 

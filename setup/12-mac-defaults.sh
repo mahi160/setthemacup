@@ -72,10 +72,16 @@ set_mac_defaults() {
   defaults write NSGlobalDomain             com.apple.mouse.tapBehavior                  -int   1
   defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag    -bool false
   defaults write com.apple.AppleMultitouchTrackpad                   TrackpadThreeFingerDrag    -bool false
+  defaults -currentHost write -g com.apple.trackpad.threeFingerDragGesture                     -bool false 2>/dev/null || true
+  # Accessibility > Pointer Control > Trackpad Options: drag without lock
+  defaults write com.apple.AppleMultitouchTrackpad                   Dragging                   -bool true
   defaults write com.apple.AppleMultitouchTrackpad                   DragLock                   -bool false
-  defaults write com.apple.AppleMultitouchTrackpad                   Dragging                   -bool false
-  defaults write com.apple.universalaccess.trackpadOptions           TapToClickLockout          -bool false
-  defaults -currentHost write -g com.apple.trackpad.threeFingerDragGesture                     -bool true 2>/dev/null || true
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging                   -bool true
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad DragLock                   -bool false
+  defaults write com.apple.universalaccess.trackpadOptions           Dragging                   -bool true
+  defaults write com.apple.universalaccess.trackpadOptions           DragLock                   -bool false
+  defaults write com.apple.universalaccess.trackpadOptions           TrackpadScroll             -bool true
+  defaults write com.apple.universalaccess.trackpadOptions           InertiaScroll              -bool true
   defaults write com.apple.AppleMultitouchTrackpad                   TrackpadScroll             -bool true
   defaults write com.apple.AppleMultitouchTrackpad                   TrackpadRightClick         -bool true
   defaults write com.apple.AppleMultitouchTrackpad                   TrackpadPinch              -bool true

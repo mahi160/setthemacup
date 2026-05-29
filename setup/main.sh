@@ -63,7 +63,6 @@ STEPS=(
   tmux_helpers  # 14 — Compile nowplaying binary + install tmux-battery/cpu scripts
   crontab       # 15 — Weekly maintenance crons
   display        # 16 — Display scaling (More Space)
-  webapps        # 17 — Web app bundles (Zen Browser wrappers)
 )
 
 main() {
