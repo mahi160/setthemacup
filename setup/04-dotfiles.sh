@@ -31,6 +31,17 @@ set_dotfiles() {
     success "Stowed $pkg."
   done
 
+  # Restore Raycast 2 settings (encrypted DBs — account-tied, not device-tied)
+  local rc_src="$SCRIPTS_DIR/raycast-data"
+  local rc_dst="$HOME/Library/Application Support/com.raycast-x.macos"
+  if [[ -d "$rc_src" ]] && ls "$rc_src"/*.db &>/dev/null 2>&1; then
+    mkdir -p "$rc_dst"
+    for db in "$rc_src"/*.db "$rc_src"/*.db-wal; do
+      [[ -f "$db" ]] && cp "$db" "$rc_dst/$(basename "$db")"
+    done
+    success "Raycast settings restored."; log "Raycast settings restored"
+  fi
+
   # Seed pi settings — copy (not symlink) so pi can write lastChangelogVersion freely
   local pi_settings_src="$DOTFILES_DIR/pi/.pi/agent/settings.json"
   local pi_settings_dst="$HOME/.pi/agent/settings.json"
