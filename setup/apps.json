@@ -98,7 +98,6 @@
     { "name": "whatsapp",                   "desc": "Messaging" },
     { "name": "telegram",                   "desc": "Messaging" },
 
-    { "name": "rectangle",                  "desc": "Window snapping via keyboard shortcuts" },
     { "name": "alt-tab",                    "desc": "Proper Cmd+Tab with window previews" },
     { "name": "caffeine",                   "desc": "Prevents Mac from sleeping" },
     { "name": "mos",                        "desc": "Smooth scrolling for external mice" },
