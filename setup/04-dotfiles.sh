@@ -11,7 +11,7 @@ set_dotfiles() {
   # pi excluded — settings.json is managed by pi at runtime (written on every update).
   # macinstall copies it once as a seed; pi owns it after that.
   info "Stowing dotfiles from $DOTFILES_DIR..."
-  local packages=(fastfetch git ghostty karabiner lazygit nvim starship stow tmux yazi zsh)
+  local packages=(fastfetch git ghostty lazygit nvim starship stow tmux yazi zsh)
   for pkg in "${packages[@]}"; do
     local conflicts
     conflicts=$(stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 \
@@ -30,17 +30,6 @@ set_dotfiles() {
       || { warn "Failed to stow $pkg."; log "Failed to stow $pkg"; }
     success "Stowed $pkg."
   done
-
-  # Seed Leader Key config
-  local lk_dir="$HOME/Library/Application Support/me.mikkelmalmberg.LeaderKey"
-  local lk_src="$SCRIPTS_DIR/leaderkey-config.json"
-  if [[ -f "$lk_src" && ! -f "$lk_dir/config.json" ]]; then
-    mkdir -p "$lk_dir"
-    cp "$lk_src" "$lk_dir/config.json"
-    success "Leader Key config seeded."; log "Leader Key config seeded"
-  else
-    success "Leader Key config already present — skipping seed."
-  fi
 
   # Seed pi settings — copy (not symlink) so pi can write lastChangelogVersion freely
   local pi_settings_src="$DOTFILES_DIR/pi/.pi/agent/settings.json"

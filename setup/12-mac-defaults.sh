@@ -127,6 +127,29 @@ set_mac_defaults() {
   defaults write com.apple.frameworks.diskimages auto-open-ro-root   -bool true
   defaults write com.apple.frameworks.diskimages auto-open-rw-root   -bool true
 
+  # ── Caps Lock → Left Control (hidutil LaunchAgent — no Karabiner needed) ──────
+  local agent_plist="$HOME/Library/LaunchAgents/com.mahi.hidutil.caps-to-control.plist"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  cat >"$agent_plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.mahi.hidutil.caps-to-control</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/hidutil</string>
+    <string>property</string>
+    <string>--set</string>
+    <string>{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+</dict></plist>
+PLIST
+  launchctl unload "$agent_plist" 2>/dev/null || true
+  launchctl load   "$agent_plist"
+  /usr/bin/hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' 2>/dev/null || true
+  success "Caps Lock → Control (active now + persists via LaunchAgent)."
+
   # ── Misc ────────────────────────────────────────────────────────────────────
   sudo nvram StartupMute=%01 2>/dev/null || true
   # Gatekeeper quarantine dialog left enabled (security default).
