@@ -117,7 +117,7 @@
     { "name": "affinity",                   "desc": "Affinity suite — Photo, Designer, Publisher" },
 
     { "name": "orbstack",                   "desc": "Docker Desktop replacement — lighter and faster" },
-    { "name": "raycast",                     "desc": "App launcher + command palette — replaces Spotlight" },
+
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
   ],
@@ -125,6 +125,11 @@
   "mas": [],
 
   "dmg": [
+    {
+      "name": "Raycast Beta",
+      "desc": "Raycast 2 beta — app launcher, hotkeys, replaces Spotlight",
+      "url": "https://x-r2.raycast-releases.com/Raycast_Beta_0.62.0.0_cc352c31cf_arm64.dmg"
+    },
     {
       "name": "FortiClient",
       "desc": "VPN client",
