@@ -34,7 +34,9 @@ ln -sf "$IMAGE_PATH" "${POKEMON_DIR}/current.png"
 
 # Update background-image in Ghostty config
 if grep -qE "^#?[[:space:]]*background-image[[:space:]]*=" "$GHOSTTY_CONFIG"; then
-  sed -i '' -E "s|^#?[[:space:]]*background-image[[:space:]]*=.*|background-image = ${IMAGE_PATH}|" "$GHOSTTY_CONFIG"
+  # Use ~ for portability in the config file
+  DISPLAY_PATH="${IMAGE_PATH/$HOME/\~}"
+  sed -i '' -E "s|^#?[[:space:]]*background-image[[:space:]]*=.*|background-image = ${DISPLAY_PATH}|" "$GHOSTTY_CONFIG"
 else
   printf "\nbackground-image = %s\n" "$IMAGE_PATH" >> "$GHOSTTY_CONFIG"
 fi

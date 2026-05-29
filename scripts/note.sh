@@ -14,13 +14,22 @@ TIME=$(date +"%H:%M")
 # Define the yearly file
 JOURNAL_FILE="$NOTES_PATH/$YEAR.md"
 
-# Get the note text
-NOTE_TEXT="$@"
+# Parse optional type prefix (note | learn) passed by tmux popup bindings
+# e.g. note.sh learn "text" — skips the type word, uses rest as text
+NOTE_TYPE="note"
+if [[ "${1:-}" == "note" || "${1:-}" == "learn" ]]; then
+  NOTE_TYPE="$1"
+  shift
+fi
+NOTE_TEXT="$*"
 
 # Exit if note is empty
 if [ -z "$NOTE_TEXT" ]; then
   exit 0
 fi
+
+# Prefix icon based on type
+[[ "$NOTE_TYPE" == "learn" ]] && NOTE_TEXT="󰑴 $NOTE_TEXT" || NOTE_TEXT="$NOTE_TEXT"
 
 # Create yearly file if it doesn't exist
 # if [ ! -f "$JOURNAL_FILE" ]; then

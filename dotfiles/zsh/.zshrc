@@ -56,6 +56,36 @@ alias dev="$SETTHEMACUP/scripts/dev.sh"
 alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
 alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
 
+# ─── Dev utilities ────────────────────────────────────────────────────────────────────────────
+
+# Kill whatever is running on a port: port-kill 3000
+function port-kill() {
+  local port=${1:?"Usage: port-kill <port>"}
+  local pids; pids=$(lsof -ti:"$port" 2>/dev/null)
+  [[ -z "$pids" ]] && { echo "Nothing on port $port"; return 0; }
+  echo "$pids" | xargs kill -9
+  echo "Killed port $port"
+}
+
+# Pull latest setup + restow dotfiles + reload shell
+function update() {
+  echo "󰆵 Pulling setup..."
+  git -C "$SETTHEMACUP" pull --ff-only || { echo "✗ git pull failed"; return 1; }
+  echo "󰆵 Restowing dotfiles..."
+  bash "$SETTHEMACUP/setup/main.sh" dotfiles
+  echo "󰆵 Reloading shell..."
+  exec zsh
+}
+
+# Delete all local branches already merged into main/master
+function branches-clean() {
+  local base=${1:-main}
+  git branch --merged "$base" \
+    | grep -v "^[[:space:]]*\*\|$base\|master\|main\|dev\|develop" \
+    | xargs -r git branch -d
+  echo "✓ Merged branches cleaned (base: $base)"
+}
+
 # ─── yazi: cd into directory on exit ─────────────────────────────────────────
 function y() {
   local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
