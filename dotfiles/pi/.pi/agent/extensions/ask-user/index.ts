@@ -4,7 +4,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { basename } from "node:path";
-import { execFile } from "node:child_process";
+import { notifyMacOS } from "../shared/macOS-notify.js";
 import {
   matchesKey,
   Key,
@@ -17,9 +17,12 @@ import {
 import { DynamicBorder } from "@earendil-works/pi-coding-agent";
 
 function notifyQuestion(question: string): void {
-  const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const script = `display notification "${esc(question.slice(0, 100))}" with title "π ??" subtitle "Waiting for your input" sound name "Ping"`;
-  execFile("osascript", ["-e", script], { timeout: 5_000 }, () => {});
+  notifyMacOS(
+    "π ??",
+    "Waiting for your input",
+    question.slice(0, 100),
+    "Ping",
+  );
 }
 
 // Multi-select checkbox component
