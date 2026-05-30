@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { notifyMacOS } from "../shared/macOS-notify.js";
 import {
   visibleWidth,
   truncateToWidth,
@@ -75,11 +76,50 @@ interface Config {
   commands: FastCommand[];
 }
 
+interface SubagentConfig {
+  name: string;
+  label: string;
+  description: string;
+  role: string;
+  prompt: string | string[];
+  thinking?: string;
+  tools?: string[];
+  icon?: string;
+}
+interface SubagentConfigFull {
+  models: FastModel[];
+  agents: SubagentConfig[];
+}
+
 const configPath = join(
   fileURLToPath(new URL(".", import.meta.url)),
   "fast-commands.json",
 );
 const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
+
+// Load subagents to auto-register fast-command subagents
+const subagentsConfigPath = join(
+  fileURLToPath(new URL("../subagents", import.meta.url)),
+  "subagents.json",
+);
+let subagentsConfig: SubagentConfigFull | undefined;
+try {
+  subagentsConfig = JSON.parse(readFileSync(subagentsConfigPath, "utf-8"));
+} catch {
+  // subagents config not available
+}
+
+// Identify which subagents are fast-command agents (by name matching)
+const fastCommandSubagentNames = new Set([
+  "commit",
+  "pr",
+  "standup",
+  "review",
+  "test",
+]);
+const fastCommandAgents = subagentsConfig?.agents.filter((a) =>
+  fastCommandSubagentNames.has(a.name),
+) ?? [];
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 
@@ -325,7 +365,20 @@ export default function (pi: ExtensionAPI): void {
     cachedModel = undefined;
   });
 
-  for (const cmd of config.commands) {
+  // Register all commands from config
+  const allCommands = [
+    ...config.commands,
+    ...fastCommandAgents.map((agent) => ({
+      name: agent.name,
+      description: agent.description,
+      role: agent.role,
+      prompt: agent.prompt,
+      thinking: agent.thinking ?? "low",
+      output: "notify" as const,
+    })),
+  ];
+
+  for (const cmd of allCommands) {
     pi.registerCommand(cmd.name, {
       description: `${cmd.description} (clean session)`,
       handler: async (args: string, ctx: ExtensionCommandContext) => {
@@ -351,6 +404,14 @@ export default function (pi: ExtensionAPI): void {
         activeCommand = cmd.name;
         const abort = new AbortController();
         activeAbort = abort;
+
+        // Notify on macOS that command started
+        notifyMacOS(
+          "⚡ Fast",
+          fastModel.id,
+          `/${cmd.name}${args ? ": " + args.slice(0, 60) : ""}`,
+          "Glass",
+        );
 
         const widgetState: WidgetState = {
           spinnerFrame: 0,

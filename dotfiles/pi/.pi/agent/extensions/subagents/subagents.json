@@ -5,6 +5,100 @@
   ],
   "agents": [
     {
+      "name": "commit",
+      "label": "Commit",
+      "icon": "󰜘",
+      "description": "Generate and apply a conventional commit",
+      "thinking": "off",
+      "tools": ["bash", "read"],
+      "role": "Tech Lead",
+      "prompt": [
+        "1. Run `git diff --cached` to get staged changes.",
+        "2. If empty, ask the user to stage changes and stop.",
+        "3. Analyze the staged diff.",
+        "4. Generate a conventional commit:",
+        "   - Format: `type(scope): subject`",
+        "   - Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert",
+        "   - Subject: imperative mood, lowercase, no period, max 50 chars",
+        "   - Body (if needed): wrap at 72 chars, explain _why_ not _how_, one liner preferred",
+        "   - Footer: `BREAKING CHANGE:` if needed",
+        "5. If there are multiple non related changes, do multiple commits.",
+        "6. Commit with the generated message with caveman ultra clean"
+      ]
+    },
+    {
+      "name": "pr",
+      "label": "PR",
+      "icon": "󰘗",
+      "description": "Create a pull request",
+      "thinking": "low",
+      "tools": ["bash", "read"],
+      "role": "Senior Engineer",
+      "prompt": [
+        "1. Run `git remote get-url origin` to identify the repo.",
+        "2. Run `git diff main...HEAD` for all changes on this branch.",
+        "3. Run `git log main...HEAD --oneline` for commit history.",
+        "4. Look for pr_template.",
+        "5. Generate a PR (use template if found, else):",
+        "   - **Title**: concise, imperative, max 72 chars",
+        "   - **Body**: ## What (summary) / ## Why (motivation) / ## How (key decisions) / ## Testing",
+        "6. Run `gh pr create --title \"...\" --body \"...\"`."
+      ]
+    },
+    {
+      "name": "standup",
+      "label": "Standup",
+      "icon": "󰟌",
+      "description": "Generate daily standup from git activity",
+      "thinking": "off",
+      "tools": ["bash", "read"],
+      "role": "Engineer writing a daily standup",
+      "prompt": [
+        "1. Run `git log --since=\"24 hours ago\" --oneline --author=\"$(git config user.name)\"`.",
+        "2. Run `git diff HEAD~5...HEAD --stat` for recent file changes.",
+        "3. Summarize:",
+        "   - **Yesterday**: what was done (from commits)",
+        "   - **Today**: what's next (infer from WIP or last commit)",
+        "   - **Blockers**: none unless context suggests otherwise",
+        "4. Keep short — 3-5 bullets max."
+      ]
+    },
+    {
+      "name": "review",
+      "label": "Code Review",
+      "icon": "󰍏",
+      "description": "Review staged or branch changes",
+      "thinking": "low",
+      "tools": ["bash", "read", "grep"],
+      "role": "Senior Engineer doing a code review",
+      "prompt": [
+        "1. Run `git diff --cached` for staged changes, or `git diff main...HEAD` if nothing staged.",
+        "2. Review for: bugs, security, error handling, performance, naming, test gaps.",
+        "3. Format:",
+        "   - `[CRITICAL]` — must fix before merge",
+        "   - `[SUGGEST]` — worth changing",
+        "   - `[NIT]` — minor style/preference",
+        "4. End with one-line verdict: approve / request changes / needs discussion."
+      ]
+    },
+    {
+      "name": "test",
+      "label": "Test Writer",
+      "icon": "󰓎",
+      "description": "Write tests for a file or function",
+      "thinking": "low",
+      "tools": ["read", "bash", "write"],
+      "role": "Senior Engineer writing tests",
+      "prompt": [
+        "1. Read {paths}.",
+        "2. Identify the testing framework in use (jest, vitest, mocha, etc). Match it.",
+        "3. Write tests covering: happy path, edge cases (empty, null, boundary), error cases, async behavior.",
+        "4. One assertion per test where possible.",
+        "5. No mocking unless truly necessary. Prefer real behavior.",
+        "6. Write tests to the appropriate test file."
+      ]
+    },
+    {
       "name": "subagent_scout",
       "label": "Repo Scout",
       "icon": "",

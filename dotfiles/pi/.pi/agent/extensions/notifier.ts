@@ -1,35 +1,34 @@
 /**
- * notifier.ts — macOS Notification Center alerts for agent events.
+ * notifier.ts — macOS Notification Center alerts for key events.
  *
- * Fires notifications for:
- *   - User asks (input events): "Ping" sound — know pi heard your question
- *   - Agent completion: "Glass" on success, "Basso" on error
+ * Notifies on:
+ *   - agent_end: Agent finishes (success or error), duration shown
+ *   - error: Agent error or abort
+ *   - ask_user: Any kind of ask (confirmation, choice, multi-select)
+ *   - subagent end: Subagent tool completes
  *
  * Features:
- *   - Input notification: Shows user's prompt (first 100 chars) + "Ping" sound
- *   - Completion sound: "Glass" on success, "Basso" on error (audible in background)
- *   - Duration shown in subtitle: "setthemacup · 12.4s"
- *   - Error detection: different title + sound when agent errors or aborts
- *   - Last assistant text shown as body (first 100 chars) — preview of what pi did
- *   - Skips completion runs shorter than MIN_DURATION_MS (fast commands, instant responses)
- *   - Proper AppleScript escaping — safe against special chars in paths/messages
+ *   - Sound: "Glass" on success/complete, "Basso" on error
+ *   - Duration shown on agent completion
+ *   - Error message shown on error/abort
+ *   - Question text shown on ask_user
+ *   - Subagent name shown on completion
+ *   - Skips agent_end if duration < MIN_DURATION_MS (fast responses)
  *
  * macOS only — execFile("osascript") will silently fail on Linux/Windows.
  * Sound names are from /System/Library/Sounds/ (no extension needed).
- * To change sounds: edit INPUT_SOUND / SUCCESS_SOUND / ERROR_SOUND.
- * To change the skip threshold: edit MIN_DURATION_MS.
  */
 
 import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { notifyMacOS, escapeAppleScript } from "./shared/macOS-notify.js";
+import { notifyMacOS } from "./shared/macOS-notify.js";
 import { basename } from "node:path";
 
 const MIN_DURATION_MS = 3_000;
-const INPUT_SOUND = "Ping";       // Notification when user asks
 const SUCCESS_SOUND = "Glass";    // Notification on agent success
 const ERROR_SOUND = "Basso";      // Notification on agent error
 
@@ -42,19 +41,8 @@ function fmtDuration(ms: number): string {
 export default function (pi: ExtensionAPI): void {
   let agentStartedAt = 0;
 
-  // Notify on user input (asks)
-  pi.on("input", (event, ctx: ExtensionContext) => {
-    const project = basename(ctx.cwd ?? "unknown");
-    // Extract text from input
-    const inputText = Array.isArray(event.text)
-      ? event.text
-          .map((item) => (typeof item === "string" ? item : item.text || ""))
-          .join(" ")
-          .slice(0, 100)
-      : String(event.text).slice(0, 100);
-    const preview = inputText || "(no text)";
-    notifyMacOS("π ?", project, preview, INPUT_SOUND);
-  });
+  // ─── agent_end: Notify on agent completion (success or error) ───
+  // Also fires on error/abort, but agent_end is the main event
 
   pi.on("agent_start", () => {
     agentStartedAt = Date.now();
@@ -101,6 +89,31 @@ export default function (pi: ExtensionAPI): void {
         .slice(0, 100);
 
       notifyMacOS("π ✓", subtitle, preview || "Ready for input", SUCCESS_SOUND);
+    }
+  });
+
+  // ─── ask_user: Notify when question is asked ───
+
+  pi.on("tool_call", async (event, ctx) => {
+    if (isToolCallEventType("ask_user", event)) {
+      const params = event.input as { question: string };
+      const question = params.question.slice(0, 80);
+      notifyMacOS("π ?", "Waiting for input", question, "Glass");
+    }
+  });
+
+  // ─── subagent end: Notify when subagent tool completes ───
+
+  pi.on("tool_end", (event, ctx) => {
+    // Detect subagent completion: tool names starting with "subagent_"
+    const toolName = event.toolName || "";
+    if (toolName.startsWith("subagent_")) {
+      const agentLabel = toolName.replace(/^subagent_/, "").toUpperCase();
+      // Show success/error based on exit code or error field
+      const isError = (event as unknown as { isError?: boolean }).isError ?? false;
+      const sound = isError ? ERROR_SOUND : "Glass";
+      const title = isError ? "π ✗" : "π ✓";
+      notifyMacOS(title, agentLabel, "Completed", sound);
     }
   });
 }

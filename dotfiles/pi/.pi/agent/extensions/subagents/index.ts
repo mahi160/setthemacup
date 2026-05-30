@@ -165,9 +165,8 @@ function parseJsonLine(
     textAcc.value += msg.delta;
     state.recentText = textAcc.value
       .split("\n")
-      .map((line) => line.trim())
       .filter(Boolean)
-      .slice(-5);
+      .slice(-12);
   }
 }
 
@@ -295,12 +294,12 @@ function installWidget(
                 `▸ ${truncateToWidth(state.currentTool, innerW - 2)}`,
               ),
             );
-          for (const line of state.recentText.slice(-5))
+          for (const line of state.recentText)
             lines.push(theme.fg("dim", truncateToWidth(line, innerW)));
           if (!state.currentTool && state.recentText.length === 0)
             lines.push(theme.fg("dim", "⏳ starting..."));
-          while (lines.length < 5) lines.push("");
-          return bordered(lines.slice(0, 7), width, theme);
+          while (lines.length < 14) lines.push("");
+          return bordered(lines.slice(0, 16), width, theme);
         },
         invalidate() {},
       };
