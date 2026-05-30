@@ -33,3 +33,9 @@ vim.o.foldlevel = 99
 vim.o.foldlevelstart = 99
 vim.o.spelllang = "en"
 vim.o.spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
+
+-- Live preview of :s substitutions in a split
+vim.o.inccommand = "split"
+
+-- Sync default register with system clipboard (off by default; uncomment to enable)
+-- vim.opt.clipboard:append("unnamedplus")

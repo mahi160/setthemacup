@@ -66,7 +66,7 @@
     },
     "mini.nvim": {
       "rev": "0f339bf5c93f392dc5d2417d47d7b9edc5f96fe8",
-      "src": "https://github.com/nvim-mini/mini.nvim"
+      "src": "https://github.com/echasnovski/mini.nvim"
     },
     "monokai-pro.nvim": {
       "rev": "cb5fbf3f00d7012b8d7b42eacc03b9162e46bc3b",

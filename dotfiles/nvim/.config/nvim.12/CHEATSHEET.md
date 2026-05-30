@@ -1,81 +1,187 @@
 # Neovim Cheatsheet
 
-## Windows & Buffers
+## Core Modes & Navigation
 
-Split the screen with `<leader>|` (vertical) or `<leader>-` (horizontal), then
-move between windows using `<C-h/j/k/l>`. Cycle buffers forward and back with
-`<S-l>` and `<S-h>`, or jump straight to the last visited one with `<S-j>`.
-Close the current buffer with `<leader>bd`, or wipe all others with `<leader>bo`.
-Quit everything at once with `<leader>qq`.
+| Binding | Action |
+|---------|--------|
+| `jj` | Exit insert mode |
+| `<Esc>` | Clear search highlight (normal mode) |
+| `<C-h/j/k/l>` | Focus left/down/up/right window |
+| `<C-d>` | Scroll down, cursor centered |
+| `<C-u>` | Scroll up, cursor centered |
+| `n` | Next search match, centered |
+| `N` | Previous search match, centered |
+| `-` | Open parent directory (oil.nvim) |
 
-## Navigation
+## Buffers & Windows
 
-`<C-d>` and `<C-u>` scroll half a page and keep the cursor centered. `n` and `N`
-jump between search matches, also centered. Press `-` anywhere to open the
-parent directory in oil.nvim — edit it like a buffer, save to apply changes.
-`<leader>tu` opens the undo tree so you can travel through history visually.
+| Binding | Action |
+|---------|--------|
+| `<leader>\|` | Split vertically |
+| `<leader>-` | Split horizontally |
+| `<S-h>` | Previous buffer |
+| `<S-l>` | Next buffer |
+| `<S-j>` | Jump to last buffer |
+| `<leader>bd` | Delete current buffer |
+| `<leader>bo` | Close all other buffers |
+| `<leader>qq` | Quit all buffers |
+| `<leader>tu` | Toggle undo tree |
 
-## Search — mini.pick
+## Tabs (window layouts)
 
-`<leader><leader>` finds any file (including hidden ones). `<leader>/` launches
-a live grep across the project. `<leader>sb` switches between open buffers,
-`<leader>sg` searches only git-tracked files, `<leader>s.` shows recent files.
-Use `<leader>sh` for help tags, `<leader>sk` for keymaps, `<leader>sd` for
-diagnostics, `<leader>sc` for commands. `<leader>sn` scopes the search to your
-nvim config. `<leader>sr` resumes the last picker. Press `<Tab>` inside any
-picker to toggle a file preview.
+| Binding | Action |
+|---------|--------|
+| `gt` | Next tab |
+| `gT` | Previous tab |
+| `<leader>tn` | New tab |
+| `<leader>tc` | Close current tab |
+| `<leader>to` | Close all other tabs |
 
-## LSP
+## Search & Navigation — mini.pick
 
-`K` shows hover docs — or, in any non-LSP buffer, it runs `:help!` which is the new
-nvim 0.12 DWIM help: it looks at the word under the cursor, strips punctuation, and
-opens the closest matching help tag automatically. Great for exploring Lua APIs inline. Rename a symbol with `grn`, trigger a code action with
-`gra`, list references with `grr`, jump to implementation with `gri`, and go to
-the type definition with `grt`, and run codelens with `grx`. `gO` shows the
-document symbol outline. Navigate diagnostics with `]d` / `[d`, or open the
-diagnostic float with `<C-W>d`.
-In CSS/HTML/Svelte files, LSP color values get a colored `■` swatch inline.
-Linked editing keeps paired tags in sync when the server supports it. Harper
-grammar hints appear as diagnostics — use `gra` to add a word to your personal
-dictionary via code action.
+| Binding | Action |
+|---------|--------|
+| `<leader><leader>` | Find file (frecency + all) |
+| `<leader>/` | Grep in project (live) |
+| `<leader>sb` | Switch buffer |
+| `<leader>sg` | Search git-tracked files |
+| `<leader>s.` | Recent files (oldfiles) |
+| `<leader>sh` | Help tags |
+| `<leader>sk` | Keymaps |
+| `<leader>sd` | Diagnostics |
+| `<leader>sc` | Commands |
+| `<leader>sn` | Search nvim config |
+| `<leader>sr` | Resume last search |
+| `<Tab>` | Toggle file preview in picker |
 
-## Git — mini.git
+## Editing & Text Manipulation
 
-`<leader>gh` shows the git context for the symbol under the cursor. `<leader>gb`
-opens a vertical blame for the current file, and `<leader>gl` shows the file's
-commit log. Diff hunks are shown in the sign column automatically via mini.diff.
+### Basic Edits
+| Binding | Action |
+|---------|--------|
+| `<leader>d` (n,v) | Delete without yanking |
+| `x p` | Paste over selection (no clobber) |
+| `J` | Join lines, keep cursor |
+| `v < / >` | Unindent/indent, keep selection |
+| `gc / gcc` | Comment toggle (line/motion) |
+| `<leader>y` (n,v) | Yank to clipboard |
+| `<leader>p` (n,v) | Paste from clipboard |
+| `<leader>P` (n,v) | Paste from clipboard (before) |
 
-## Editing
+### Surround — mini.surround
+| Binding | Action |
+|---------|--------|
+| `sa` | Add surrounding |
+| `sd` | Delete surrounding |
+| `sr` | Replace surrounding |
+| `sf` | Find surrounding (right) |
+| `sF` | Find surrounding (left) |
+| `sh` | Highlight surrounding |
+| `sn` | Update n_lines |
+| `l / n` | Suffix for previous/next |
 
-Comment lines or motions with `gc` / `gcc` (built-in). Surround text with `sa`
-(add), `sd` (delete), `sr` (replace) — e.g. `saiw"` wraps a word in quotes.
-Yank to the system clipboard with `<leader>y`, paste with `<leader>p` or
-`<leader>P`. Find and replace project-wide with `<leader>rr` (grug-far).
+### Find & Replace
+| Binding | Action |
+|---------|--------|
+| `<leader>r` | Find & replace (grug-far) |
+| `<leader>sw` | Substitute word under cursor |
 
 ## Text Objects — mini.ai
 
-These extend `v`, `d`, `c`, `y` with smarter targets. `f` is a function,
-`c` is a class, `o` is a conditional, `l` is a loop, `a` is an argument,
-`b` is a block, `C` is a comment. So `daf` deletes a whole function, `cil`
-changes inside a loop, `vac` selects a whole class including its header.
+These work with `v`, `d`, `c`, `y`:
+- `f` = function, `c` = class, `o` = conditional, `l` = loop
+- `a` = argument, `b` = block, `C` = comment
 
-## Completion
+Examples: `daf` (delete function), `cil` (change inside loop), `vac` (select class)
 
-The completion menu appears automatically. `<C-y>` confirms the selected item.
-`<Tab>` accepts the supermaven AI ghost text suggestion when the menu is closed.
-Signatures show inline as you type. Snippets come from friendly-snippets and
-expand through blink.cmp.
+## Language Server Protocol (LSP)
 
-## Quickfix & Loclist
+| Binding | Action |
+|---------|--------|
+| `K` | Hover docs (or `:help!` DWIM in non-LSP) |
+| `gd` | Go to definition |
+| `gr` | LSP references |
+| `grn` | Rename symbol |
+| `gra` | Code action |
+| `gri` | Go to implementation |
+| `grt` | Go to type definition |
+| `grx` | Code lens |
+| `gO` | Document symbols (outline) |
+| `]d / [d` | Next/prev diagnostic |
+| `<C-W>d` | Open diagnostic float |
+| `<leader>f` | Format buffer (conform) |
+| `<leader>ti` | Toggle inlay hints |
 
-Toggle the quickfix with `<leader>xx` and the loclist with `<leader>xl`. Step
-through items with `]q` / `[q`, jump to the ends with `]Q` / `[Q`. For the
-loclist use `]l` / `[l`. Linting results land here automatically on save.
+## Git — mini.git & mini.diff
 
-## Misc
+| Binding | Action |
+|---------|--------|
+| `<leader>gh` | Show git history at cursor |
+| `<leader>gb` | Show blame (vertical split) |
+| `<leader>gl` | Show file log |
+| *hunks* | Visible in sign column via mini.diff |
 
-`<leader>tm` toggles the minimap, `<leader>tu` the undo tree, and `<leader>ti`
-inlay hints. `<leader>du` opens the database UI.
-`<leader>lo` / `<leader>lc` starts and stops the live HTML preview.
-`<leader>r` opens find & replace (grug-far). Press `<Esc>` to clear search
-highlights. `jj` exits insert mode. Open this file anytime with `<leader>?`.
+## UI & Toggles
+
+| Binding | Action |
+|---------|--------|
+| `<leader>tm` | Toggle minimap |
+| `<leader>ti` | Toggle inlay hints |
+| `<leader>xx` | Toggle quickfix |
+| `<leader>xl` | Toggle loclist |
+| `]q / [q` | Next/prev quickfix |
+| `]Q / [Q` | Last/first quickfix |
+| `]l / [l` | Next/prev loclist |
+| `<leader>du` | Toggle database UI |
+
+## Live Preview & Utilities
+
+| Binding | Action |
+|---------|--------|
+| `<leader>lo` | Start live HTML preview |
+| `<leader>lc` | Close live preview |
+| `<leader>X` | Make file executable (chmod +x) |
+| `<leader>re` | Restart config |
+| `<leader>?` | Open this cheatsheet |
+
+## Completion & Snippets
+
+- Menu appears automatically; press `<C-y>` to confirm
+- `<Tab>` accepts supermaven AI ghost text (when menu closed)
+- Signatures display inline as you type
+- Snippets from friendly-snippets expand through blink.cmp
+
+## Command Mode
+
+| Command | Action |
+|---------|--------|
+| `:PackUpdate` | Update all plugins (vim.pack) |
+| `:PackUpdate plugin1 plugin2` | Update specific plugins |
+| `:PackDel plugin1 plugin2` | Delete unused plugins |
+| `:messages` | Show startup messages |
+| `:restart` | Restart config |
+
+## Options
+
+- `inccommand = "split"` — Live preview of `:s` substitutions
+- To enable clipboard sync with system: uncomment `clipboard:append("unnamedplus")` in `01_core.lua`
+
+---
+
+## Tabs vs. Buffers
+
+**Buffers** (`<S-h>/<S-l>`): Files in memory, flip between them quickly, all in same window.
+
+**Tabs** (`gt`/`gT`): Separate window layouts, each can contain multiple buffers side-by-side.
+Use tabs when organizing by feature/context (e.g., Tab 1=auth, Tab 2=ui, Tab 3=docs).
+
+---
+
+## Helper Keys (from mini.clue)
+
+Press a prefix key to see all available sub-mappings:
+- `<leader>` — all leader commands
+- `g` — LSP + Neovim built-in
+- `z` — folding, diff, etc.
+- `[` / `]` — previous/next (buffers, quickfix, diagnostics, etc.)
+- `"` / `'` — registers and marks

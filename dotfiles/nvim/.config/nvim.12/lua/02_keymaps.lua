@@ -49,3 +49,24 @@ map("n", "<leader>bo", function()
 		end
 	end
 end, o("Close other buffers"))
+
+-- ── Edit helpers ──────────────────────────────────────────────────────────────
+map("x", "p", '"_dP', o("Paste over selection without clobbering register"))
+map({ "n", "v" }, "<leader>d", '"_d', o("Delete without yanking"))
+map("n", "J", "mzJ`z", o("Join lines without moving cursor"))
+map("v", "<", "<gv", o("Unindent and keep selection"))
+map("v", ">", ">gv", o("Indent and keep selection"))
+
+-- ── Utility ───────────────────────────────────────────────────────────────────
+map("n", "<leader>X", "<cmd>!chmod +x %<CR>", { silent = true, desc = "Make file executable" })
+map("n", "<leader>re", "<cmd>restart<CR>", o("Restart config"))
+
+-- ── Find & replace ────────────────────────────────────────────────────────────
+map("n", "<leader>sw", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], o("Substitute word under cursor"))
+
+-- ── Tabs ──────────────────────────────────────────────────────────────────────
+map("n", "gt", "gt", o("Next tab"))
+map("n", "gT", "gT", o("Previous tab"))
+map("n", "<leader>tn", "<cmd>tabnew<CR>", o("New tab"))
+map("n", "<leader>tc", "<cmd>tabclose<CR>", o("Close tab"))
+map("n", "<leader>to", "<cmd>tabonly<CR>", o("Close other tabs"))

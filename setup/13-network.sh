@@ -24,36 +24,27 @@ set_network() {
     local safe_name; safe_name="$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-')"
     local label="com.mahi.mount.${safe_name}"
     local plist="$HOME/Library/LaunchAgents/${label}.plist"
-    local mount_point="/Volumes/${name}"   # safe: name validated above
     local host; host="$(echo "$url" | sed 's|smb://||' | cut -d'/' -f1)"
     local mount_script="$HOME/Library/LaunchAgents/${label}.sh"
 
-    sudo mkdir -p "$mount_point" 2>/dev/null || warn "Could not create $mount_point."
-
-    # ── Write mount helper script ────────────────────────────────────────────
-    # Quoted heredoc (<<'SCRIPT') — no shell expansion, so $url/$name/$host
-    # values are NOT interpolated here. We write them as literal assignments
-    # on the next lines using printf, then append the rest with a quoted heredoc.
+    # ── Write mount helper script ─────────────────────────────────────────────
+    # osascript mounts via Finder/Keychain — no sudo, no pre-created mount point.
     {
       printf '#!/bin/bash\n'
-      printf 'MOUNT_POINT=%s\n' "$(printf '%q' "$mount_point")"
-      printf 'URL=%s\n'         "$(printf '%q' "$url")"
-      printf 'HOST=%s\n'        "$(printf '%q' "$host")"
-      printf 'LOG=%s\n'         "$(printf '%q' "/tmp/${name}-mount.log")"
+      printf 'URL=%s\n'  "$(printf '%q' "$url")"
+      printf 'HOST=%s\n' "$(printf '%q' "$host")"
+      printf 'LOG=%s\n'  "$(printf '%q' "/tmp/${name}-mount.log")"
       cat <<'SCRIPT'
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
-if mount | grep -q "$MOUNT_POINT"; then log "Already mounted"; exit 0; fi
+if mount | grep -qF "$HOST"; then log "Already mounted"; exit 0; fi
 log "Waiting for $HOST..."
 for i in $(seq 1 6); do
   ping -c1 -W2 "$HOST" &>/dev/null && break
   log "  attempt $i — waiting 5s..."; sleep 5
 done
 if ! ping -c1 -W2 "$HOST" &>/dev/null; then log "Host unreachable — skipping."; exit 1; fi
-log "Mounting $URL → $MOUNT_POINT"
-/sbin/mount_smbfs -o nobrowse "$URL" "$MOUNT_POINT" >> "$LOG" 2>&1 && log "Mounted." || {
-  log "mount_smbfs failed — trying Finder..."
-  /usr/bin/open "$URL" >> "$LOG" 2>&1 || log "Finder open also failed."
-}
+log "Mounting $URL"
+osascript -e "mount volume \"$URL\"" >> "$LOG" 2>&1 && log "Mounted." || log "osascript mount failed."
 SCRIPT
     } > "$mount_script"
     chmod +x "$mount_script"
@@ -77,7 +68,7 @@ PLIST
     launchctl unload "$plist" 2>/dev/null || true
     launchctl load   "$plist"
     success "${name} — LaunchAgent registered."
-    info "  Mount point : $mount_point"
+    info "  Mount point : auto (managed by osascript/Keychain)"
     info "  Server      : $url"
     info "  Log         : /tmp/${name}-mount.log"
     echo ""
