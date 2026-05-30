@@ -1,27 +1,23 @@
 /**
- * fast-commands.ts — Slash commands that run in clean, ephemeral pi sessions.
+ * fast-commands.ts — User-facing slash commands (/commit, /pr, /standup) that run in clean, ephemeral pi sessions.
  *
- * Each command spawns `pi --mode json -p "..."` as a subprocess so the current
- * session's context is NEVER injected into the task. Structured JSON events from
- * the subprocess drive a live widget: braille spinner, elapsed time, current tool,
- * and streaming assistant text.
+ * Each command references an agent defined in subagents.json (via agentRef).
+ * Spawns `pi --mode json -p "..."` as a subprocess so the current session's
+ * context is NEVER injected. Structured JSON events drive a live widget:
+ * braille spinner, elapsed time, current tool, streaming text.
  *
- * Result display is controlled per command via "output" in fast-commands.json:
- *   "notify" — last line shown as a notification toast
- *   "file"   — full output injected inline into the main session via registerMessageRenderer
+ * Result display via "output" in fast-commands.json:
+ *   "notify" — last line shown as notification toast
+ *   "file"   — full output injected inline via registerMessageRenderer
  *
- * Thinking level is configured per command via "thinking":
- *   "off" / "low" / "medium" — defaults to "low"
- *
- * To add a command: add an entry to fast-commands.json.
- * To change fast models: edit the "models" array in fast-commands.json.
+ * Agent config (prompt, thinking, tools, role) come from subagents.json.
+ * Models fallback to subagents.json models if not in fast-commands.
  */
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
-import { notifyMacOS } from "../shared/macOS-notify.js";
 import {
   visibleWidth,
   truncateToWidth,
@@ -58,21 +54,18 @@ function bordered(lines: string[], width: number, theme: Theme): string[] {
 
 // ── Config schema ─────────────────────────────────────────────────────────────
 
-interface FastModel {
+interface Model {
   provider: string;
   id: string;
 }
+
 interface FastCommand {
   name: string;
-  description: string;
-  role: string;
-  prompt: string | string[];
-  argsDefault?: string;
-  thinking?: string; // "off" | "minimal" | "low" | "medium" | "high"
-  output?: "notify" | "file"; // "notify" = last-line toast, "file" = open .md — default "notify"
+  agentRef: string; // references an agent name in subagents.json
+  output?: "notify" | "file"; // "notify" = last-line toast, "file" = open .md
 }
-interface Config {
-  models: FastModel[];
+
+interface FastCommandsConfig {
   commands: FastCommand[];
 }
 
@@ -86,18 +79,20 @@ interface SubagentConfig {
   tools?: string[];
   icon?: string;
 }
+
 interface SubagentConfigFull {
-  models: FastModel[];
+  models: Model[];
   agents: SubagentConfig[];
 }
 
-const configPath = join(
+const fastCommandsConfigPath = join(
   fileURLToPath(new URL(".", import.meta.url)),
   "fast-commands.json",
 );
-const config: Config = JSON.parse(readFileSync(configPath, "utf-8"));
+const fastCommandsConfig: FastCommandsConfig = JSON.parse(
+  readFileSync(fastCommandsConfigPath, "utf-8"),
+);
 
-// Load subagents to auto-register fast-command subagents
 const subagentsConfigPath = join(
   fileURLToPath(new URL("../subagents", import.meta.url)),
   "subagents.json",
@@ -105,21 +100,9 @@ const subagentsConfigPath = join(
 let subagentsConfig: SubagentConfigFull | undefined;
 try {
   subagentsConfig = JSON.parse(readFileSync(subagentsConfigPath, "utf-8"));
-} catch {
-  // subagents config not available
+} catch (err) {
+  console.warn("[fast-commands] subagents.json not found:", err);
 }
-
-// Identify which subagents are fast-command agents (by name matching)
-const fastCommandSubagentNames = new Set([
-  "commit",
-  "pr",
-  "standup",
-  "review",
-  "test",
-]);
-const fastCommandAgents = subagentsConfig?.agents.filter((a) =>
-  fastCommandSubagentNames.has(a.name),
-) ?? [];
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 
@@ -154,18 +137,14 @@ interface WidgetState {
 
 let activeCommand = "";
 let activeAbort: AbortController | undefined;
-let cachedModel: { provider: string; id: string } | null | undefined =
-  undefined;
+let cachedModel: Model | null | undefined = undefined;
 // undefined = not yet resolved, null = resolved but none available
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildMessage(cmd: FastCommand, args: string): string {
-  const body = Array.isArray(cmd.prompt) ? cmd.prompt.join("\n") : cmd.prompt;
-  return (
-    `Role: ${cmd.role}.\n\n` +
-    body.replace(/\{args\}/g, args.trim() || cmd.argsDefault || args)
-  );
+function buildMessage(agent: SubagentConfig): string {
+  const body = Array.isArray(agent.prompt) ? agent.prompt.join("\n") : agent.prompt;
+  return `Role: ${agent.role}.\n\n${body}`;
 }
 
 /**
@@ -317,9 +296,10 @@ function spawnCleanSession(
  */
 async function resolveFastModel(
   ctx: ExtensionCommandContext,
-): Promise<{ provider: string; id: string } | undefined> {
+): Promise<Model | undefined> {
   if (cachedModel !== undefined) return cachedModel ?? undefined;
-  for (const candidate of config.models) {
+  const models = subagentsConfig?.models ?? [];
+  for (const candidate of models) {
     const key = await ctx.modelRegistry.getApiKeyForProvider(
       candidate.provider,
     );
@@ -329,7 +309,7 @@ async function resolveFastModel(
     }
   }
   // No API key found — still try first model (OAuth subprocess inherits auth.json)
-  cachedModel = config.models[0] ?? null;
+  cachedModel = models[0] ?? null;
   return cachedModel ?? undefined;
 }
 
@@ -365,22 +345,18 @@ export default function (pi: ExtensionAPI): void {
     cachedModel = undefined;
   });
 
-  // Register all commands from config
-  const allCommands = [
-    ...config.commands,
-    ...fastCommandAgents.map((agent) => ({
-      name: agent.name,
-      description: agent.description,
-      role: agent.role,
-      prompt: agent.prompt,
-      thinking: agent.thinking ?? "low",
-      output: "notify" as const,
-    })),
-  ];
+  // Register fast commands from config, resolving agents from subagents.json
+  for (const fcmd of fastCommandsConfig.commands) {
+    const agent = subagentsConfig?.agents.find((a) => a.name === fcmd.agentRef);
+    if (!agent) {
+      console.warn(
+        `[fast-commands] Agent "${fcmd.agentRef}" not found in subagents.json`,
+      );
+      continue;
+    }
 
-  for (const cmd of allCommands) {
-    pi.registerCommand(cmd.name, {
-      description: `${cmd.description} (clean session)`,
+    pi.registerCommand(fcmd.name, {
+      description: `${agent.description} (clean session)`,
       handler: async (args: string, ctx: ExtensionCommandContext) => {
         if (activeCommand) {
           ctx.ui.notify(
@@ -395,23 +371,15 @@ export default function (pi: ExtensionAPI): void {
         const fastModel = await resolveFastModel(ctx);
         if (!fastModel) {
           ctx.ui.notify(
-            `No fast model available. Tried: ${config.models.map((m) => m.id).join(", ")}`,
+            `No fast model available`,
             "error",
           );
           return;
         }
 
-        activeCommand = cmd.name;
+        activeCommand = fcmd.name;
         const abort = new AbortController();
         activeAbort = abort;
-
-        // Notify on macOS that command started
-        notifyMacOS(
-          "⚡ Fast",
-          fastModel.id,
-          `/${cmd.name}${args ? ": " + args.slice(0, 60) : ""}`,
-          "Glass",
-        );
 
         const widgetState: WidgetState = {
           spinnerFrame: 0,
@@ -445,7 +413,7 @@ export default function (pi: ExtensionAPI): void {
                 const header =
                   spin +
                   theme.fg("dim", ` ${fastModel.id}`) +
-                  theme.fg("muted", ` → /${cmd.name}`) +
+                  theme.fg("muted", ` → /${fcmd.name}`) +
                   elapsed;
 
                 const inner: string[] = [header];
@@ -496,8 +464,8 @@ export default function (pi: ExtensionAPI): void {
 
           ({ exitCode, fullText } = await spawnCleanSession(
             `${fastModel.provider}/${fastModel.id}`,
-            cmd.thinking ?? "low",
-            buildMessage(cmd, args),
+            agent.thinking ?? "low",
+            buildMessage(agent),
             abort.signal,
             widgetState,
             () => widgetTui?.requestRender(),
@@ -513,14 +481,14 @@ export default function (pi: ExtensionAPI): void {
         if (abort.signal.aborted) return;
 
         if (exitCode === 0) {
-          if (cmd.output === "file") {
+          if (fcmd.output === "file") {
             // Inject full output as inline message in the main session
             pi.sendMessage(
               {
                 customType: "fast-result",
                 content: "",
                 display: true,
-                details: { name: cmd.name, text: fullText },
+                details: { name: fcmd.name, text: fullText },
               },
               { triggerTurn: false },
             );
@@ -533,7 +501,7 @@ export default function (pi: ExtensionAPI): void {
                 .filter(Boolean)
                 .at(-1) ?? "";
             ctx.ui.notify(
-              `✓ /${cmd.name}${lastLine ? `: ${lastLine.slice(0, 120)}` : ""}`,
+              `✓ /${fcmd.name}${lastLine ? `: ${lastLine.slice(0, 120)}` : ""}`,
               "success",
             );
           }
@@ -545,7 +513,7 @@ export default function (pi: ExtensionAPI): void {
               .filter(Boolean)
               .at(-1) ?? "";
           ctx.ui.notify(
-            `✗ /${cmd.name} failed${lastLine ? `: ${lastLine.slice(0, 120)}` : ` (exit ${exitCode})`}`,
+            `✗ /${fcmd.name} failed${lastLine ? `: ${lastLine.slice(0, 120)}` : ` (exit ${exitCode})`}`,
             "error",
           );
         }

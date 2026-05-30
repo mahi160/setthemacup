@@ -1,153 +1,19 @@
 {
-  "models": [
-    { "provider": "anthropic", "id": "claude-haiku-4-5" },
-    { "provider": "google", "id": "gemini-flash-lite-latest" }
-  ],
   "commands": [
     {
       "name": "commit",
-      "thinking": "off",
-      "output": "notify",
-      "description": "Generate and apply a conventional commit",
-      "role": "Tech Lead",
-      "prompt": [
-        "1. Run `git diff --cached` to get staged changes.",
-        "2. If empty, ask the user to stage changes and stop.",
-        "3. Analyze the staged diff.",
-        "4. Generate a conventional commit:",
-        "   - Format: `type(scope): subject`",
-        "   - Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert",
-        "   - Subject: imperative mood, lowercase, no period, max 50 chars",
-        "   - Body (if needed): wrap at 72 chars, explain _why_ not _how_, one liner preferred",
-        "   - Footer: `BREAKING CHANGE:` if needed",
-        "5. If there are multiple non related changes, do multiple commits.",
-        "6. Commit with the generated message with caveman ultra clean"
-      ]
+      "agentRef": "commit",
+      "output": "notify"
     },
     {
       "name": "pr",
-      "thinking": "low",
-      "output": "file",
-      "description": "Create a pull request",
-      "role": "Senior Engineer",
-      "prompt": [
-        "1. Run `git remote get-url origin` to identify the repo.",
-        "2. Run `git diff main...HEAD` for all changes on this branch.",
-        "3. Run `git log main...HEAD --oneline` for commit history.",
-        "4. Look for pr_template.",
-        "5. Generate a PR (use template if found, else):",
-        "   - **Title**: concise, imperative, max 72 chars",
-        "   - **Body**: ## What (summary) / ## Why (motivation) / ## How (key decisions) / ## Testing",
-        "6. Run `gh pr create --title \"...\" --body \"...\"`."
-      ]
+      "agentRef": "pr",
+      "output": "file"
     },
     {
       "name": "standup",
-      "thinking": "off",
-      "output": "file",
-      "description": "Generate daily standup from git activity",
-      "role": "Engineer writing a daily standup",
-      "prompt": [
-        "1. Run `git log --since=\"24 hours ago\" --oneline --author=\"$(git config user.name)\"`.",
-        "2. Run `git diff HEAD~5...HEAD --stat` for recent file changes.",
-        "3. Summarize:",
-        "   - **Yesterday**: what was done (from commits)",
-        "   - **Today**: what's next (infer from WIP or last commit)",
-        "   - **Blockers**: none unless context suggests otherwise",
-        "4. Keep short — 3-5 bullets max."
-      ]
-    },
-    {
-      "name": "explain",
-      "thinking": "low",
-      "output": "file",
-      "description": "Explain a file or symbol",
-      "role": "Senior Engineer explaining to a smart peer",
-      "argsDefault": "Explain the last code discussed in context.",
-      "prompt": [
-        "1. {args}",
-        "2. Explain:",
-        "   - **What it does** — one sentence",
-        "   - **How it works** — key logic, data flow",
-        "   - **Why it exists** — the problem it solves",
-        "   - **Gotchas** — non-obvious behavior, edge cases",
-        "3. Keep tight. Code snippets only when they clarify."
-      ]
-    },
-    {
-      "name": "bugs",
-      "thinking": "medium",
-      "output": "file",
-      "description": "Find bugs, logic errors, and edge cases",
-      "role": "Senior Engineer doing a bug review",
-      "argsDefault": "Review the last code discussed in context.",
-      "prompt": [
-        "1. Read {args}.",
-        "2. Hunt for:",
-        "   - Logic errors, off-by-one mistakes",
-        "   - Null/undefined/empty edge cases",
-        "   - Race conditions or async issues",
-        "   - Error handling gaps (swallowed errors, missing fallbacks)",
-        "   - Type mismatches or unsafe casts",
-        "   - Security issues (injection, unvalidated input, exposed secrets)",
-        "   - Resource leaks (unclosed handles, missing cleanup)",
-        "3. For each bug: location, what, why, fix with code snippet.",
-        "4. Prioritize: critical → high → low."
-      ]
-    },
-    {
-      "name": "refactor",
-      "thinking": "low",
-      "output": "file",
-      "description": "Refactor code for clarity, performance, or maintainability",
-      "role": "Senior Engineer doing a focused refactor",
-      "argsDefault": "Refactor the last code discussed in context.",
-      "prompt": [
-        "1. Read {args}.",
-        "2. Identify:",
-        "   - Complexity / hard to follow logic",
-        "   - Duplication",
-        "   - Poor naming",
-        "   - Performance problems",
-        "   - Unnecessary abstraction",
-        "3. Refactor with constraints:",
-        "   - Preserve exact behavior — no feature changes",
-        "   - Minimal diff — don't rewrite what isn't broken",
-        "   - Explain each significant change",
-        "4. Apply the changes."
-      ]
-    },
-    {
-      "name": "review",
-      "thinking": "low",
-      "output": "file",
-      "description": "Review staged or branch changes",
-      "role": "Senior Engineer doing a code review",
-      "prompt": [
-        "1. Run `git diff --cached` for staged changes, or `git diff main...HEAD` if nothing staged.",
-        "2. Review for: bugs, security, error handling, performance, naming, test gaps.",
-        "3. Format:",
-        "   - `[CRITICAL]` — must fix before merge",
-        "   - `[SUGGEST]` — worth changing",
-        "   - `[NIT]` — minor style/preference",
-        "4. End with one-line verdict: approve / request changes / needs discussion."
-      ]
-    },
-    {
-      "name": "test",
-      "thinking": "low",
-      "output": "file",
-      "description": "Write tests for a file or function",
-      "role": "Senior Engineer writing tests",
-      "argsDefault": "Write tests for the last code discussed in context.",
-      "prompt": [
-        "1. Read {args}.",
-        "2. Identify the testing framework in use (jest, vitest, mocha, etc). Match it.",
-        "3. Write tests covering: happy path, edge cases (empty, null, boundary), error cases, async behavior.",
-        "4. One assertion per test where possible.",
-        "5. No mocking unless truly necessary. Prefer real behavior.",
-        "6. Write tests to the appropriate test file."
-      ]
+      "agentRef": "standup",
+      "output": "file"
     }
   ]
 }
