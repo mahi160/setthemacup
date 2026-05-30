@@ -9,7 +9,6 @@ import { join } from "node:path";
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const BUDGET_PATH = join(homedir(), ".pi", "agent", "budget.json");
-const DB_PATH = join(homedir(), ".pi", "agent", "stats.db");
 
 interface BudgetConfig {
   mode: "auto" | "cost" | "messages";
@@ -52,17 +51,7 @@ function saveConfig(cfg: BudgetConfig): void {
   writeFileSync(BUDGET_PATH, JSON.stringify(cfg, null, 2), "utf-8");
 }
 
-// ── SQLite queries (read-only) ────────────────────────────────────────────────
-
-// Dynamic require avoids TS resolution errors for built-in node:sqlite
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { DatabaseSync } = require("node:sqlite") as {
-  DatabaseSync: new (path: string) => {
-    prepare(sql: string): {
-      get(...p: unknown[]): Record<string, unknown> | undefined;
-    };
-  };
-};
+// ── Stats DB queries (shared singleton) ──────────────────────────────────────
 
 interface DayTotals {
   cost: number;
@@ -70,21 +59,24 @@ interface DayTotals {
   requests: number;
 }
 
+let _statsDb:
+  | {
+      getBudgetTotals(sinceMs: number): DayTotals;
+      getRecentCostSum(limit?: number): number;
+    }
+  | null = null;
+
+function statsDb(): NonNullable<typeof _statsDb> {
+  if (!_statsDb) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _statsDb = require("./stats/db.js") as NonNullable<typeof _statsDb>;
+  }
+  return _statsDb;
+}
+
 function queryTotals(sinceMs: number): DayTotals {
-  if (!existsSync(DB_PATH)) return { cost: 0, inputs: 0, requests: 0 };
   try {
-    const db = new DatabaseSync(DB_PATH);
-    const row = db
-      .prepare(
-        `
-      SELECT COALESCE(SUM(cost_usd), 0)      AS cost,
-             COUNT(*)                          AS inputs,
-             COALESCE(SUM(request_count), 0)  AS requests
-      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
-    `,
-      )
-      .get(sinceMs) as DayTotals | undefined;
-    return row ?? { cost: 0, inputs: 0, requests: 0 };
+    return statsDb().getBudgetTotals(sinceMs);
   } catch {
     return { cost: 0, inputs: 0, requests: 0 };
   }
@@ -92,18 +84,8 @@ function queryTotals(sinceMs: number): DayTotals {
 
 function detectMode(cfg: BudgetConfig): "cost" | "messages" {
   if (cfg.mode !== "auto") return cfg.mode;
-  if (!existsSync(DB_PATH)) return "messages";
   try {
-    const db = new DatabaseSync(DB_PATH);
-    const row = db
-      .prepare(
-        `
-      SELECT COALESCE(SUM(cost_usd), 0) AS totalCost
-      FROM (SELECT cost_usd FROM user_inputs WHERE ended_at IS NOT NULL ORDER BY started_at DESC LIMIT 50)
-    `,
-      )
-      .get() as { totalCost: number } | undefined;
-    return (row?.totalCost ?? 0) > 0 ? "cost" : "messages";
+    return statsDb().getRecentCostSum(50) > 0 ? "cost" : "messages";
   } catch {
     return "messages";
   }
@@ -114,6 +96,13 @@ function detectMode(cfg: BudgetConfig): "cost" | "messages" {
 export default function (pi: ExtensionAPI): void {
   let bypass = false;
   let detectedMode: "cost" | "messages" = "messages";
+  let cachedCfg: BudgetConfig = { ...DEFAULTS };
+
+  function reloadConfig(): BudgetConfig {
+    cachedCfg = loadConfig();
+    detectedMode = detectMode(cachedCfg);
+    return cachedCfg;
+  }
 
   pi.on("session_start", () => {
     bypass = false;
@@ -121,14 +110,13 @@ export default function (pi: ExtensionAPI): void {
       bypass = true;
       return;
     }
-    const cfg = loadConfig();
-    detectedMode = detectMode(cfg);
+    reloadConfig();
   });
 
   pi.on("before_agent_start", async (_, ctx: ExtensionContext) => {
     if (bypass || process.env.PI_BUDGET_OVERRIDE === "1") return;
 
-    const cfg = loadConfig();
+    const cfg = cachedCfg;
     const now = Date.now();
 
     if (detectedMode === "cost") {
@@ -205,7 +193,7 @@ export default function (pi: ExtensionAPI): void {
     description:
       "Show budget usage or set caps. Usage: /budget [set <key> <N>] [mode <cost|messages|auto>]",
     handler: async (args, ctx: ExtensionContext) => {
-      const cfg = loadConfig();
+      const cfg = cachedCfg;
       const mode = detectedMode;
 
       if (!args || args.trim() === "") {
@@ -247,7 +235,7 @@ export default function (pi: ExtensionAPI): void {
         }
         cfg.mode = newMode;
         saveConfig(cfg);
-        detectedMode = detectMode(cfg);
+        reloadConfig();
         ctx.ui.notify(
           `Budget mode set to: ${newMode} (effective: ${detectedMode})`,
           "success",
@@ -277,6 +265,7 @@ export default function (pi: ExtensionAPI): void {
         }
         (cfg as Record<string, unknown>)[key] = val;
         saveConfig(cfg);
+        reloadConfig();
         ctx.ui.notify(`Budget.${key} = ${val}`, "success");
         return;
       }

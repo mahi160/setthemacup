@@ -27,11 +27,11 @@
     "clearOnShrink": false,
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "quietStartup": true,
   "collapseChangelog": true,
   "enableInstallTelemetry": false,
-  "autocompleteMaxVisible": 10,
+  "autocompleteMaxVisible": 7,
   "doubleEscapeAction": "tree",
   "treeFilterMode": "no-tools",
   "branchSummary": {
@@ -44,5 +44,8 @@
   "packages": [
     "npm:@plannotator/pi-extension@0.19.24",
     "npm:pi-web-access"
-  ]
+  ],
+  "images": {
+    "blockImages": true
+  }
 }

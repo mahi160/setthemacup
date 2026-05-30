@@ -31,7 +31,8 @@ export function fmtMs(ms: number): string {
 }
 
 export function fmtDate(ts: number): string {
-  return new Date(safe(ts)).toISOString().slice(0, 10);
+  const d = new Date(safe(ts));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function fmtPct(ratio: number): string {

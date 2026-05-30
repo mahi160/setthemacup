@@ -5,7 +5,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { createState, resetState, requestRender } from "./state";
 import { createTopWidget, createFooter, createTokenWidget } from "./render";
-import { resetGitCache } from "./git";
+import { resetGitCache } from "../shared/git";
 
 export default function (pi: ExtensionAPI): void {
   const state = createState();

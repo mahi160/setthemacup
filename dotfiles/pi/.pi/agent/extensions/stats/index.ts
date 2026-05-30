@@ -16,13 +16,14 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { randomUUID } from "node:crypto";
-import { execFile, execFileSync } from "node:child_process";
+
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 import { spawn } from "node:child_process";
 
 import { bus } from "../shared/bus.js";
+import { getGitBranch, seedGitBranch } from "../shared/git.js";
 
 import {
   closeDb,
@@ -112,44 +113,14 @@ function weekRange(): { start: number; end: number } {
   return { start: end - STATS_CONFIG.weekDays * 86_400_000, end };
 }
 
-function parseInputPrefix(text: string): { skills: Map<string, number>; commands: Map<string, number> } {
-  const skills = new Map<string, number>();
+function parseInputPrefix(text: string): { commands: Map<string, number> } {
   const commands = new Map<string, number>();
   const trimmed = text.trim();
   if (trimmed.startsWith("/")) {
     const name = trimmed.slice(1).split(" ")[0] ?? "";
     if (name) inc(commands, name);
   }
-  return { skills, commands };
-}
-
-let _gitBranchAt = 0, _gitBranchVal = "";
-
-function seedGitBranch(): void {
-  try {
-    _gitBranchVal = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      encoding: "utf8", timeout: 3_000,
-    }).trim();
-  } catch {
-    _gitBranchVal = "";
-  }
-  _gitBranchAt = Date.now();
-}
-
-function gitBranch(): string {
-  const now = Date.now();
-  if (now - _gitBranchAt < 5_000) return _gitBranchVal;
-  _gitBranchAt = now; // stamp first — prevents concurrent refreshes
-  execFile(
-    "git",
-    ["rev-parse", "--abbrev-ref", "HEAD"],
-    { encoding: "utf8", timeout: 3_000 },
-    (err, stdout) => {
-      if (!err) _gitBranchVal = (stdout as string).trim();
-      else _gitBranchVal = "";
-    },
-  );
-  return _gitBranchVal;
+  return { commands };
 }
 
 function resolveSessionId(ctx: ExtensionContext): string {
@@ -166,13 +137,14 @@ export default function (pi: ExtensionAPI): void {
   let currentInput: InputState | null = null;
   let lastCompactWarning = 0;
   let pendingSlash: string | null = null;
+  let unsubscribeSkill: (() => void) | undefined;
 
   // ── Session lifecycle ───────────────────────────────────────────────────
 
   pi.on("session_start", (_, ctx: ExtensionContext) => {
     const id = resolveSessionId(ctx);
     const now = Date.now();
-    seedGitBranch();
+    seedGitBranch(ctx.cwd);
     session = {
       id,
       startedAt: now,
@@ -190,7 +162,7 @@ export default function (pi: ExtensionAPI): void {
     lastCompactWarning = 0;
   });
 
-  bus.on("skill_invoked", (data) => {
+  unsubscribeSkill = bus.on("skill_invoked", (data) => {
     const { name } = data as { name: string };
     if (session) inc(session.skills, name);
     if (currentInput) inc(currentInput.skills, name);
@@ -212,7 +184,7 @@ export default function (pi: ExtensionAPI): void {
 
     const rawText = pendingSlash ?? event.prompt ?? "";
     pendingSlash = null;
-    const { skills, commands } = parseInputPrefix(rawText);
+    const { commands } = parseInputPrefix(rawText);
     const model = ctx.model;
 
     currentInput = {
@@ -221,10 +193,10 @@ export default function (pi: ExtensionAPI): void {
       startedAt: Date.now(),
       provider: model?.provider ?? "unknown",
       modelId: model?.id ?? "unknown",
-      branch: gitBranch(),
+      branch: getGitBranch(ctx.cwd),
       tools: new Map(),
       commands,
-      skills,
+      skills: new Map(),
       totalTokens: 0,
       tokensInput: 0,
       tokensOutput: 0,
@@ -366,6 +338,8 @@ export default function (pi: ExtensionAPI): void {
     } catch (e) {
       console.error("[pi-stats] finalizeSession failed:", e);
     }
+    unsubscribeSkill?.();
+    unsubscribeSkill = undefined;
     session = null;
     closeDb();
   });

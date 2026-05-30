@@ -6,7 +6,7 @@ import type {
 import { basename } from "node:path";
 import type { FooterState } from "./state";
 import { fmt, fmtCost, buildLine } from "./format";
-import { getGitDirty } from "./git";
+import { getGitDirty } from "../shared/git";
 import { getModelDisplayName, getProviderDisplay } from "./models";
 
 // Tool name → nerd font icon. Falls back to generic ⚙ for unknowns.
@@ -106,6 +106,9 @@ export function createTopWidget(
 export function createFooter(ctx: ExtensionContext, state: FooterState) {
   return (tui: any, theme: Theme, footerData: any) => {
     state.footerTui = tui;
+
+    state.footerDispose?.();
+    state.footerDispose = undefined;
 
     state.branch = footerData.getGitBranch() ?? "";
     const dispose = footerData.onBranchChange(() => {

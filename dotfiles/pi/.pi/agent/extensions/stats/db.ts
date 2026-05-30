@@ -65,12 +65,6 @@ export interface ToolStat {
   total: number;
 }
 
-export interface ModelStat {
-  provider: string;
-  model_id: string;
-  uses: number;
-}
-
 export interface ModelEfficiency {
   provider: string;
   model_id: string;
@@ -279,7 +273,6 @@ function migrate(db: SqlDb): void {
   addCol("user_inputs", "branch",             "TEXT DEFAULT ''");
   addCol("user_inputs", "request_count",      "INTEGER DEFAULT 0");
   addCol("user_inputs", "success",            "INTEGER DEFAULT 0");
-  addCol("user_inputs", "ttft_ms",            "INTEGER DEFAULT 0");
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS qna (
@@ -477,16 +470,6 @@ export function getTopToolsByInputs(sinceTs = 0, limit = 10): ToolStat[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([tool, total]) => ({ tool, total }));
-}
-
-export function getTopModelsByInputs(limit = 6): ModelStat[] {
-  return getDb()
-    .prepare(`
-      SELECT provider, model_id, COUNT(*) AS uses
-      FROM user_inputs WHERE ended_at IS NOT NULL
-      GROUP BY provider, model_id ORDER BY uses DESC LIMIT ?
-    `)
-    .all(limit) as ModelStat[];
 }
 
 export function getModelEfficiency(): ModelEfficiency[] {
@@ -709,43 +692,34 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ── Request counts + QnA ──────────────────────────────────────────────────────
+// ── Budget + QnA ─────────────────────────────────────────────────────────────
 
-export interface RequestCounts {
-  today: number;
-  windowHours: number;
-  weekly: number;
-  allTime: number;
+export interface BudgetTotals {
+  cost: number;
+  inputs: number;
+  requests: number;
 }
 
-export function getRequestCounts(windowHours = 5, cycleStartDay = 0): RequestCounts {
-  const now = Date.now();
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+export function getBudgetTotals(sinceMs: number): BudgetTotals {
+  const row = getDb()
+    .prepare(`
+      SELECT COALESCE(SUM(cost_usd), 0)      AS cost,
+             COUNT(*)                        AS inputs,
+             COALESCE(SUM(request_count), 0) AS requests
+      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
+    `)
+    .get(sinceMs) as BudgetTotals | undefined;
+  return row ?? { cost: 0, inputs: 0, requests: 0 };
+}
 
-  const windowStart = now - windowHours * 3_600_000;
-
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const daysAgo = (dayOfWeek - cycleStartDay + 7) % 7;
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - daysAgo);
-  weekStart.setHours(0, 0, 0, 0);
-
-  const row = getDb().prepare(`
-    SELECT
-      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS today,
-      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS windowHours,
-      COALESCE(SUM(CASE WHEN started_at >= ? THEN request_count ELSE 0 END), 0) AS weekly,
-      COALESCE(SUM(request_count), 0) AS allTime
-    FROM user_inputs WHERE ended_at IS NOT NULL
-  `).get(
-    startOfDay.getTime(),
-    windowStart,
-    weekStart.getTime(),
-  ) as RequestCounts | undefined;
-
-  return row ?? { today: 0, windowHours: 0, weekly: 0, allTime: 0 };
+export function getRecentCostSum(limit = 50): number {
+  const row = getDb()
+    .prepare(`
+      SELECT COALESCE(SUM(cost_usd), 0) AS totalCost
+      FROM (SELECT cost_usd FROM user_inputs WHERE ended_at IS NOT NULL ORDER BY started_at DESC LIMIT ?)
+    `)
+    .get(limit) as { totalCost: number } | undefined;
+  return Number(row?.totalCost ?? 0);
 }
 
 export function recordQna(
