@@ -21,7 +21,7 @@
         "   - Body (if needed): wrap at 72 chars, explain _why_ not _how_, one liner preferred",
         "   - Footer: `BREAKING CHANGE:` if needed",
         "5. If there are multiple non related changes, do multiple commits.",
-        "6. Commit with the generated message."
+        "6. Commit with the generated message with caveman ultra clean"
       ]
     },
     {
