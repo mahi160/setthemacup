@@ -79,15 +79,25 @@ function tryRecordQna(
 
 // ── Overlay runner ─────────────────────────────────────────────────────────────
 
+// Convert literal backslash escapes (\n, \t) that LLMs sometimes emit
+// into real characters so multi-line questions render correctly.
+function unescape(s: string): string {
+  return s
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t");
+}
+
 async function runOverlay(
   uiCtx: ExtensionContext,
-  params: {
+  rawParams: {
     question: string;
     choices?: string[];
     default?: string;
     multiSelect?: boolean;
   },
 ): Promise<string> {
+  const params = { ...rawParams, question: unescape(rawParams.question) };
   if (params.multiSelect && params.choices?.length) {
     const component = new MultiSelectComponent(params.choices);
     const result = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
