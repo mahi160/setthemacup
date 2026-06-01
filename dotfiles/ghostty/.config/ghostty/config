@@ -42,7 +42,7 @@ window-padding-balance = true
 background-blur = 20
 background-opacity = 0.96
 background = #282828
-background-image = ~/Pictures/pokemon_bg/current.png
+background-image = ~/Pictures/pokemon_bg/98.png
 # managed by scripts/pokemon-bg.sh — run pokemon-bg or press Alt+Q to cycle
 background-image-opacity = 0.15
 background-image-fit = none
@@ -72,6 +72,9 @@ auto-update = check
 # ============================================================================
 
 # Ghostty uses Metal renderer on macOS — no extra flags needed
+
+# Reduce scrollback for long-running sessions
+scrollback-lines = 3000
 
 # ============================================================================
 # MOUSE & CURSOR
