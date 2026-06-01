@@ -143,10 +143,12 @@ function extractOutsideWritePaths(
 
   // --- Output redirect (>, >>) ---
   // Matches: > /path or > ../path (relative or absolute)
+  // /dev/null, /dev/stdout, /dev/stderr are discard/passthrough sinks — never block them
+  const devSinks = new Set(["/dev/null", "/dev/stdout", "/dev/stderr"]);
   const redirectRegex = />{1,2}\s*([^\s;|&]+)/g;
   for (const match of command.matchAll(redirectRegex)) {
     const path = match[1]!;
-    if (!path.startsWith("-")) {
+    if (!path.startsWith("-") && !devSinks.has(path)) {
       addIfOutside(path);
     }
   }
