@@ -1,12 +1,12 @@
 {
   "lastChangelogVersion": "0.78.0",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-8",
+  "defaultModel": "claude-sonnet-4-6",
   "defaultThinkingLevel": "medium",
   "enabledModels": [
-    "openai-codex/gpt-5.5",
-    "google/gemini-flash-latest",
-    "anthropic/claude-sonnet-4-6"
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-haiku-4-5",
+    "anthropic/claude-opus-4-8"
   ],
   "compaction": {
     "enabled": true,
@@ -42,7 +42,7 @@
   },
   "theme": "gruvbox-material",
   "packages": [
-    "npm:@plannotator/pi-extension@0.19.24",
+    "npm:@plannotator/pi-extension",
     "npm:pi-web-access"
   ],
   "images": {
