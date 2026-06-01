@@ -14,7 +14,7 @@ import {
   truncateToWidth,
   type Theme,
 } from "@earendil-works/pi-tui";
-import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
   spawnCleanSession,
   bordered,
@@ -29,19 +29,33 @@ export interface CommandResult {
   fullText: string;
 }
 
+// Minimal context shape needed for widget display
+export interface WidgetContext {
+  ui: {
+    setWidget(
+      key: string,
+      renderer:
+        | ((tui: { requestRender(): void }, theme: import("@earendil-works/pi-tui").Theme) => { render(w: number): string[]; invalidate(): void })
+        | undefined,
+      opts?: { placement?: string },
+    ): void;
+  };
+}
+
 /**
- * Runs a command in a clean session with live widget feedback.
- * Handles widget setup, spinner animation, and execution.
- * Returns exit code + full output text.
- * No output display — caller decides (notify vs file, etc).
+ * Core: runs a subagent with live spinner widget.
+ * Accepts any context that has ui.setWidget — works for both
+ * ExtensionCommandContext (fast commands) and ExtensionContext (tools).
  */
-export async function runCommand(options: {
+export async function runWithWidget(options: {
   agent: SubagentConfig;
   model: Model;
   prompt: string;
-  ctx: ExtensionCommandContext;
+  signal: AbortSignal;
+  ctx: WidgetContext;
+  tools?: string[];
 }): Promise<CommandResult> {
-  const { agent, model, prompt, ctx } = options;
+  const { agent, model, prompt, signal, ctx, tools } = options;
 
   const widgetState: WidgetState & {
     model: string;
@@ -61,9 +75,8 @@ export async function runCommand(options: {
   };
 
   let widgetTui: { requestRender(): void } | undefined;
-  const widgetKey = `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const widgetKey = `subagent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-  // Setup widget
   ctx.ui.setWidget(
     widgetKey,
     (tui, theme) => {
@@ -79,7 +92,6 @@ export async function runCommand(options: {
             "dim",
             ` ${(widgetState.elapsedMs / 1000).toFixed(1)}s`,
           );
-
           const header =
             spin +
             theme.fg("success", ` ${widgetState.icon} ${widgetState.agent}`) +
@@ -89,25 +101,15 @@ export async function runCommand(options: {
           const inner: string[] = [header];
 
           if (widgetState.retrying) {
-            inner.push(
-              theme.fg("warning", `  ↻ retry ${widgetState.retryAttempt}...`),
-            );
+            inner.push(theme.fg("warning", `  ↻ retry ${widgetState.retryAttempt}...`));
           } else if (widgetState.currentTool) {
-            const toolInfo = widgetState.currentTool.slice(0, iw - 6);
-            inner.push(
-              theme.fg("warning", `  ▸`) + theme.fg("dim", ` ${toolInfo}`),
-            );
+            inner.push(theme.fg("warning", `  ▸`) + theme.fg("dim", ` ${widgetState.currentTool.slice(0, iw - 6)}`));
           } else {
             inner.push(theme.fg("dim", `  ⏳ processing...`));
           }
 
           if (widgetState.toolCount > 0) {
-            inner.push(
-              theme.fg(
-                "muted",
-                `  ${widgetState.toolCount} tool${widgetState.toolCount !== 1 ? "s" : ""}`,
-              ),
-            );
+            inner.push(theme.fg("muted", `  ${widgetState.toolCount} tool${widgetState.toolCount !== 1 ? "s" : ""}`));
           }
 
           if (widgetState.recentText.length > 0) {
@@ -132,8 +134,7 @@ export async function runCommand(options: {
 
   try {
     spinnerTimer = setInterval(() => {
-      widgetState.spinnerFrame =
-        (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
+      widgetState.spinnerFrame = (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
       widgetState.elapsedMs += 100;
       widgetTui?.requestRender();
     }, 100);
@@ -142,9 +143,10 @@ export async function runCommand(options: {
       `${model.provider}/${model.id}`,
       agent.thinking ?? "low",
       prompt,
-      new AbortSignal(),
+      signal,
       widgetState,
       () => widgetTui?.requestRender(),
+      tools,
     ));
   } finally {
     clearInterval(spinnerTimer);
@@ -152,4 +154,19 @@ export async function runCommand(options: {
   }
 
   return { exitCode, fullText };
+}
+
+/**
+ * Convenience wrapper for fast commands (ExtensionCommandContext).
+ * Uses its own AbortController — commands aren't cancellable mid-flight.
+ */
+export async function runCommand(options: {
+  agent: SubagentConfig;
+  model: Model;
+  prompt: string;
+  ctx: ExtensionCommandContext;
+  tools?: string[];
+}): Promise<CommandResult> {
+  const abort = new AbortController();
+  return runWithWidget({ ...options, signal: abort.signal });
 }

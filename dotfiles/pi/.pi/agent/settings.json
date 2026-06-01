@@ -1,12 +1,12 @@
 {
-  "lastChangelogVersion": "0.77.0",
+  "lastChangelogVersion": "0.78.0",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-haiku-4-5",
-  "defaultThinkingLevel": "high",
+  "defaultModel": "claude-opus-4-8",
+  "defaultThinkingLevel": "medium",
   "enabledModels": [
     "openai-codex/gpt-5.5",
     "google/gemini-flash-latest",
-    "anthropic/claude-haiku-4-5"
+    "anthropic/claude-sonnet-4-6"
   ],
   "compaction": {
     "enabled": true,

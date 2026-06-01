@@ -4,7 +4,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { basename } from "node:path";
-import { notifyMacOS } from "../shared/macOS-notify.js";
 import {
   matchesKey,
   Key,
@@ -15,15 +14,6 @@ import {
   Spacer,
 } from "@earendil-works/pi-tui";
 import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-
-function notifyQuestion(question: string): void {
-  notifyMacOS(
-    "π ??",
-    "Waiting for your input",
-    question.slice(0, 100),
-    "Ping",
-  );
-}
 
 // Multi-select checkbox component
 class MultiSelectComponent implements Component {
@@ -57,9 +47,7 @@ class MultiSelectComponent implements Component {
     });
   }
 
-  invalidate(): void {
-    // no cache
-  }
+  invalidate(): void {}
 
   getSelected(): string[] {
     return Array.from(this.selected)
@@ -89,14 +77,74 @@ function tryRecordQna(
   }
 }
 
+// ── Overlay runner ─────────────────────────────────────────────────────────────
+
+async function runOverlay(
+  uiCtx: ExtensionContext,
+  params: {
+    question: string;
+    choices?: string[];
+    default?: string;
+    multiSelect?: boolean;
+  },
+): Promise<string> {
+  if (params.multiSelect && params.choices?.length) {
+    const component = new MultiSelectComponent(params.choices);
+    const result = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
+      const container = new Container();
+      container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+      container.addChild(new Text(theme.fg("accent", theme.bold(params.question)), 1, 0));
+      container.addChild(new Spacer(1));
+      const choicesContainer = new Container();
+      choicesContainer.addChild({
+        render: (w: number) => component.render(w),
+        invalidate: () => component.invalidate(),
+        handleInput: () => {},
+      });
+      container.addChild(choicesContainer);
+      container.addChild(new Spacer(1));
+      container.addChild(new Text(theme.fg("dim", "↑↓ navigate • space toggle • enter select • esc cancel"), 1, 0));
+      container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+      container.addChild(new Spacer(1));
+      return {
+        render: (w) => container.render(w),
+        invalidate: () => container.invalidate(),
+        handleInput: (data) => {
+          if (matchesKey(data, Key.enter)) {
+            const selected = component.getSelected();
+            done(selected.length > 0 ? selected.join(",") : null);
+          } else if (matchesKey(data, Key.escape)) {
+            done(null);
+          } else {
+            component.handleInput(data);
+            tui.requestRender();
+          }
+        },
+      };
+    });
+    return result ?? params.default ?? "";
+  }
+
+  if (params.choices?.length) {
+    const result = await uiCtx.ui.select(params.question, params.choices);
+    return result ?? params.default ?? params.choices[0] ?? "";
+  }
+
+  const ok = await uiCtx.ui.confirm("Question", params.question);
+  return ok ? (params.default ?? "yes") : "no";
+}
+
 // ── Extension ─────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
   let sessionId = "unknown";
   let savedCtx: ExtensionContext | undefined;
+  // Serial queue — only one overlay open at a time; concurrent asks wait their turn
+  let uiQueue: Promise<void> = Promise.resolve();
 
   pi.on("session_start", (_, ctx: ExtensionContext) => {
     savedCtx = ctx;
+    uiQueue = Promise.resolve(); // reset on new session
     try {
       const file = ctx.sessionManager.getSessionFile();
       sessionId = file ? basename(file, ".jsonl") : `ephemeral_${Date.now()}`;
@@ -112,14 +160,16 @@ export default function (pi: ExtensionAPI): void {
       "Ask the user a structured clarifying question via a keyboard-driven overlay.",
       "Use when multiple valid interpretations exist and a choice must be made.",
       "Always prefer this over asking in prose.",
-      "Returns the user's selected answer as a string.",
+      "Single mode: pass 'question' (+ optional choices/multiSelect) — returns selected answer as string.",
+      "Batch mode: pass 'questions' array — asks each in sequence, returns JSON array of {question, answer}.",
+      "Use batch mode when you have several things to clarify at once.",
     ].join(" "),
     parameters: Type.Object({
-      question: Type.String({ description: "The question to ask the user" }),
+      question: Type.Optional(Type.String({ description: "Single question to ask" })),
       choices: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "List of answer choices (if omitted, user can press Enter to confirm or Esc to cancel)",
+            "Choices for the single question (omit for yes/no confirm)",
         }),
       ),
       default: Type.Optional(
@@ -138,6 +188,20 @@ export default function (pi: ExtensionAPI): void {
           description: "Unused in current impl — choices are keyboard-driven",
         }),
       ),
+      questions: Type.Optional(
+        Type.Array(
+          Type.Object({
+            question: Type.String({ description: "The question to ask" }),
+            choices: Type.Optional(Type.Array(Type.String(), { description: "Answer choices; omit for yes/no confirm" })),
+            default: Type.Optional(Type.String({ description: "Default if user presses Enter" })),
+            multiSelect: Type.Optional(Type.Boolean({ description: "Allow picking multiple choices; returns comma-separated string" })),
+          }),
+          {
+            description:
+              "Batch mode: ask multiple questions in one call. Returns JSON array of {question, answer}. Use instead of 'question' when you have several things to ask at once.",
+          },
+        ),
+      ),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const uiCtx = ctx ?? savedCtx;
@@ -151,78 +215,63 @@ export default function (pi: ExtensionAPI): void {
         };
       }
 
-      notifyQuestion(params.question);
+      // ── Batch mode: multiple questions in one call ──────────────────────────
+      // If both `question` and `questions` provided, merge — single goes first
+      const allQuestions = [
+        ...(params.question
+          ? [{ question: params.question, choices: params.choices, default: params.default, multiSelect: params.multiSelect }]
+          : []),
+        ...(params.questions ?? []),
+      ];
 
-      let finalAnswer: string;
+      if (allQuestions.length > 1 || (allQuestions.length === 1 && params.questions?.length)) {
+        const results: Array<{ question: string; answer: string }> = [];
 
-      if (params.multiSelect && params.choices?.length) {
-        // Multi-select mode
-        const component = new MultiSelectComponent(params.choices);
-        const result = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
-          const container = new Container();
-          
-          // Top border
-          container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
-          
-          // Title
-          container.addChild(new Text(theme.fg("accent", theme.bold(params.question)), 1, 0));
-          
-          // Spacer
-          container.addChild(new Spacer(1));
-          
-          // Choices container
-          const choicesContainer = new Container();
-          choicesContainer.addChild({
-            render: (w: number) => component.render(w),
-            invalidate: () => component.invalidate(),
-            handleInput: () => {},
-          });
-          container.addChild(choicesContainer);
-          
-          // Bottom spacer
-          container.addChild(new Spacer(1));
-          
-          // Help text
-          container.addChild(new Text(theme.fg("dim", "↑↓ navigate • space toggle • enter select • esc cancel"), 1, 0));
-          
-          // Bottom border
-          container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
-          
-          // Bottom padding
-          container.addChild(new Spacer(1));
-          
-          return {
-            render: (w) => container.render(w),
-            invalidate: () => container.invalidate(),
-            handleInput: (data) => {
-              if (matchesKey(data, Key.enter)) {
-                const selected = component.getSelected();
-                done(selected.length > 0 ? selected.join(",") : null);
-              } else if (matchesKey(data, Key.escape)) {
-                done(null);
-              } else {
-                component.handleInput(data);
-                tui.requestRender();
+        for (const q of allQuestions) {
+          let answer!: string;
+          await new Promise<void>((resolveSlot) => {
+            uiQueue = uiQueue.then(async () => {
+              try {
+                answer = await runOverlay(uiCtx, q);
+              } catch {
+                answer = q.default ?? "";
+              } finally {
+                resolveSlot();
               }
-            },
-          };
-        });
-        finalAnswer = result ?? params.default ?? "";
-      } else if (params.choices?.length) {
-        const result = await uiCtx.ui.select(params.question, params.choices);
-        finalAnswer = result ?? params.default ?? params.choices[0] ?? "";
-      } else {
-        const ok = await uiCtx.ui.confirm("Question", params.question);
-        finalAnswer = ok ? (params.default ?? "yes") : "no";
+            });
+          });
+          tryRecordQna(sessionId, q.question, answer, q.choices ?? null);
+          results.push({ question: q.question, answer });
+        }
+
+        return {
+          content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
+          details: {},
+        };
       }
 
-      tryRecordQna(
-        sessionId,
-        params.question,
-        finalAnswer,
-        params.choices ?? null,
-      );
+      // ── Single question mode (only `question`, no `questions`) ─────────────────────────────────────────────────
+      if (!params.question) {
+        return {
+          content: [{ type: "text", text: params.default ?? "(no question provided)" }],
+          details: {},
+        };
+      }
 
+      let finalAnswer!: string;
+      await new Promise<void>((resolveSlot) => {
+        uiQueue = uiQueue.then(async () => {
+          try {
+            finalAnswer = await runOverlay(uiCtx, params as { question: string; choices?: string[]; default?: string; multiSelect?: boolean });
+          } catch {
+            finalAnswer = params.default ?? "";
+          } finally {
+            resolveSlot();
+          }
+        });
+      });
+
+      tryRecordQna(sessionId, params.question, finalAnswer, params.choices ?? null);
       return {
         content: [{ type: "text", text: finalAnswer }],
         details: {},

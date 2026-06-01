@@ -31,6 +31,7 @@ import { basename } from "node:path";
 const MIN_DURATION_MS = 3_000;
 const SUCCESS_SOUND = "Glass";    // Notification on agent success
 const ERROR_SOUND = "Basso";      // Notification on agent error
+const ASK_SOUND = "Pop";          // Notification on ask_user
 
 /** Formats milliseconds as "8.3s" or "2m 4s". */
 function fmtDuration(ms: number): string {
@@ -94,26 +95,12 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── ask_user: Notify when question is asked ───
 
-  pi.on("tool_call", async (event, ctx) => {
+  pi.on("tool_call", (event, ctx) => {
     if (isToolCallEventType("ask_user", event)) {
-      const params = event.input as { question: string };
-      const question = params.question.slice(0, 80);
-      notifyMacOS("π ?", "Waiting for input", question, "Glass");
+      const params = event.input as { question?: string; questions?: Array<{ question: string }> };
+      const first = params.question ?? params.questions?.[0]?.question ?? "";
+      notifyMacOS("π ?", "Waiting for input", first.slice(0, 80), ASK_SOUND);
     }
   });
 
-  // ─── subagent end: Notify when subagent tool completes ───
-
-  pi.on("tool_end", (event, ctx) => {
-    // Detect subagent completion: tool names starting with "subagent_"
-    const toolName = event.toolName || "";
-    if (toolName.startsWith("subagent_")) {
-      const agentLabel = toolName.replace(/^subagent_/, "").toUpperCase();
-      // Show success/error based on exit code or error field
-      const isError = (event as unknown as { isError?: boolean }).isError ?? false;
-      const sound = isError ? ERROR_SOUND : "Glass";
-      const title = isError ? "π ✗" : "π ✓";
-      notifyMacOS(title, agentLabel, "Completed", sound);
-    }
-  });
 }

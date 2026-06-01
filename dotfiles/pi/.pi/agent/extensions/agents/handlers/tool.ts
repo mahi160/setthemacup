@@ -6,49 +6,17 @@
  * Each spawns a clean session with parameter injection ({task}, {paths}, {maxFiles}).
  */
 
-import { spawn } from "node:child_process";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { spawnCleanSession, type SubagentConfig, type Model } from "../../shared/spawn-subagent";
+import { runWithWidget } from "../../shared/command-runner";
+import { buildPromptWithParams, resolveModel, type SubagentConfig, type Model } from "../../shared/spawn-subagent";
 
 export interface ToolHandlerOptions {
   subagents: SubagentConfig[];
   models: Model[];
 }
 
-// Helper: replace {task}, {paths}, {maxFiles} in prompt
-function buildPromptWithParams(
-  agent: SubagentConfig,
-  params: { task: string; paths?: string[]; maxFiles?: number },
-): string {
-  const body = Array.isArray(agent.prompt)
-    ? agent.prompt.join("\n")
-    : agent.prompt;
-  let result = body;
-  result = result.replaceAll("{task}", params.task);
-  result = result.replaceAll(
-    "{paths}",
-    params.paths?.length ? params.paths.join(", ") : "none provided",
-  );
-  result = result.replaceAll("{maxFiles}", String(params.maxFiles ?? 20));
-  return `Role: ${agent.role}.\n\n${result}`;
-}
 
-// Helper: resolve model from credentials
-async function resolveModel(
-  ctx: ExtensionContext,
-  models: Model[],
-): Promise<Model | undefined> {
-  for (const candidate of models) {
-    const key = await ctx.modelRegistry.getApiKeyForProvider(
-      candidate.provider,
-    );
-    if (key) {
-      return candidate;
-    }
-  }
-  return models[0];
-}
 
 /**
  * Register template tools (scout, review, tests, security, research, etc).
@@ -114,26 +82,14 @@ export function registerTools(
           const tools = agent.tools ?? ["read", "grep", "find", "ls"];
           const prompt = buildPromptWithParams(agent, params);
 
-          // Simple widget state for tool execution
-          const widgetState = {
-            spinnerFrame: 0,
-            elapsedMs: 0,
-            currentTool: "",
-            toolCount: 0,
-            recentText: [] as string[],
-            retrying: false,
-            retryAttempt: 0,
-          };
-
-          const { exitCode, fullText } = await spawnCleanSession(
-            `${model.provider}/${model.id}`,
-            agent.thinking ?? "low",
+          const { exitCode, fullText } = await runWithWidget({
+            agent,
+            model,
             prompt,
             signal,
-            widgetState,
-            () => {}, // no widget update callback for tools
+            ctx,
             tools,
-          );
+          });
 
           if (exitCode === 0) {
             return {

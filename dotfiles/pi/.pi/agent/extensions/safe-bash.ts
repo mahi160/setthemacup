@@ -95,7 +95,7 @@ function extractDeletePaths(
   for (const subCmd of subCommands) {
     // Check for delete operations in this sub-command
     const deleteMatch = subCmd.match(
-      /\b(rm|rmdir|unlink)\b((?:[^;&|[\n])*)/,
+      /\b(rm|rmdir|unlink)\b((?:[^;&|\n])*)/,
     );
     if (!deleteMatch) continue;
 
@@ -143,7 +143,7 @@ function extractOutsideWritePaths(
 
   // --- Output redirect (>, >>) ---
   // Matches: > /path or > ../path (relative or absolute)
-  const redirectRegex = />{1,2}\s+([^\s;|&]+)/g;
+  const redirectRegex = />{1,2}\s*([^\s;|&]+)/g;
   for (const match of command.matchAll(redirectRegex)) {
     const path = match[1]!;
     if (!path.startsWith("-")) {

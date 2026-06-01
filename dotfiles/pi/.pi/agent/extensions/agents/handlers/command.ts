@@ -102,17 +102,18 @@ export function registerCommands(
           return;
         }
 
-        await ctx.waitForIdle();
-
-        const model = await resolveModel(ctx);
-        if (!model) {
-          ctx.ui.notify(`No model available`, "error");
-          return;
-        }
-
+        // Set flag before any await to prevent concurrent invocations
         activeCommand = fcmd.name;
 
         try {
+          await ctx.waitForIdle();
+
+          const model = await resolveModel(ctx);
+          if (!model) {
+            ctx.ui.notify(`No model available`, "error");
+            return;
+          }
+
           const { exitCode, fullText } = await runCommand({
             agent,
             model,

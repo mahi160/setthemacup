@@ -105,6 +105,55 @@ export function formatTool(
 }
 
 /**
+ * Builds a prompt from agent config + task parameters.
+ * Replaces {task}, {paths}, {maxFiles} placeholders.
+ */
+export function buildPromptWithParams(
+  agent: SubagentConfig,
+  params: { task: string; paths?: string[]; maxFiles?: number },
+): string {
+  const body = Array.isArray(agent.prompt) ? agent.prompt.join("\n") : agent.prompt;
+  return `Role: ${agent.role}.\n\n${body
+    .replaceAll("{task}", params.task)
+    .replaceAll("{paths}", params.paths?.length ? params.paths.join(", ") : "none provided")
+    .replaceAll("{maxFiles}", String(params.maxFiles ?? 20))}`;
+}
+
+/**
+ * Resolves the first model the current environment has an API key for.
+ * Falls back to models[0] if none found.
+ */
+export async function resolveModel(
+  ctx: { modelRegistry: { getApiKeyForProvider(p: string): Promise<string | null | undefined> } },
+  models: Model[],
+): Promise<Model | undefined> {
+  for (const candidate of models) {
+    const key = await ctx.modelRegistry.getApiKeyForProvider(candidate.provider);
+    if (key) return candidate;
+  }
+  return models[0];
+}
+
+/**
+ * Resolves model with optional provider/id override string ("provider/id").
+ * Falls back to resolveModel if override not found.
+ */
+export async function resolveModelWithOverride(
+  ctx: { modelRegistry: { getApiKeyForProvider(p: string): Promise<string | null | undefined> } },
+  models: Model[],
+  override?: string,
+): Promise<Model | undefined> {
+  if (override) {
+    const [provider, id] = override.split("/");
+    if (provider && id) {
+      const found = models.find((m) => m.provider === provider && m.id === id);
+      if (found) return found;
+    }
+  }
+  return resolveModel(ctx, models);
+}
+
+/**
  * Parses one JSONL event from `--mode json` output.
  * Updates widget state: tool execution, text deltas, retries.
  */
@@ -138,6 +187,8 @@ export function parseJsonEvents(
       const ame = event.assistantMessageEvent;
       if (ame?.type === "text_delta" && ame.delta) {
         textAcc.value += ame.delta;
+        // Cap at 10KB to prevent unbounded growth on large outputs
+        if (textAcc.value.length > 10_000) textAcc.value = textAcc.value.slice(-10_000);
         state.recentText = textAcc.value
           .split("\n")
           .map((l) => l.trim())
