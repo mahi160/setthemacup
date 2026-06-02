@@ -13,6 +13,7 @@
  *    - Blocks bash delete commands targeting outside-CWD absolute paths
  *    - Blocks bash write patterns (>, tee, cp, mv, sed -i) to outside-CWD destinations
  *    - Allows reads anywhere
+ *    - Exempts /tmp and /var/folders (ephemeral OS scratch space)
  *
  * Known limitations (v1):
  * - Symlink bypass via "ln -s /outside; edit link-in-cwd" not blocked
@@ -57,6 +58,21 @@ function normalizePath(filePath: string, cwd: string): string {
     normalized = resolve(cwd, normalized);
   }
   return normalized;
+}
+
+/**
+ * Paths outside CWD that are safe to write (ephemeral OS-managed scratch space).
+ */
+const ALLOWED_OUTSIDE_PREFIXES = [
+  "/tmp/",
+  "/var/folders/", // macOS per-user temp (e.g. mktemp)
+];
+
+function isAllowedOutside(filePath: string, cwd: string): boolean {
+  const normalized = normalizePath(filePath, cwd);
+  return ALLOWED_OUTSIDE_PREFIXES.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
 }
 
 /**
@@ -222,7 +238,7 @@ export default function (pi: ExtensionAPI): void {
   // Inject system prompt note
   pi.on("before_agent_start", (event, _ctx) => {
     const note =
-      "\n\n[safe-bash active: deletes in CWD require confirmation; no writes/edits/deletes outside CWD]";
+      "\n\n[safe-bash active: deletes in CWD require confirmation; no writes/edits/deletes outside CWD except /tmp and /var/folders]";
     return {
       systemPrompt: event.systemPrompt + note,
     };
@@ -233,7 +249,7 @@ export default function (pi: ExtensionAPI): void {
     // --- Write tool: block if outside CWD ---
     if (isToolCallEventType("write", event)) {
       const writeEvent = event as WriteToolCallEvent;
-      if (isOutsideCwd(writeEvent.input.path, ctx.cwd)) {
+      if (isOutsideCwd(writeEvent.input.path, ctx.cwd) && !isAllowedOutside(writeEvent.input.path, ctx.cwd)) {
         if (ctx.hasUI) {
           ctx.ui.notify(
             `Blocked: write outside CWD - ${writeEvent.input.path}`,
@@ -248,7 +264,7 @@ export default function (pi: ExtensionAPI): void {
     // --- Edit tool: block if outside CWD ---
     if (isToolCallEventType("edit", event)) {
       const editEvent = event as EditToolCallEvent;
-      if (isOutsideCwd(editEvent.input.path, ctx.cwd)) {
+      if (isOutsideCwd(editEvent.input.path, ctx.cwd) && !isAllowedOutside(editEvent.input.path, ctx.cwd)) {
         if (ctx.hasUI) {
           ctx.ui.notify(
             `Blocked: edit outside CWD - ${editEvent.input.path}`,
@@ -266,7 +282,9 @@ export default function (pi: ExtensionAPI): void {
       const command = bashEvent.input.command;
 
       // Check for write patterns (redirect, tee, cp, mv, sed -i) to outside CWD
-      const outsideWrites = extractOutsideWritePaths(command, ctx.cwd);
+      const outsideWrites = extractOutsideWritePaths(command, ctx.cwd).filter(
+        (p) => !isAllowedOutside(p, ctx.cwd),
+      );
       if (outsideWrites.length > 0) {
         if (ctx.hasUI) {
           ctx.ui.notify(
