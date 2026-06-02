@@ -1,7 +1,7 @@
 /**
- * title.ts — Gruvbox-material gradient ASCII header for mahi.
+ * title.ts — Kanagawa wave gradient ASCII header for mahi.
  *
- * Displays block-font "mahi" logo with a gruvbox color cycle gradient.
+ * Displays block-font "mahi" logo with a kanagawa wave color cycle gradient.
  * Subtitle shows current model, project name, and a daily rotating quote.
  * No DB queries, no timers — pure visual.
  */
@@ -10,22 +10,23 @@ import { basename } from "node:path";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  Theme,
 } from "@earendil-works/pi-coding-agent";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Rgb = [number, number, number];
 
-// ── Gruvbox-material palette (accent cycle) ───────────────────────────────────
+// ── Kanagawa wave palette (accent cycle) ─────────────────────────────────────
 
 const PALETTE: Rgb[] = [
-  [216, 166, 87], // yellow
-  [231, 138, 78], // orange
-  [234, 105, 98], // red
-  [211, 134, 155], // purple
-  [125, 174, 163], // blue
-  [137, 180, 130], // aqua
-  [169, 182, 101], // green
+  [126, 156, 216], // crystalBlue
+  [149, 127, 184], // oniViolet
+  [228, 104, 118], // waveRed
+  [230, 195, 132], // carpYellow
+  [152, 187, 108], // springGreen
+  [122, 168, 159], // waveAqua
+  [156, 171, 202], // springViolet
 ];
 
 // ── ASCII art: "mahi" ─────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ function renderHeader(
   modelId: string,
   cwd: string,
   quote: string,
+  theme: Theme,
 ): string[] {
   if (!_asciiCache || _asciiCache.width !== width) {
     _asciiCache = {
@@ -145,7 +147,7 @@ function renderHeader(
     "",
     ...lines,
     `${BOLD}${gradientText(center(subtitle, width), 0.18)}${RESET}`,
-    DIM + center(divider, width) + RESET,
+    theme.fg("borderMuted", center(divider, width)),
     "",
   ];
 }
@@ -161,7 +163,7 @@ export default function (pi: ExtensionAPI): void {
     QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
 
   function installHeader(ctx: ExtensionContext): void {
-    ctx.ui.setHeader((tui) => {
+    ctx.ui.setHeader((tui, theme) => {
       requestRender = () => tui.requestRender();
       return {
         render(width: number): string[] {
@@ -170,9 +172,11 @@ export default function (pi: ExtensionAPI): void {
             currentModelId || "—",
             currentCwd,
             dailyQuote,
+            theme,
           );
         },
         invalidate() {
+          _asciiCache = null;
           tui.requestRender();
         },
       };

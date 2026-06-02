@@ -5,6 +5,7 @@
 #   nowplaying-mediaremote  compiled Swift binary (~5ms vs 155ms interpreted)
 #   tmux-battery            battery icon + % via pmset
 #   tmux-cpu                cpu icon + % via ps + sysctl
+#   tmux-nowplaying         now playing via nowplaying-cli
 
 [[ -z "${SETUP_LIB_LOADED:-}" ]] && source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -34,7 +35,7 @@ set_tmux_helpers() {
   fi
 
   # ── tmux-battery + tmux-cpu shell scripts ─────────────────────────────────
-  for script in tmux-battery tmux-cpu; do
+  for script in tmux-battery tmux-cpu tmux-nowplaying; do
     local src="$SCRIPTS_DIR/${script}.sh"
     local dst="$HOME/.local/bin/${script}"
     if [[ -f "$src" ]]; then

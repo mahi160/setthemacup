@@ -126,7 +126,8 @@
       "name": "zsh-syntax-highlighting",
       "desc": "Fish-like syntax highlighting for zsh"
     },
-    { "name": "zoxide", "desc": "Smarter cd — replaces OMZ z plugin" }
+    { "name": "zoxide", "desc": "Smarter cd — replaces OMZ z plugin" },
+    { "name": "nowplaying-cli", "desc": "Now Playing info from macOS MediaRemote — used in tmux status bar" }
   ],
 
   "casks": [

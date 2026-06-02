@@ -27,7 +27,7 @@
     "clearOnShrink": false,
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "quietStartup": true,
   "collapseChangelog": true,
   "enableInstallTelemetry": false,
