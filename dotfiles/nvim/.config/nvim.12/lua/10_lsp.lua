@@ -28,6 +28,34 @@ require("tiny-inline-diagnostic").setup({ preset = "ghost" })
 vim.lsp.document_color.enable(true, nil, { style = "virtual" })
 vim.lsp.linked_editing_range.enable()
 
+-- ── Diagnostic density toggle (verbose ↔ minimal) ────────────────────────────
+local diagnostic_density = "verbose" -- start with signs + underline + inline
+local function toggle_diagnostic_density()
+	if diagnostic_density == "verbose" then
+		diagnostic_density = "minimal"
+		vim.diagnostic.config({
+			virtual_text = false,
+			signs = false,
+			underline = false,
+		})
+		vim.notify("Diagnostics: minimal", vim.log.levels.INFO)
+	else
+		diagnostic_density = "verbose"
+		vim.diagnostic.config({
+			virtual_text = false,
+			underline = true,
+			signs = { text = {
+				[vim.diagnostic.severity.ERROR] = " ",
+				[vim.diagnostic.severity.WARN] = " ",
+				[vim.diagnostic.severity.INFO] = " ",
+				[vim.diagnostic.severity.HINT] = " ",
+			}},
+		})
+		vim.notify("Diagnostics: verbose", vim.log.levels.INFO)
+	end
+end
+vim.keymap.set("n", "<leader>td", toggle_diagnostic_density, { silent = true, desc = "Toggle diagnostic density" })
+
 require("mason").setup()
 require("mason-lspconfig").setup()
 require("mason-tool-installer").setup({
@@ -39,21 +67,16 @@ require("mason-tool-installer").setup({
 		"html",
 		"cssls",
 		"gopls",
-		"pyright",
 		"bashls",
 		"harper_ls",
 		"sqls",
 		"emmet-language-server",
 		"prettier",
 		"eslint_d",
-		"oxlint", -- fast Rust linter; wired in 11_format.lua alongside eslint_d
 		"stylua",
 		"shfmt",
 		"gofumpt",
 		"goimports",
-		"black",
-		"pylint",
-		"isort",
 		"stylelint",
 		"stylelint_lsp",
 	},
@@ -91,9 +114,8 @@ local servers = {
 		},
 	},
 	sqls = {},
-	pyright = {},
 	bashls = {},
-	emmet_language_server = {
+	["emmet-language-server"] = {
 		filetypes = { "html", "css", "javascriptreact", "typescriptreact", "svelte" },
 	},
 	gopls = {
@@ -120,10 +142,28 @@ local servers = {
 	},
 }
 
+-- Ensure spell file exists for harper_ls
+local spell_file = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
+local spell_dir = vim.fn.fnamemodify(spell_file, ":h")
+if vim.fn.isdirectory(spell_dir) == 0 then
+	vim.fn.mkdir(spell_dir, "p")
+end
+if vim.fn.filereadable(spell_file) == 0 then
+	vim.fn.writefile({}, spell_file)
+end
+
 for name, config in pairs(servers) do
 	config.capabilities = capabilities
-	vim.lsp.config(name, config)
-	vim.lsp.enable(name)
+	local ok = pcall(vim.lsp.config, name, config)
+	if not ok then
+		vim.notify("Failed to configure LSP: " .. name, vim.log.levels.ERROR)
+		goto continue
+	end
+	local enable_ok = pcall(vim.lsp.enable, name)
+	if not enable_ok then
+		vim.notify("Failed to enable LSP: " .. name, vim.log.levels.ERROR)
+	end
+	::continue::
 end
 
 vim.api.nvim_create_autocmd("LspAttach", {
@@ -133,6 +173,22 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, silent = true, desc = desc })
 		end
 
+		-- ── Navigation ────────────────────────────────────────────────────────────
+		map("gr", vim.lsp.buf.definition, "Goto definition")
+		map("gR", vim.lsp.buf.references, "Find references")
+		map("gy", vim.lsp.buf.type_definition, "Goto type definition")
+		map("gi", vim.lsp.buf.implementation, "Goto implementation")
+
+		-- ── Edit ──────────────────────────────────────────────────────────────────
+		map("<leader>rn", vim.lsp.buf.rename, "Rename symbol")
+		map("<leader>ca", vim.lsp.buf.code_action, "Code actions")
+		map("<leader>f", function()
+			require("conform").format({ async = true, lsp_format = "fallback" })
+		end, "Format buffer")
+
+		-- ── Info ──────────────────────────────────────────────────────────────────
+		map("K", vim.lsp.buf.hover, "Hover documentation")
+		map("<C-k>", vim.lsp.buf.signature_help, "Signature help")
 		map("<leader>ti", function()
 			vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = ev.buf }), { bufnr = ev.buf })
 		end, "Toggle inlay hints")

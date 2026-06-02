@@ -20,23 +20,27 @@ conform.setup({
 		graphql = { "prettier" },
 		liquid = { "prettier" },
 		lua = { "stylua" },
-		python = { "isort", "black" },
 		go = { "goimports", "gofumpt" },
 		sh = { "shfmt" },
 		bash = { "shfmt" },
 	},
-	format_after_save = { lsp_format = "fallback", async = true, timeout_ms = 1000 },
+	format_after_save = function(bufnr)
+		-- Skip unmodifiable buffers and special filetypes
+		if not vim.bo[bufnr].modifiable or vim.bo[bufnr].filetype == "" then
+			return nil
+		end
+		return { lsp_format = "fallback", async = true, timeout_ms = 1000 }
+	end,
 })
 
 local lint = require("lint")
 
 lint.linters_by_ft = {
-	python = { "pylint" },
-	typescript = { "eslint_d", "oxlint" }, -- oxlint: 50-100x faster, catches different issues
-	javascript = { "eslint_d", "oxlint" },
-	svelte = { "eslint_d", "oxlint" },
-	typescriptreact = { "eslint_d", "oxlint" },
-	javascriptreact = { "eslint_d", "oxlint" },
+	typescript = { "eslint_d" },
+	javascript = { "eslint_d" },
+	svelte = { "eslint_d" },
+	typescriptreact = { "eslint_d" },
+	javascriptreact = { "eslint_d" },
 	css = { "stylelint" },
 }
 

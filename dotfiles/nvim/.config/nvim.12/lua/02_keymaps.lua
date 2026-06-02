@@ -24,6 +24,7 @@ map({ "n", "v" }, "<leader>p", '"+p', o("Paste from clipboard"))
 map({ "n", "v" }, "<leader>P", '"+P', o("Paste from clipboard (before)"))
 
 map("n", "<leader>tu", "<cmd>UndotreeToggle<CR>", o("Toggle undotree"))
+map("n", "<leader>ts", "<cmd>set spell!<CR>", o("Toggle spell check"))
 
 map("n", "<leader>|", "<cmd>vsplit<CR>", o("Split vertically"))
 map("n", "<leader>-", "<cmd>split<CR>", o("Split horizontally"))

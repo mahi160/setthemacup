@@ -138,6 +138,7 @@
     { "name": "slack", "desc": "Work chat" },
     { "name": "whatsapp", "desc": "Messaging" },
     { "name": "telegram", "desc": "Messaging" },
+    { "name": "localsend", "desc": "Open-source cross-platform AirDrop alternative" },
 
     { "name": "alt-tab", "desc": "Proper Cmd+Tab with window previews" },
     { "name": "caffeine", "desc": "Prevents Mac from sleeping" },

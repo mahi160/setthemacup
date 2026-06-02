@@ -121,17 +121,30 @@ Examples: `daf` (delete function), `cil` (change inside loop), `vac` (select cla
 | `<leader>gl` | Show file log |
 | *hunks* | Visible in sign column via mini.diff |
 
+## Diagnostics & References — Trouble
+
+| Binding | Action |
+|---------|--------|
+| `<leader>xd` | Workspace diagnostics (trouble) |
+| `<leader>xD` | Buffer diagnostics (trouble) |
+| `<leader>xr` | LSP references (trouble) |
+
+## Quickfix & Loclist — quicker.nvim
+
+| Binding | Action |
+|---------|--------|
+| `<leader>xx` | Toggle quickfix |
+| `<leader>xl` | Toggle loclist |
+| `]q / [q` | Next/prev quickfix |
+| `]Q / [Q` | Last/first quickfix |
+| `]l / [l` | Next/prev loclist |
+
 ## UI & Toggles
 
 | Binding | Action |
 |---------|--------|
 | `<leader>tm` | Toggle minimap |
 | `<leader>ti` | Toggle inlay hints |
-| `<leader>xx` | Toggle quickfix |
-| `<leader>xl` | Toggle loclist |
-| `]q / [q` | Next/prev quickfix |
-| `]Q / [Q` | Last/first quickfix |
-| `]l / [l` | Next/prev loclist |
 | `<leader>du` | Toggle database UI |
 
 ## Live Preview & Utilities
@@ -149,7 +162,24 @@ Examples: `daf` (delete function), `cil` (change inside loop), `vac` (select cla
 - Menu appears automatically; press `<C-y>` to confirm
 - `<Tab>` accepts supermaven AI ghost text (when menu closed)
 - Signatures display inline as you type
-- Snippets from friendly-snippets expand through blink.cmp
+- Snippets: **friendly-snippets** per language, expanded via **mini.snippets** + blink.cmp
+
+## Spell Checking
+
+- **harper_ls** runs on all files — checks spelling in comments, strings, and identifiers
+- Severity: `hint` (subtle underline) — won't pollute error count
+- `zg` — add word under cursor to personal dictionary
+- `gra` — trigger harper code action to fix a spelling error
+- Dictionary: `~/.config/nvim.12/spell/en.utf-8.add`
+
+## npm / Package Info
+
+| Binding | Action |
+|---------|--------|
+| `<leader>np` | Show npm package versions inline |
+| `<leader>nu` | Update package on cursor line |
+| `<leader>nd` | Delete package on cursor line |
+| `<leader>ni` | Install a new package |
 
 ## Command Mode
 

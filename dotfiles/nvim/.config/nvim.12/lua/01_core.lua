@@ -27,6 +27,7 @@ vim.o.tabstop = 2
 vim.o.shiftwidth = 2
 vim.o.expandtab = true
 vim.o.keywordprg = ":help!"
+-- Folding: LSP-based (will gracefully fallback if no LSP attached)
 vim.o.foldmethod = "expr"
 vim.o.foldexpr = "v:lua.vim.lsp.foldexpr()"
 vim.o.foldlevel = 99

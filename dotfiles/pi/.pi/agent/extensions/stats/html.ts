@@ -23,7 +23,7 @@ import type {
   ErrorRecord,
 } from "./db.js";
 import { fmtTokens, fmtCost, fmtMs, fmtDate, fmtPct, escHtml } from "./format.js";
-import { GRUVBOX_CSS } from "./themes/gruvbox.css.js";
+import { KANAGAWA_CSS } from "./themes/kanagawa.css.js";
 
 // ── Report data interface ─────────────────────────────────────────────────────
 
@@ -272,7 +272,7 @@ export function buildHtml(d: ReportData): string {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"></script>
-<style>${GRUVBOX_CSS}</style>
+<style>${KANAGAWA_CSS}</style>
 </head>
 <body>
 <div class="page">
@@ -418,7 +418,7 @@ document.getElementById("share-btn").onclick=async function(){
     var dataUrl=await htmlToImage.toPng(card,{
       pixelRatio:2,
       cacheBust:true,
-      backgroundColor:document.documentElement.dataset.theme==="light"?"#fbf1c7":"#1d2021"
+      backgroundColor:document.documentElement.dataset.theme==="light"?"#f2ecbc":"#16161d"
     });
 
     wrap.style.position="fixed";

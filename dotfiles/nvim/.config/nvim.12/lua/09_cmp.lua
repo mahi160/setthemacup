@@ -25,7 +25,7 @@ require("blink.cmp").setup({
 	signature = { enabled = true },
 	completion = {
 		documentation = { auto_show = true, auto_show_delay_ms = 150 },
-		ghost_text = { enabled = false },
+		ghost_text = { enabled = true },
 		menu = {
 			auto_show = true,
 			auto_show_delay_ms = 0,
@@ -41,6 +41,6 @@ require("blink.cmp").setup({
 })
 
 require("supermaven-nvim").setup({
-	ignore_filetypes = {},
+	ignore_filetypes = { "markdown", "text" }, -- avoid overlap with blink ghost_text
 	-- color = { suggestion_color = "#6c7086", cterm = 244 },
 })

@@ -1,36 +1,23 @@
-# ============================================================================
-# THEME CONFIGURATION
-# ============================================================================
-theme = Gruvbox Material Dark
+# theme = Gruvbox Material Dark
+theme = Kanagawa Wave
 
-
-# ============================================================================
-# FONT CONFIGURATION
-# ============================================================================
-
-# Primary font with ligatures enabled
-font-family = JetBrainsMono Nerd Font
-# font-family = Maple Mono NF
+# font-family = JetBrainsMono Nerd Font
+font-family = Maple Mono NF
 # font-family = JetBrains Mono
 # font-family = Cascadia Code Mono
-font-size = 14
-font-feature = +liga +calt +ss01 +ss02 +ss03
-
-
-# Quick-switch font alternatives (uncomment to try):
 # font-family = MonaspiceRn Nerd Font Propo  # => === >=
 # font-family = BlexMono Nerd Font Mono
 # font-family = VictorMono Nerd Font Propo
 # font-family = Monaco
+font-size = 14
+font-feature = +liga +calt +ss01 +ss02 +ss03
+
+
 
 # Optional font adjustments:
 # font-thicken = true
 # font-thicken-strength = 80
 # adjust-cell-height = 10%
-
-# ============================================================================
-# WINDOW APPEARANCE
-# ============================================================================
 
 # Window dimensions
 window-height = 24
@@ -38,12 +25,10 @@ window-width = 80
 window-padding-x = 2
 window-padding-balance = true
 
-# Visual effects
-background-blur = 20
+background-blur = 240
 background-opacity = 0.96
-background = #282828
-background-image = ~/Pictures/pokemon_bg/98.png
-# managed by scripts/pokemon-bg.sh — run pokemon-bg or press Alt+Q to cycle
+
+background-image = ~/Pictures/pokemon_bg/21.png
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right
@@ -52,62 +37,27 @@ background-image-position = bottom-right
 macos-titlebar-style = hidden
 title = " "
 
-# ============================================================================
-# WINDOW BEHAVIOR
-# ============================================================================
-
 window-save-state = always
 confirm-close-surface = false
-
-# ============================================================================
-# SHELL INTEGRATION
-# ============================================================================
 
 shell-integration = detect
 shell-integration-features = cursor,sudo,title
 auto-update = check
 
-# ============================================================================
-# PERFORMANCE & RENDERING
-# ============================================================================
-
-# Ghostty uses Metal renderer on macOS — no extra flags needed
-
-# Reduce scrollback for long-running sessions
-scrollback-lines = 3000
-
-# ============================================================================
-# MOUSE & CURSOR
-# ============================================================================
-
-# Cursor appearance
 cursor-style = block
 cursor-style-blink = true
 
-# Mouse behavior
 mouse-hide-while-typing = true
 mouse-scroll-multiplier = 3
 
-# Click behavior
 copy-on-select = clipboard
 
-# ============================================================================
-# CLIPBOARD & SELECTION
-# ============================================================================
-
-# Enable OSC 52 for remote clipboard support
 clipboard-read = ask
 clipboard-write = allow
 
-# ============================================================================
-# KEYBINDINGS
-# ============================================================================
-
 macos-option-as-alt = true
 
-# Quick terminal toggle
 keybind = global:cmd+grave_accent=toggle_quick_terminal
 
-# Disable conflicting keybinds
 keybind = alt+left=unbind
 keybind = alt+right=unbind

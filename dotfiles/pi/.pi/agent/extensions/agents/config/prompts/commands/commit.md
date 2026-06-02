@@ -9,3 +9,5 @@
    - Footer: `BREAKING CHANGE:` if needed
 5. If there are multiple non related changes, do multiple commits.
 6. Commit with the generated message with caveman ultra clean
+7. If there is a skill/instruction for commit in the repo, follow that more than this instruction (look into
+   .agents/.claude folder)

@@ -38,41 +38,25 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 pick_hl()
 
--- ── Disable smear-cursor while picker is open ─────────────────────────────────
-local grp = vim.api.nvim_create_augroup("MiniPickExtras", { clear = true })
-vim.api.nvim_create_autocmd("User", {
-	pattern = "MiniPickStart",
-	group = grp,
-	callback = function()
-		require("smear_cursor").enabled = false
-	end,
-})
-vim.api.nvim_create_autocmd("User", {
-	pattern = "MiniPickStop",
-	group = grp,
-	callback = function()
-		require("smear_cursor").enabled = true
-	end,
-})
-
 -- ── Files picker: mini.visits frecency on top, then all project files ────────
 local function pick_files(opts)
 	opts = opts or {}
 	local cwd = (opts.source and opts.source.cwd) or vim.uv.cwd()
 
 	-- 1. Get visited paths ranked by mini.visits (recency × frequency)
-	local visited_abs = (pcall(require, "mini.visits") and MiniVisits ~= nil)
-			and MiniVisits.list_paths(cwd)
-		or {}
+	local ok, visits = pcall(require, "mini.visits")
+	local visited_abs = (ok and visits ~= nil) and visits.list_paths(cwd) or {}
 
-	-- Normalize absolute → relative paths for display + dedup key
+	-- Normalize absolute → relative paths for display + dedup key (prune deleted files)
 	local seen = {}
 	local items = {}
 	for _, abs in ipairs(visited_abs) do
-		local rel = vim.fn.fnamemodify(abs, ":~:.")
-		if not seen[rel] then
-			seen[rel] = true
-			table.insert(items, rel)
+		if vim.fn.filereadable(abs) == 1 then -- skip deleted/inaccessible files
+			local rel = vim.fn.fnamemodify(abs, ":~:.")
+			if not seen[rel] then
+				seen[rel] = true
+				table.insert(items, rel)
+			end
 		end
 	end
 
@@ -82,6 +66,10 @@ local function pick_files(opts)
 		local out = vim.fn.systemlist(
 			"fd --type=f --hidden --exclude=.git --color=never . " .. vim.fn.shellescape(cwd)
 		)
+		if vim.v.shell_error ~= 0 then
+			vim.notify("fd error (code " .. vim.v.shell_error .. "): falling back", vim.log.levels.WARN)
+			return MiniPick.builtin.files(nil, opts)
+		end
 		for _, line in ipairs(out) do
 			if line ~= "" then
 				table.insert(all_files, vim.fn.fnamemodify(line, ":~:."))
@@ -91,6 +79,10 @@ local function pick_files(opts)
 		local out = vim.fn.systemlist(
 			"rg --files --hidden --glob=!.git --color=never " .. vim.fn.shellescape(cwd)
 		)
+		if vim.v.shell_error ~= 0 then
+			vim.notify("rg error (code " .. vim.v.shell_error .. "): falling back", vim.log.levels.WARN)
+			return MiniPick.builtin.files(nil, opts)
+		end
 		for _, line in ipairs(out) do
 			if line ~= "" then
 				table.insert(all_files, vim.fn.fnamemodify(line, ":~:."))

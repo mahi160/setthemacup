@@ -27,7 +27,7 @@
     "clearOnShrink": false,
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "quietStartup": true,
   "collapseChangelog": true,
   "enableInstallTelemetry": false,
@@ -40,7 +40,7 @@
   "warnings": {
     "anthropicExtraUsage": false
   },
-  "theme": "gruvbox-material",
+  "theme": "kanagawa-wave",
   "packages": [
     "npm:@plannotator/pi-extension",
     "npm:pi-web-access"

@@ -34,7 +34,8 @@ clue.setup({
 		{ mode = "n", keys = "<leader>tn", desc = "new tab" },
 		{ mode = "n", keys = "<leader>tc", desc = "close tab" },
 		{ mode = "n", keys = "<leader>to", desc = "only this tab" },
-		{ mode = "n", keys = "<leader>x", desc = "+quickfix" },
+		{ mode = "n", keys = "<leader>x", desc = "+quickfix/trouble" },
+		{ mode = "n", keys = "<leader>n", desc = "+npm/packages" },
 		{ mode = "n", keys = "<leader>?", desc = "cheatsheet" },
 	},
 })
