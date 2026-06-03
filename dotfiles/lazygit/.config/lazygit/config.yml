@@ -1,0 +1,9 @@
+gui:
+  nerdFontsVersion: "3"
+  border: rounded
+  expandFocusedSidePanel: true
+git:
+  pagers:
+    - colorArg: always
+      pager: >-
+        delta --paging=never --line-numbers --syntax-theme=base16 --hunk-header-style=omit --file-style="bold #dca561" --file-decoration-style=none --minus-style="syntax #43242b" --plus-style="syntax #223249" --minus-emph-style="syntax #672228" --plus-emph-style="syntax #2d4f67" --line-numbers-minus-style="#c34043" --line-numbers-plus-style="#76946a" --line-numbers-zero-style="#727169" --line-numbers-left-format="{nm:>4} " --line-numbers-right-format="{np:>4}│"
