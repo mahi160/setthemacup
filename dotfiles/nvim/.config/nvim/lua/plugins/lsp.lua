@@ -7,6 +7,7 @@ return {
       },
       servers = {
         cssls = { settings = { css = { lint = { unknownAtRules = "ignore" } } } },
+        css_variables = {},
       },
     },
   },

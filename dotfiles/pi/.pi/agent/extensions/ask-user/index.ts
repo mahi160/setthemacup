@@ -77,6 +77,8 @@ function tryRecordQna(
   }
 }
 
+const FREE_TEXT = "✏  Write my own…";
+
 // ── Overlay runner ─────────────────────────────────────────────────────────────
 
 // Convert literal backslash escapes (\n, \t) that LLMs sometimes emit
@@ -86,6 +88,41 @@ function unescape(s: string): string {
     .replace(/\\r\\n/g, "\n")
     .replace(/\\n/g, "\n")
     .replace(/\\t/g, "\t");
+}
+
+async function runTextInput(
+  uiCtx: ExtensionContext,
+  question: string,
+): Promise<string | null> {
+  let buffer = "";
+  return uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => ({
+    render: (w: number) => {
+      const c = new Container();
+      c.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+      c.addChild(new Text(theme.fg("accent", theme.bold(question)), 1, 0));
+      c.addChild(new Spacer(1));
+      c.addChild(new Text(truncateToWidth(`  ${buffer}▌`, w), 1, 0));
+      c.addChild(new Spacer(1));
+      c.addChild(new Text(theme.fg("dim", "enter confirm • esc cancel"), 1, 0));
+      c.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+      c.addChild(new Spacer(1));
+      return c.render(w);
+    },
+    invalidate: () => {},
+    handleInput: (data) => {
+      if (matchesKey(data, Key.enter)) {
+        done(buffer.trim() || null);
+      } else if (matchesKey(data, Key.escape)) {
+        done(null);
+      } else if (matchesKey(data, Key.backspace) || data === "\x7f" || data === "\x08") {
+        buffer = buffer.slice(0, -1);
+        tui.requestRender();
+      } else if (data.length >= 1 && data >= " ") {
+        buffer += data;
+        tui.requestRender();
+      }
+    },
+  }));
 }
 
 async function runOverlay(
@@ -99,8 +136,9 @@ async function runOverlay(
 ): Promise<string> {
   const params = { ...rawParams, question: unescape(rawParams.question) };
   if (params.multiSelect && params.choices?.length) {
-    const component = new MultiSelectComponent(params.choices);
-    const result = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
+    const itemsWithFree = [...params.choices, FREE_TEXT];
+    const component = new MultiSelectComponent(itemsWithFree);
+    const rawResult = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
       const container = new Container();
       container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
       container.addChild(new Text(theme.fg("accent", theme.bold(params.question)), 1, 0));
@@ -132,12 +170,23 @@ async function runOverlay(
         },
       };
     });
-    return result ?? params.default ?? "";
+    if (rawResult === null) return params.default ?? "";
+    const selected = rawResult.split(",");
+    const hasFree = selected.includes(FREE_TEXT);
+    let items = selected.filter((s) => s !== FREE_TEXT);
+    if (hasFree) {
+      const custom = await runTextInput(uiCtx, params.question);
+      if (custom) items.push(custom);
+    }
+    return items.join(",") || (params.default ?? "");
   }
 
   if (params.choices?.length) {
-    const result = await uiCtx.ui.select(params.question, params.choices);
-    return result ?? params.default ?? params.choices[0] ?? "";
+    const choicesWithFree = [...params.choices, FREE_TEXT];
+    const result = await uiCtx.ui.select(params.question, choicesWithFree);
+    if (result === null) return params.default ?? params.choices[0] ?? "";
+    if (result === FREE_TEXT) return (await runTextInput(uiCtx, params.question)) ?? params.default ?? "";
+    return result;
   }
 
   const ok = await uiCtx.ui.confirm("Question", params.question);
