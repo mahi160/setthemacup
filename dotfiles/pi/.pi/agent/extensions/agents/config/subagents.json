@@ -1,7 +1,7 @@
 {
   "models": [
-    { "provider": "google", "id": "gemini-flash-lite-latest" },
-    { "provider": "anthropic", "id": "claude-haiku-4-5" }
+    { "provider": "anthropic", "id": "claude-haiku-4-5" },
+    { "provider": "google", "id": "gemini-flash-lite-latest" }
   ],
   "agents": [
     {
