@@ -1,3 +1,5 @@
+require("colorpeek").setup()
+
 -- relative number toggle
 vim.api.nvim_create_autocmd("InsertEnter", {
   group = vim.api.nvim_create_augroup("number_insert", { clear = true }),
