@@ -43,6 +43,8 @@ confirm-close-surface = false
 shell-integration = detect
 shell-integration-features = cursor,sudo,title
 auto-update = check
+notify-on-command-finish = unfocused
+notify-on-command-finish-action = no-bell,notify
 
 cursor-style = block
 cursor-style-blink = true
