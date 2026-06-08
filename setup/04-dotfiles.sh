@@ -52,6 +52,13 @@ set_dotfiles() {
       fi
     fi
 
+    # Generate pi agent notification icon (π on dark bg → ~/.local/share/pi/notify-icon.png)
+    local icon_script="$SETUP_DIR/scripts/pi-notify-icon.sh"
+    if [[ -f "$icon_script" && ! -f "$HOME/.local/share/pi/notify-icon.png" ]]; then
+      info "Generating pi notification icon..."
+      bash "$icon_script" && success "Pi notification icon ready." || warn "Pi icon generation failed — run scripts/pi-notify-icon.sh manually."
+    fi
+
     log "Dotfiles setup complete"
   )
 }

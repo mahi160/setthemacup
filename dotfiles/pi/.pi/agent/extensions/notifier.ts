@@ -29,9 +29,9 @@ import { notifyMacOS } from "./shared/macOS-notify.js";
 import { basename } from "node:path";
 
 const MIN_DURATION_MS = 3_000;
-const SUCCESS_SOUND = "Glass";    // Notification on agent success
+const SUCCESS_SOUND = "Hero";     // Notification on agent success
 const ERROR_SOUND = "Basso";      // Notification on agent error
-const ASK_SOUND = "Pop";          // Notification on ask_user
+const ASK_SOUND = "Ping";         // Notification on ask_user
 
 /** Formats milliseconds as "8.3s" or "2m 4s". */
 function fmtDuration(ms: number): string {

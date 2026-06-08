@@ -127,7 +127,8 @@
       "desc": "Fish-like syntax highlighting for zsh"
     },
     { "name": "zoxide", "desc": "Smarter cd — replaces OMZ z plugin" },
-    { "name": "nowplaying-cli", "desc": "Now Playing info from macOS MediaRemote — used in tmux status bar" }
+    { "name": "nowplaying-cli", "desc": "Now Playing info from macOS MediaRemote — used in tmux status bar" },
+    { "name": "terminal-notifier", "desc": "macOS notification CLI — used by pi agent notifier extension" }
   ],
 
   "casks": [
