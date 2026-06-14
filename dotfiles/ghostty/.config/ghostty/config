@@ -28,7 +28,7 @@ window-padding-balance = true
 background-blur = 240
 background-opacity = 0.95
 
-background-image = ~/Pictures/pokemon_bg/648.png
+background-image = ~/Pictures/pokemon_bg/281.png
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right

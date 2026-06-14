@@ -119,3 +119,5 @@ eval "$(atuin init zsh --disable-up-arrow)"  # Ctrl+R → fuzzy history (replace
 
 # pi — extended Anthropic prompt cache (1h instead of 5min, big cost/speed win)
 export PI_CACHE_RETENTION=long
+
+export PATH="$HOME/develop/flutter/bin:$PATH"

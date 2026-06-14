@@ -4,4 +4,4 @@
    - **Yesterday**: what was done (from commits)
    - **Today**: what's next (infer from WIP or last commit)
    - **Blockers**: none unless context suggests otherwise
-4. Keep short — 3-5 bullets max.
+4. Keep it short — 3-5 bullets max.

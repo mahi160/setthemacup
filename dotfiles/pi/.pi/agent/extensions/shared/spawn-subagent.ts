@@ -10,6 +10,8 @@
  */
 
 import { spawn } from "node:child_process";
+import { join } from "node:path";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
   visibleWidth,
   truncateToWidth,
@@ -161,6 +163,7 @@ export function parseJsonEvents(
   line: string,
   state: WidgetState,
   textAcc: { value: string },
+  errAcc?: { value: string },
 ): void {
   let event: {
     type: string;
@@ -168,6 +171,7 @@ export function parseJsonEvents(
     args?: Record<string, unknown>;
     assistantMessageEvent?: { type: string; delta?: string };
     attempt?: number;
+    message?: { stopReason?: string; errorMessage?: string };
   };
   try {
     event = JSON.parse(line);
@@ -204,6 +208,26 @@ export function parseJsonEvents(
     case "auto_retry_end":
       state.retrying = false;
       break;
+    case "message_end": {
+      const msg = event.message;
+      if (msg?.stopReason === "error" && msg.errorMessage && errAcc) {
+        // Extract human-readable message from "400 {\"error\":{\"message\":\"...\"}}"
+        try {
+          const jsonStart = msg.errorMessage.indexOf("{");
+          if (jsonStart !== -1) {
+            const parsed = JSON.parse(msg.errorMessage.slice(jsonStart)) as {
+              error?: { message?: string };
+            };
+            errAcc.value = parsed.error?.message ?? msg.errorMessage;
+          } else {
+            errAcc.value = msg.errorMessage;
+          }
+        } catch {
+          errAcc.value = msg.errorMessage;
+        }
+      }
+      break;
+    }
   }
 }
 
@@ -221,15 +245,20 @@ export function spawnCleanSession(
   widgetState: WidgetState,
   onUpdate: () => void,
   tools?: string[],
-): Promise<{ exitCode: number | null; fullText: string }> {
+): Promise<{ exitCode: number | null; fullText: string; errorMessage?: string }> {
   return new Promise((resolve) => {
     const textAcc = { value: "" };
+    const errAcc = { value: "" };
     let lineBuffer = "";
 
     const args = [
       "--model",
       modelFlag,
       "--no-session",
+      "--no-extensions",
+      // Re-inject only the OAuth shim so subagents authenticate the same way as the main session.
+      // Without it, pi falls back to raw API key auth which may have different quota limits.
+      "-e", join(getAgentDir(), "extensions", "claude", "index.ts"),
       "--no-context-files",
       "--no-skills",
       "--thinking",
@@ -258,15 +287,19 @@ export function spawnCleanSession(
       lineBuffer = lines.pop() ?? "";
       for (const line of lines) {
         if (line.trim()) {
-          parseJsonEvents(line, widgetState, textAcc);
+          parseJsonEvents(line, widgetState, textAcc, errAcc);
           onUpdate();
         }
       }
     });
 
     proc.on("close", (code) => {
-      if (lineBuffer.trim()) parseJsonEvents(lineBuffer, widgetState, textAcc);
-      resolve({ exitCode: code, fullText: textAcc.value.trim() });
+      if (lineBuffer.trim()) parseJsonEvents(lineBuffer, widgetState, textAcc, errAcc);
+      resolve({
+        exitCode: code,
+        fullText: textAcc.value.trim(),
+        errorMessage: errAcc.value || undefined,
+      });
     });
 
     signal.addEventListener("abort", () => proc.kill("SIGTERM"), {

@@ -1,0 +1,128 @@
+{
+  "agents": [
+    {
+      "name": "commit",
+      "label": "Commit",
+      "icon": "󰜘",
+      "type": "user",
+      "output": "notify",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "off",
+      "tools": ["bash", "read"],
+      "file": "prompts/commit.md",
+      "description": "Generate and apply a conventional commit"
+    },
+    {
+      "name": "pr",
+      "label": "Pull Request",
+      "icon": "󰘗",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "low",
+      "tools": ["bash", "read"],
+      "file": "prompts/pr.md",
+      "description": "Create a pull request"
+    },
+    {
+      "name": "standup",
+      "label": "Standup",
+      "icon": "󰟌",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "off",
+      "tools": ["bash"],
+      "file": "prompts/standup.md",
+      "description": "Generate daily standup from git activity"
+    },
+    {
+      "name": "review",
+      "label": "Code Review",
+      "icon": "󰍏",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "medium",
+      "tools": ["bash", "read", "grep"],
+      "file": "prompts/review.md",
+      "description": "Two-axis review (Standards + Spec) of changes since a fixed point"
+    },
+    {
+      "name": "test",
+      "label": "Test Writer",
+      "icon": "󰓎",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "low",
+      "tools": ["read", "bash", "write"],
+      "file": "prompts/test.md",
+      "description": "Write tests for a file or function"
+    },
+    {
+      "name": "scout",
+      "label": "Repo Scout",
+      "icon": "",
+      "type": "ai",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "low",
+      "tools": ["read", "grep", "find", "ls"],
+      "file": "prompts/scout.md",
+      "description": "Map repo structure, find symbols, and trace code flow",
+      "guidelines": [
+        "Use scout automatically when you need to inspect unfamiliar code, map relevant files, or gather repo context before editing.",
+        "Use scout instead of spending expensive main-model turns on broad file discovery.",
+        "Do not use scout for trivial single-file reads or when the relevant files are already known."
+      ]
+    },
+    {
+      "name": "diff_review",
+      "label": "Diff Review",
+      "icon": "",
+      "type": "ai",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "low",
+      "tools": ["read", "grep", "find", "ls"],
+      "file": "prompts/diff-review.md",
+      "description": "Review changed code for correctness bugs and regressions",
+      "guidelines": [
+        "Use diff_review automatically after non-trivial edits or when reviewing staged/branch changes.",
+        "Use diff_review for correctness, regression, edge-case, and maintainability review; avoid style-only comments.",
+        "Do not use diff_review for tiny one-line edits unless high risk."
+      ]
+    },
+    {
+      "name": "tests",
+      "label": "Test Strategist",
+      "icon": "",
+      "type": "ai",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "low",
+      "tools": ["read", "grep", "find", "ls"],
+      "file": "prompts/tests.md",
+      "description": "Find missing tests and high-risk test cases",
+      "guidelines": [
+        "Use tests automatically after adding or changing behavior to identify missing high-value tests.",
+        "Use tests before writing tests when framework, fixtures, or existing test style are unknown.",
+        "Do not use tests for documentation-only changes."
+      ]
+    },
+    {
+      "name": "security",
+      "label": "Security Review",
+      "icon": "",
+      "type": "ai",
+      "model": "anthropic/claude-haiku-4-5",
+      "thinking": "medium",
+      "tools": ["read", "grep", "find", "ls"],
+      "file": "prompts/security.md",
+      "description": "Check code for exploitable security issues",
+      "guidelines": [
+        "Use security automatically for auth, permissions, input parsing, file/network/process execution, secrets, payments, or data exposure changes.",
+        "Use security to trace sources to sinks and report exploitable issues only.",
+        "Do not use security for purely visual or copy changes."
+      ]
+    }
+  ]
+}
