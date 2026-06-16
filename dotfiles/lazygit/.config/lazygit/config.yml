@@ -2,6 +2,26 @@ gui:
   nerdFontsVersion: "3"
   border: rounded
   expandFocusedSidePanel: true
+  theme:
+    activeBorderColor:
+      - '#7e9cd8'  # lotusBlue4
+      - bold
+    inactiveBorderColor:
+      - '#727169'  # lotusGray3
+    optionsTextColor:
+      - '#7e9cd8'  # lotusBlue4
+    selectedLineBgColor:
+      - '#2d4f67'  # lotusBlue1
+    selectedRangeBgColor:
+      - '#2d4f67'  # lotusBlue1
+    cherryPickedCommitBgColor:
+      - '#223249'  # lotusBlue2
+    cherryPickedCommitFgColor:
+      - '#7e9cd8'  # lotusBlue4
+    unstagedChangesColor:
+      - '#e46876'  # lotusRed
+    defaultFgColor:
+      - '#dcd7ba'  # lotusInk1
 git:
   pagers:
     - colorArg: always
