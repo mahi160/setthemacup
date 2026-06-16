@@ -9,7 +9,7 @@ vim.g.gruvbox_material_background = "hard"
 vim.g.gruvbox_material_transparent_background = 2
 
 require("kanagawa").setup({
-	theme = "dragon",
+	theme = "wave",
 	undercurl = true,
 	commentStyle = { italic = true },
 	functionStyle = { italic = true },
@@ -26,4 +26,4 @@ require("kanagawa").setup({
 	},
 })
 
-vim.cmd.colorscheme("gruvbox-material")
+vim.cmd.colorscheme("kanagawa-wave")
