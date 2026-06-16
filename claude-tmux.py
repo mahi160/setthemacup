@@ -14,9 +14,19 @@ import urllib.request
 
 SERVICE = "claude-usage-widget"
 
-COLOR_GREEN  = "#98BB6C"  # springGreen
-COLOR_YELLOW = "#E6C384"  # carpYellow
-COLOR_RED    = "#E82424"  # samuraiRed
+import os
+
+_VARIANT = open(os.path.expanduser("~/.config/kanagawa-variant")).read().strip() \
+    if os.path.exists(os.path.expanduser("~/.config/kanagawa-variant")) else "wave"
+
+if _VARIANT == "lotus":
+    COLOR_GREEN  = "#6f894e"  # lotusGreen
+    COLOR_YELLOW = "#cc6d00"  # lotusOrange
+    COLOR_RED    = "#c84053"  # lotusRed
+else:
+    COLOR_GREEN  = "#98BB6C"  # springGreen
+    COLOR_YELLOW = "#E6C384"  # carpYellow
+    COLOR_RED    = "#E82424"  # samuraiRed
 
 
 def keychain_get(account: str) -> str:

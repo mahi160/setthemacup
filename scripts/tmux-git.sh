@@ -10,12 +10,22 @@
 #   ⎇ main ↑2  1.2M
 #   ⎇ main ~5 ?2  892K
 
-# Kanagawa wave colours — tmux hex style syntax
-B='#[fg=#7e9cd8]'  # crystalBlue  — branch
-G='#[fg=#98bb6c]'  # springGreen  — ahead ↑
-Y='#[fg=#e6c384]'  # carpYellow   — modified ~
-R='#[fg=#e46876]'  # waveRed      — untracked ?
-D='#[fg=#727169]'  # fujiGray     — size
+# Theme-aware colours — reads ~/.config/kanagawa-variant
+VARIANT=$(cat "$HOME/.config/kanagawa-variant" 2>/dev/null || echo "wave")
+
+if [[ "$VARIANT" == "lotus" ]]; then
+  B='#[fg=#4d699b]'  # lotusBlue4   — branch
+  G='#[fg=#6f894e]'  # lotusGreen   — ahead ↑
+  Y='#[fg=#cc6d00]'  # lotusOrange  — modified ~
+  R='#[fg=#c84053]'  # lotusRed     — untracked ?
+  D='#[fg=#716e61]'  # lotusGray2   — size
+else
+  B='#[fg=#7e9cd8]'  # crystalBlue  — branch
+  G='#[fg=#98bb6c]'  # springGreen  — ahead ↑
+  Y='#[fg=#e6c384]'  # carpYellow   — modified ~
+  R='#[fg=#e46876]'  # waveRed      — untracked ?
+  D='#[fg=#727169]'  # fujiGray     — size
+fi
 X='#[fg=default]'  # reset
 
 path="${1:-.}"
