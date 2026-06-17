@@ -29,12 +29,12 @@ fi
 X='#[fg=default]'  # reset
 
 path="${1:-.}"
-branch=$(git -C "$path" branch --show-current 2>/dev/null)
+branch=$(timeout 2 git -C "$path" branch --show-current 2>/dev/null)
 [ -z "$branch" ] && exit 0
 
-ahead=$(git -C "$path" rev-list --count "@{u}..HEAD" 2>/dev/null)
+ahead=$(timeout 2 git -C "$path" rev-list --count "@{u}..HEAD" 2>/dev/null)
 
-gitstatus=$(git -C "$path" status --porcelain 2>/dev/null)
+gitstatus=$(timeout 2 git -C "$path" status --porcelain 2>/dev/null)
 modified=$(printf '%s\n' "$gitstatus" | grep -v '^??' | grep -c '.' 2>/dev/null || echo 0)
 untracked=$(printf '%s\n' "$gitstatus" | grep -c '^??' 2>/dev/null || echo 0)
 
