@@ -1,15 +1,16 @@
 {
-  "lastChangelogVersion": "0.79.6",
+  "lastChangelogVersion": "0.80.3",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-6",
-  "defaultThinkingLevel": "medium",
+  "defaultModel": "claude-haiku-4-5",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
-    "anthropic/claude-sonnet-4-6",
     "anthropic/claude-haiku-4-5",
-    "anthropic/claude-opus-4-8"
+    "anthropic/claude-opus-4-8",
+    "anthropic/claude-sonnet-5"
   ],
   "compaction": {
     "enabled": true,
+    "reserveTokens": 40000,
     "keepRecentTokens": 30000
   },
   "retry": {
@@ -46,6 +47,6 @@
     "npm:pi-web-access"
   ],
   "images": {
-    "blockImages": true
+    "blockImages": false
   }
 }

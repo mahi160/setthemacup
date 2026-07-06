@@ -43,8 +43,14 @@ function toolIcon(name: string): string {
   );
 }
 
+interface TuiHandle { requestRender(): void }
+interface FooterData {
+  getGitBranch(): string | null;
+  onBranchChange(cb: () => void): () => void;
+}
+
 export function createTokenWidget(state: FooterState) {
-  return (tui: any, theme: Theme) => {
+  return (tui: TuiHandle, theme: Theme) => {
     state.widgetTokenTui = tui;
     return {
       render(_width: number): string[] {
@@ -70,7 +76,7 @@ export function createTopWidget(
   pi: ExtensionAPI,
   state: FooterState,
 ) {
-  return (tui: any, theme: Theme) => {
+  return (tui: TuiHandle, theme: Theme) => {
     state.widgetTui = tui;
     return {
       render(width: number): string[] {
@@ -104,7 +110,7 @@ export function createTopWidget(
 }
 
 export function createFooter(ctx: ExtensionContext, state: FooterState) {
-  return (tui: any, theme: Theme, footerData: any) => {
+  return (tui: TuiHandle, theme: Theme, footerData: FooterData) => {
     state.footerTui = tui;
 
     state.footerDispose?.();

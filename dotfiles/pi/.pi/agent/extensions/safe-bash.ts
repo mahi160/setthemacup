@@ -297,25 +297,9 @@ export default function (pi: ExtensionAPI): void {
 
       // Check for delete operations
       if (hasDeleteOp(command)) {
-        const { paths: rawPaths, hasDynamic } = extractDeletePaths(command);
+        const { paths: rawPaths } = extractDeletePaths(command);
 
-        // Check if any extracted path is an absolute path outside CWD
-        // If so, hard block (regardless of session approval)
-        for (const path of rawPaths) {
-          if (path.startsWith("/") && isOutsideCwd(path, ctx.cwd)) {
-            if (ctx.hasUI) {
-              ctx.ui.notify(
-                `Blocked: delete outside CWD - ${path}`,
-                "warning",
-              );
-            }
-            return { block: true, reason: "Delete outside CWD blocked" };
-          }
-        }
-
-        // At this point, no extracted absolute path was outside CWD.
-        // But relative paths like ../../etc/file could still escape.
-        // Double-check by normalizing all paths.
+        // Block if any extracted path (absolute or relative) escapes CWD.
         for (const path of rawPaths) {
           if (isOutsideCwd(path, ctx.cwd)) {
             if (ctx.hasUI) {

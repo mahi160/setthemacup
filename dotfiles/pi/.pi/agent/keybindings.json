@@ -1,5 +1,6 @@
 {
-  "tui.select.down": ["down", "ctrl+j"],
-  "tui.select.up": ["up", "ctrl+k"],
-  "app.interrupt": ["ctrl+q"]
+  "tui.select.down": ["down", "ctrl+n"],
+  "tui.select.up": ["up", "ctrl+p"],
+  "app.interrupt": ["ctrl+q"],
+  "app.model.cycleForward": ["ctrl+l"]
 }

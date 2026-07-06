@@ -6,8 +6,14 @@ return {
         enabled = false,
       },
       servers = {
-        cssls = { settings = { css = { lint = { unknownAtRules = "ignore" } } } },
-        css_variables = {},
+        ["stylelint-language-server"] = {
+          settings = {
+            stylelint = {
+              autoFixOnSave = false,
+              autoFixOnFormat = false,
+            },
+          },
+        },
       },
     },
   },

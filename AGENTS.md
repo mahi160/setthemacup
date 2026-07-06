@@ -12,7 +12,7 @@ Full macOS dev environment. One command from a fresh machine:
 curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash
 ```
 
-`bootstrap.sh` → clones repo to `~/.setup` → runs `setup/main.sh` (15 idempotent steps).
+`bootstrap.sh` → clones repo to `~/.setup` → runs `setup/main.sh` (16 idempotent steps).
 
 ---
 
@@ -24,33 +24,26 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 ├── AGENTS.md                 # ← you are here
 ├── README.md                 # human-facing docs
 ├── scripts/
-│   ├── main.sh               # entry point — sources lib + all 15 steps
-│   ├── apps.json             # all brew formulae, casks, mas, dmg, smb mounts
-│   ├── compile-nowplaying.sh # compile Swift → ~/.local/bin/nowplaying-mediaremote
-│   ├── tmux-battery.sh       # battery icon+% → installed to ~/.local/bin/tmux-battery
-│   ├── tmux-cpu.sh           # cpu icon+% → installed to ~/.local/bin/tmux-cpu
-│   ├── dev.sh                # tmux dev session launcher
-│   ├── note.sh               # quick note/learn capture (tmux popup M-n / M-l)
-│   ├── pokemon-bg.sh         # cycle Ghostty background + update ghostty config
-│   ├── crontab-setup.sh      # install weekly cron jobs (idempotent)
-│   └── pi-prune.sh           # delete pi sessions >30 days (run by cron)
+│   ├── main.sh               # → setup/main.sh (see below)
+│   ├── apps.json             # → setup/apps.json
+│   └── *.sh, *.swift         # Helper scripts: compile-nowplaying, crontab-setup, dev, note, pokemon-bg, pi-prune, pi-notify-icon, set-display-resolution, nowplaying_mediaremote, tmux-battery/cpu/git/nowplaying, pi-qna, quick-note, quick-learn
 └── dotfiles/                 # stowed by GNU stow into $HOME
-    ├── ghostty/              → ~/.config/ghostty/config
-    ├── tmux/                 → ~/.config/tmux/tmux.conf
-    ├── nvim/
-    │   ├── .config/nvim/     → ~/.config/nvim/          (LazyVim, alias: v)
-    │   └── .config/nvim.12/  → ~/.config/nvim.12/       (vim.pack + mini.nvim, alias: vm)
-    ├── zsh/                  → ~/.zshrc + ~/.zshenv
-    ├── starship/             → ~/.config/starship.toml
     ├── fastfetch/            → ~/.config/fastfetch/config.jsonc
-    ├── pi/                   → ~/.pi/agent/ (extensions, themes, keybindings stowed;
-│                           settings.json COPIED not symlinked — pi owns it at runtime)
-    └── stow/                 → ~/.stow-global-ignore
+    ├── ghostty/              → ~/.config/ghostty/config
+    ├── git/                  → ~/.gitconfig + ~/.gitignore_global
+    ├── lazygit/              → ~/.config/lazygit/config.yml
+    ├── nvim/                 → ~/.config/nvim/ + ~/.config/nvim.12/
+    ├── pi/                   → ~/.pi/agent/ (full directory symlinked; extensions, settings, keybindings, etc.)
+    ├── starship/             → ~/.config/starship.toml
+    ├── stow/                 → ~/.stow-global-ignore
+    ├── tmux/                 → ~/.config/tmux/tmux.conf
+    ├── yazi/                 → ~/.config/yazi/{yazi.toml,keymap.toml}
+    └── zsh/                  → ~/.zshrc + ~/.zshenv
 ```
 
 ---
 
-## setup/ — the 15 steps
+## setup/ — the 16 steps
 
 Entry point: `setup/main.sh`. Each step is a standalone file `setup/NN-name.sh` that sources `setup/lib.sh`.
 Single step: `bash setup/main.sh apps` or `bash setup/02-apps.sh` directly.
@@ -60,7 +53,7 @@ Single step: `bash setup/main.sh apps` or `bash setup/02-apps.sh` directly.
 | 1 | `set_homebrew` | install brew, bootstrap PATH (NOT in subshell — exports to outer shell) |
 | 2 | `set_apps` | install all brew formulae + casks from `apps.json` |
 | 3 | `set_store_apps` | mas App Store + DMG apps (Raycast, FortiClient) |
-| 4 | `set_dotfiles` | stow all dotfile packages, fetch starter pokemon PNG |
+| 4 | `set_dotfiles` | stow all dotfile packages (11 packages), fetch starter pokemon |
 | 5 | `set_git` | global git identity (personal: mahi160) |
 | 6 | `set_node` | fnm → Node LTS → pnpm (NOT in subshell — exports to outer shell) |
 | 7 | `set_nvim` | LazyVim headless sync + nvim.12 headless bootstrap |
@@ -69,9 +62,10 @@ Single step: `bash setup/main.sh apps` or `bash setup/02-apps.sh` directly.
 | 10 | `set_ssh` | generate ed25519 keys (personal + work), print pubkeys |
 | 11 | `set_mac_cleanup` | clear dock, disable Siri/Game Center/analytics |
 | 12 | `set_mac_defaults` | keyboard/finder/trackpad/spaces/screenshots via `defaults write` |
-| 13 | `set_network_shares` | LaunchAgent plist per SMB entry in apps.json |
-| 14 | `set_tmux_helpers` | compile nowplaying Swift binary + cp tmux-battery/cpu to ~/.local/bin/ |
+| 13 | `set_network` | LaunchAgent plist per SMB entry in apps.json |
+| 14 | `set_nowplaying` | compile Swift binary + install 7 tmux helpers to ~/.local/bin/ |
 | 15 | `set_crontab` | weekly pi-prune + fnm-clean cron entries |
+| 16 | `set_display` | set display scaling to "More Space" |
 
 **Adding a new step:** create `setup/NN-name.sh` defining `set_name()` (follow existing pattern). Add `name` to the steps list in `setup/main.sh`. If critical, add to `CRITICAL_STEPS`.
 
@@ -144,8 +138,8 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 - Terminal: Ghostty 1.3.1, Metal renderer (macOS)
 - Font: `JetBrainsMono Nerd Font` (installed via `font-jetbrains-mono-nerd-font` cask)
-- Background image path: `~/Pictures/pokemon_bg/218.png` — managed by `scripts/pokemon-bg.sh`
-- `background-blur = 20` (single key — not `background-blur = true` + separate radius)
+- Background image path: `~/Pictures/pokemon_bg/current.png` (symlinked to random starter; managed by `scripts/pokemon-bg.sh`)
+- `background-blur = 240` (single key — not `background-blur = true` + separate radius)
 - `macos-option-as-alt = true` enables Alt key for tmux/zsh bindings
 - `confirm-close-surface = false` — no close prompt
 
@@ -200,6 +194,21 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 ---
 
+## git, lazygit, yazi
+
+### git
+- Config: `~/.gitconfig` (stowed from `dotfiles/git/`)
+- Global ignore: `~/.gitignore_global` (stowed from `dotfiles/git/`)
+
+### lazygit
+- Config: `~/.config/lazygit/config.yml` (stowed from dotfiles)
+- Theme: kanagawa-lotus
+
+### yazi
+- Configs: `~/.config/yazi/{yazi.toml,keymap.toml}` (stowed from dotfiles)
+
+---
+
 ## key conventions
 
 | Thing | Convention |
@@ -210,6 +219,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 | Regex in stow | Perl regex — `.*\.ext$` not `*.ext` |
 | Brew tap formulas | Full path `owner/tap/name` works in apps.json |
 | New binaries | Install to `~/.local/bin/` — already in PATH via `.zshenv` |
+| Paths in config | Use `~/.` not `/Users/mahi/` |
 | Scripts | `set -euo pipefail`, derive paths from `$0` not hardcoded |
 
 ---

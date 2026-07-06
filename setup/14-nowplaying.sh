@@ -35,7 +35,7 @@ set_tmux_helpers() {
   fi
 
   # ── tmux-battery + tmux-cpu shell scripts ─────────────────────────────────
-  for script in tmux-battery tmux-cpu tmux-nowplaying tmux-git; do
+  for script in tmux-battery tmux-cpu tmux-nowplaying tmux-git pi-qna quick-note quick-learn; do
     local src="$SCRIPTS_DIR/${script}.sh"
     local dst="$HOME/.local/bin/${script}"
     if [[ -f "$src" ]]; then

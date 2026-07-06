@@ -251,14 +251,15 @@ function display(
   notifyMacOS(`${agent.icon}  /${agent.name}`, agent.label, preview.slice(0, 100) || "Done", "Hero");
 }
 
-// ── Build prompt for AI tools (replaces {task}/{paths}/{maxFiles}) ─────────────
+// ── Prompt building ───────────────────────────────────────────────────────────
 
-function buildAiPrompt(
+function buildAgentPrompt(
   agent: LoadedAgent,
   task: string,
   paths?: string[],
   maxFiles?: number,
 ): string {
+  if (agent.type !== "ai") return `${agent.prompt}\n\nAdditional task: ${task}`;
   return agent.prompt
     .replaceAll("{task}", task)
     .replaceAll("{paths}", paths?.length ? paths.join(", ") : "none provided")
@@ -287,14 +288,24 @@ export default function (pi: ExtensionAPI): void {
     };
   });
 
-  // Concurrency guard for user commands
+  // Concurrency guard — only one user-triggered command at a time
   let activeCommand = "";
-  pi.on("session_start", () => {
-    activeCommand = "";
-  });
-  pi.on("session_shutdown", () => {
-    activeCommand = "";
-  });
+  const resetGuard = () => { activeCommand = ""; };
+  pi.on("session_start", resetGuard);
+  pi.on("session_shutdown", resetGuard);
+
+  async function guarded(
+    name: string,
+    ctx: ExtensionCommandContext,
+    fn: () => Promise<void>,
+  ): Promise<void> {
+    if (activeCommand) {
+      ctx.ui.notify(`/${activeCommand} is already running — wait for it`, "warning");
+      return;
+    }
+    activeCommand = name;
+    try { await fn(); } finally { activeCommand = ""; }
+  }
 
   const userAgents = agents.filter((a) => a.type === "user");
   const aiAgents = agents.filter((a) => a.type === "ai");
@@ -304,24 +315,16 @@ export default function (pi: ExtensionAPI): void {
   for (const agent of userAgents) {
     pi.registerCommand(agent.name, {
       description: agent.description,
-      handler: async (_args, ctx) => {
-        if (activeCommand) {
-          ctx.ui.notify(
-            `/${activeCommand} is already running — wait for it`,
-            "warning",
-          );
-          return;
-        }
-        activeCommand = agent.name;
-        try {
-          await ctx.waitForIdle();
-          const abort = new AbortController();
-          const result = await run(agent, agent.prompt, abort.signal, ctx);
-          display(pi, agent, result, ctx);
-        } finally {
-          activeCommand = "";
-        }
-      },
+      handler: (args, ctx) => guarded(agent.name, ctx, async () => {
+        await ctx.waitForIdle();
+        const abort = new AbortController();
+        const extra = args.trim();
+        const prompt = extra
+          ? `${agent.prompt}\n\nAdditional instructions from user: ${extra}`
+          : agent.prompt;
+        const result = await run(agent, prompt, abort.signal, ctx);
+        display(pi, agent, result, ctx);
+      }),
     });
   }
 
@@ -340,26 +343,14 @@ export default function (pi: ExtensionAPI): void {
           Type.Array(Type.String(), { description: "Paths to focus on" }),
         ),
         maxFiles: Type.Optional(
-          Type.Number({
-            description: "Max files/findings to return. Default 20",
-          }),
+          Type.Number({ description: "Max files/findings to return. Default 20" }),
         ),
       }),
       async execute(_id, params, signal, _onUpdate, ctx) {
-        const prompt = buildAiPrompt(
-          agent,
-          params.task,
-          params.paths,
-          params.maxFiles,
-        );
+        const prompt = buildAgentPrompt(agent, params.task, params.paths, params.maxFiles);
         const { exitCode, text } = await run(agent, prompt, signal, ctx);
-        if (exitCode === 0) {
-          return { content: [{ type: "text", text: text || "(no output)" }] };
-        }
-        return {
-          isError: true,
-          content: [{ type: "text", text: text || `Agent exited ${exitCode}` }],
-        };
+        if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
+        return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
       },
     });
   }
@@ -397,40 +388,29 @@ export default function (pi: ExtensionAPI): void {
         return;
       }
 
-      if (activeCommand) {
-        ctx.ui.notify(
-          `/${activeCommand} is already running — wait for it`,
-          "warning",
-        );
-        return;
-      }
-      activeCommand = `sub:${name}`;
-
-      try {
+      await guarded(`sub:${name}`, ctx, async () => {
         await ctx.waitForIdle();
         const abort = new AbortController();
-        const prompt =
-          agent.type === "ai"
-            ? buildAiPrompt(agent, task)
-            : `${agent.prompt}\n\nAdditional task: ${task}`;
-        const result = await run(agent, prompt, abort.signal, ctx);
+        const result = await run(agent, buildAgentPrompt(agent, task), abort.signal, ctx);
         display(pi, agent, result, ctx);
-      } finally {
-        activeCommand = "";
-      }
+      });
     },
   });
 
   // ── custom_agent tool (LLM callable) ─────────────────────────────────────────
 
+  const userAgentRoster = userAgents
+    .map((a) => `${a.name} — ${a.description}`)
+    .join("; ");
+
   pi.registerTool({
     name: "custom_agent",
     label: "Custom Agent",
     description:
-      "Dispatch any named agent with a free-form task. Use for one-off tasks or agents not otherwise exposed as dedicated tools.",
-    promptSnippet: "Dispatch a named agent with a free-form task",
+      `Dispatch a named agent with a free-form task. Use for user-facing agents not exposed as dedicated tools. Available user agents: ${userAgentRoster}`,
+    promptSnippet: `Dispatch a named agent. User agents (only reachable here): ${userAgentRoster}`,
     parameters: Type.Object({
-      name: Type.String({ description: "Agent name (see /sub for list)" }),
+      name: Type.String({ description: `Agent name. User agents: ${userAgentRoster}` }),
       task: Type.String({ description: "Task description" }),
       paths: Type.Optional(
         Type.Array(Type.String(), { description: "Paths to focus on" }),
@@ -450,19 +430,10 @@ export default function (pi: ExtensionAPI): void {
         };
       }
 
-      const prompt =
-        agent.type === "ai"
-          ? buildAiPrompt(agent, params.task, params.paths)
-          : `${agent.prompt}\n\nAdditional task: ${params.task}`;
-
+      const prompt = buildAgentPrompt(agent, params.task, params.paths);
       const { exitCode, text } = await run(agent, prompt, signal, ctx);
-      if (exitCode === 0) {
-        return { content: [{ type: "text", text: text || "(no output)" }] };
-      }
-      return {
-        isError: true,
-        content: [{ type: "text", text: text || `Agent exited ${exitCode}` }],
-      };
+      if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
+      return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
     },
   });
 

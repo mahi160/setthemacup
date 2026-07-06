@@ -52,7 +52,7 @@ alias note="$SETTHEMACUP/scripts/note.sh"
 alias dev="$SETTHEMACUP/scripts/dev.sh"
 alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
 alias theme="$SETTHEMACUP/scripts/toggle-theme.sh"
-alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui" --cmd "pnpm i && cd ./wick-ui-lib && pnpm dev" --window "cd ./wick-ui-lib && pnpm test:ui"'
+alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui"'
 
 # ─── Dev utilities ────────────────────────────────────────────────────────────────────────────
 

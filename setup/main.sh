@@ -2,7 +2,7 @@
 # setup/main.sh — macOS setup entry point. Sources lib + all step files, runs them.
 #
 # Usage:
-#   bash setup/main.sh              # full run (all 15 steps)
+#   bash setup/main.sh              # full run (all 16 steps)
 #   bash setup/main.sh homebrew     # single step by short name
 #   bash setup/main.sh mac_defaults # underscores work too
 #

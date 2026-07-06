@@ -64,7 +64,10 @@ tmux new-session -d -s "$SESSION_NAME" -n editor
 tmux send-keys -t "$SESSION_NAME":editor 'v .' C-m
 
 # Window 2: dev
-# Layout: left 80% = pi agent | right 20% top = dev server, bottom = shell
+# Layout: left 80% = pi agent | right 20% top = dev server, bottom = shell/test
+TEST_CMD=""
+[[ "$SESSION_NAME" == "wick-ui" ]] && DEV_CMD="pnpm dev" && TEST_CMD="pnpm test:ui"
+
 tmux new-window -t "$SESSION_NAME" -n dev
 tmux send-keys -t "$SESSION_NAME":dev 'a' C-m
 sleep 0.1
@@ -72,6 +75,7 @@ tmux split-window -h -l 20% -t "$SESSION_NAME":dev
 tmux send-keys -t "$SESSION_NAME":dev.2 "$DEV_CMD" C-m
 sleep 0.1
 tmux split-window -v -t "$SESSION_NAME":dev.2
+[[ -n "$TEST_CMD" ]] && tmux send-keys -t "$SESSION_NAME":dev.3 "$TEST_CMD" C-m
 tmux select-pane -t "$SESSION_NAME":dev.3
 
 # Window 3: git

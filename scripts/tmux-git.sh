@@ -32,6 +32,9 @@ path="${1:-.}"
 branch=$(timeout 2 git -C "$path" branch --show-current 2>/dev/null)
 [ -z "$branch" ] && exit 0
 
+MAX=20
+[ ${#branch} -gt $MAX ] && branch="${branch:0:$MAX}…"
+
 ahead=$(timeout 2 git -C "$path" rev-list --count "@{u}..HEAD" 2>/dev/null)
 
 gitstatus=$(timeout 2 git -C "$path" status --porcelain 2>/dev/null)

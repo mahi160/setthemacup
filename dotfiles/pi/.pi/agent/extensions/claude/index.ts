@@ -1,7 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerMcpAliases, syncAliasActivation } from "./aliases.js";
-import { transformPayload } from "./payload.js";
-import { unaliasToolCalls } from "./payload.js";
 import { writeDebugLog } from "./debug.js";
 import {
 	CORE_TOOL_NAMES,
@@ -14,11 +12,11 @@ import { registeredMcpAliases, autoActivatedAliases, getLastManagedToolList, set
 import { loadToolAliases, extractToolAliasPairs, readConfigFile } from "./config.js";
 import { isPlainObject, lower } from "./helpers.js";
 import {
+	transformPayload,
+	unaliasToolCalls,
 	rewritePromptText,
 	rewriteSystemField,
-	remapBlockNames,
 	collectToolNames,
-	collectToolsByName,
 	filterAndRemapTools,
 	remapToolChoice,
 	remapMessageToolNames,
@@ -71,12 +69,10 @@ export const _test = {
 	COMPANIONS,
 	TOOL_TO_COMPANION,
 	autoActivatedAliases,
-	buildCaptureShim: undefined, // moved to aliases.ts, not exported
 	collectToolNames,
 	extractToolAliasPairs,
 	filterAndRemapTools,
 	getLastManagedToolList,
-	isCompanionSource: undefined, // private in aliases.ts
 	isPlainObject,
 	loadToolAliases,
 	lower,
