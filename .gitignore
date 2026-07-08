@@ -28,3 +28,4 @@ dotfiles/pi/.pi/agent/stats.db
 dotfiles/pi/.pi/agent/run-history.jsonl
 **/.pi/agent/*.log
 dotfiles/git/.gitconfig
+dotfiles/pi/.pi/agent/trust.json
