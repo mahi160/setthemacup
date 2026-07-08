@@ -31,6 +31,7 @@ import {
   type WidgetState,
 } from "../shared/spawn-subagent";
 import { notifyMacOS } from "../shared/macOS-notify";
+import { runOverlay } from "../ask-user/index";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -71,9 +72,18 @@ function load(): LoadedAgent[] {
   });
 }
 
+// Subagents are headless child processes — no TTY, no ask_user tool. This hint
+// gives them an escape hatch: emit this exact line as their entire final output
+// and runInteractive() below pauses, asks the real user via the parent session's
+// overlay, then re-runs the agent with the answer folded in.
+const ASK_HINT =
+  '\n\nIf something is genuinely ambiguous and you need user input, output ONLY: `ASK: <your question>` as your entire final message — nothing else. You will get the answer back and can continue.';
+
+const MAX_ASKS = 3;
+
 let agents: LoadedAgent[] = [];
 try {
-  agents = load();
+  agents = load().map((a) => ({ ...a, prompt: a.prompt + ASK_HINT }));
 } catch (err) {
   console.warn("[agents] failed to load config:", err);
 }
@@ -81,6 +91,19 @@ try {
 // ── Widget + spawn ─────────────────────────────────────────────────────────────
 
 type AnyCtx = ExtensionCommandContext | ExtensionContext;
+
+// Debounce widget redraws — tool-call bursts + the 100ms tick can both fire
+// requestRender() within a few ms of each other, and with several subagents
+// running at once that stacks into visible flicker. Coalesce to ~1 render/50ms.
+const pendingRender = new WeakSet<object>();
+function scheduleRender(tui: { requestRender(): void } | undefined): void {
+  if (!tui || pendingRender.has(tui)) return;
+  pendingRender.add(tui);
+  setTimeout(() => {
+    pendingRender.delete(tui);
+    tui.requestRender();
+  }, 50);
+}
 
 async function run(
   agent: LoadedAgent,
@@ -163,7 +186,7 @@ async function run(
     widgetState.spinnerFrame =
       (widgetState.spinnerFrame + 1) % SPINNER_FRAMES.length;
     widgetState.elapsedMs += 100;
-    widgetTui?.requestRender();
+    scheduleRender(widgetTui);
   }, 100);
 
   try {
@@ -173,7 +196,7 @@ async function run(
       prompt,
       signal,
       widgetState,
-      () => widgetTui?.requestRender(),
+      () => scheduleRender(widgetTui),
       agent.tools,
     );
     // pi exits 0 even on API errors — if no text but an error was captured, surface it
@@ -185,6 +208,35 @@ async function run(
     clearInterval(timer);
     ctx.ui.setWidget(widgetKey, undefined);
   }
+}
+
+// ── Ask bridge ─────────────────────────────────────────────────────────────────
+
+// Runs an agent, and if it asks a question (ASK: convention), surfaces it via
+// the parent session's real overlay, then re-runs with the answer appended.
+async function runInteractive(
+  agent: LoadedAgent,
+  initialPrompt: string,
+  signal: AbortSignal,
+  ctx: AnyCtx,
+): Promise<{ exitCode: number | null; text: string }> {
+  let prompt = initialPrompt;
+  for (let attempt = 0; attempt <= MAX_ASKS; attempt++) {
+    const result = await run(agent, prompt, signal, ctx);
+    const match = result.exitCode === 0 ? result.text.trim().match(/^ASK:\s*([\s\S]+)$/i) : null;
+    if (!match || attempt === MAX_ASKS) return result;
+
+    const question = match[1].trim();
+    let answer: string;
+    try {
+      // ponytail: cast — runOverlay wants ExtensionContext, AnyCtx covers both shapes pi actually passes here
+      answer = await runOverlay(ctx as ExtensionContext, { question });
+    } catch {
+      return result; // no interactive UI available (e.g. headless main session) — surface the ASK as-is
+    }
+    prompt = `${initialPrompt}\n\nYou previously asked: "${question}"\nUser answered: "${answer}"\nContinue the task using this answer — do not ask the same thing again.`;
+  }
+  return { exitCode: 1, text: "agent asked too many questions — aborted" };
 }
 
 // ── Display (user commands) ────────────────────────────────────────────────────
@@ -320,9 +372,9 @@ export default function (pi: ExtensionAPI): void {
         const abort = new AbortController();
         const extra = args.trim();
         const prompt = extra
-          ? `${agent.prompt}\n\nAdditional instructions from user: ${extra}`
+          ? `${agent.prompt}\n\nIMPORTANT — user instruction (follow this, it overrides the defaults above where they conflict): ${extra}`
           : agent.prompt;
-        const result = await run(agent, prompt, abort.signal, ctx);
+        const result = await runInteractive(agent, prompt, abort.signal, ctx);
         display(pi, agent, result, ctx);
       }),
     });
@@ -348,7 +400,7 @@ export default function (pi: ExtensionAPI): void {
       }),
       async execute(_id, params, signal, _onUpdate, ctx) {
         const prompt = buildAgentPrompt(agent, params.task, params.paths, params.maxFiles);
-        const { exitCode, text } = await run(agent, prompt, signal, ctx);
+        const { exitCode, text } = await runInteractive(agent, prompt, signal, ctx);
         if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
         return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
       },
@@ -391,7 +443,7 @@ export default function (pi: ExtensionAPI): void {
       await guarded(`sub:${name}`, ctx, async () => {
         await ctx.waitForIdle();
         const abort = new AbortController();
-        const result = await run(agent, buildAgentPrompt(agent, task), abort.signal, ctx);
+        const result = await runInteractive(agent, buildAgentPrompt(agent, task), abort.signal, ctx);
         display(pi, agent, result, ctx);
       });
     },
@@ -431,7 +483,7 @@ export default function (pi: ExtensionAPI): void {
       }
 
       const prompt = buildAgentPrompt(agent, params.task, params.paths);
-      const { exitCode, text } = await run(agent, prompt, signal, ctx);
+      const { exitCode, text } = await runInteractive(agent, prompt, signal, ctx);
       if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
       return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
     },
