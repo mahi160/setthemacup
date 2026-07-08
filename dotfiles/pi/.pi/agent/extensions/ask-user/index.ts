@@ -125,7 +125,7 @@ async function runTextInput(
   }));
 }
 
-async function runOverlay(
+export async function runOverlay(
   uiCtx: ExtensionContext,
   rawParams: {
     question: string;
