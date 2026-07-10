@@ -67,6 +67,7 @@ const STATS_CONFIG = {
   recentSessionsLimit: 6,
   compactWarningPct: 80,
   compactWarningCooldownMs: 300_000,
+  compactAutoPct: 95,
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ export default function (pi: ExtensionAPI): void {
   let session: SessionState | null = null;
   let currentInput: InputState | null = null;
   let lastCompactWarning = 0;
+  let compacting = false;
   let pendingSlash: string | null = null;
   let unsubscribeSkill: (() => void) | undefined;
 
@@ -160,6 +162,7 @@ export default function (pi: ExtensionAPI): void {
     };
     upsertSession(id, now, ctx.cwd ?? "");
     lastCompactWarning = 0;
+    compacting = false;
   });
 
   unsubscribeSkill = bus.on("skill_invoked", (data) => {
@@ -242,8 +245,22 @@ export default function (pi: ExtensionAPI): void {
     const usage = ctx.getContextUsage();
     if (usage?.tokens) session.tokens = usage.tokens;
 
-    // Auto-compact reminder
-    if (usage?.percent && usage.percent > STATS_CONFIG.compactWarningPct) {
+    // Critical — compact now, don't wait for the user to notice.
+    if (usage?.percent && usage.percent > STATS_CONFIG.compactAutoPct && !compacting) {
+      compacting = true;
+      ctx.ui.notify(`Context at ${Math.round(usage.percent)}% — auto-compacting`, "warning");
+      ctx.compact({
+        onComplete: () => {
+          compacting = false;
+          ctx.ui.notify("Auto-compact done", "info");
+        },
+        onError: (error) => {
+          compacting = false;
+          ctx.ui.notify(`Auto-compact failed: ${error.message}`, "error");
+        },
+      });
+    } else if (usage?.percent && usage.percent > STATS_CONFIG.compactWarningPct) {
+      // Soft warning — leave the call to the user below the critical threshold.
       const now = Date.now();
       if (now - lastCompactWarning > STATS_CONFIG.compactWarningCooldownMs) {
         lastCompactWarning = now;
