@@ -227,6 +227,62 @@ function extractOutsideWritePaths(
   return outside;
 }
 
+// ── Shared bash-command check (LLM tool calls + user `!` shell escapes) ─────
+
+type BashVerdict = { block: true; reason: string } | undefined;
+
+async function checkBashCommand(
+  command: string,
+  cwd: string,
+  ctx: ExtensionContext,
+): Promise<BashVerdict> {
+  // Write patterns (redirect, tee, cp, mv, sed -i) to outside CWD
+  const outsideWrites = extractOutsideWritePaths(command, cwd).filter(
+    (p) => !isAllowedOutside(p, cwd),
+  );
+  if (outsideWrites.length > 0) {
+    if (ctx.hasUI) {
+      ctx.ui.notify(`Blocked: bash write outside CWD - ${outsideWrites[0]}`, "warning");
+    }
+    return { block: true, reason: "Bash write outside CWD blocked" };
+  }
+
+  if (!hasDeleteOp(command)) return undefined;
+
+  const { paths: rawPaths } = extractDeletePaths(command);
+  for (const path of rawPaths) {
+    if (isOutsideCwd(path, cwd)) {
+      if (ctx.hasUI) {
+        ctx.ui.notify(`Blocked: delete outside CWD — ${path}`, "warning");
+      }
+      return { block: true, reason: "Delete outside CWD blocked" };
+    }
+  }
+
+  if (deletionSessionApproved) return undefined;
+
+  if (!ctx.hasUI) {
+    return { block: true, reason: "Delete in CWD requires confirmation (no UI available)" };
+  }
+
+  notifyMacOS("π ⚠️", "Delete confirmation needed", command.slice(0, 80), "Glass");
+
+  // No response in 60s (headless run, stepped away) → treat like timeout/abort: block.
+  const choice = await ctx.ui.select(
+    `⚠️  Delete in CWD:\n  ${command}\n\nAllow?`,
+    ["Yes (once)", "No", "Yes for session"],
+    { timeout: 60_000 },
+  );
+
+  if (!choice || choice === "No") {
+    return { block: true, reason: "Delete blocked by user" };
+  }
+  if (choice === "Yes for session") {
+    deletionSessionApproved = true;
+  }
+  return undefined;
+}
+
 // ── Extension ──────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
@@ -279,84 +335,19 @@ export default function (pi: ExtensionAPI): void {
     // --- Bash tool: delete guard + write pattern check ---
     if (isToolCallEventType("bash", event)) {
       const bashEvent = event as BashToolCallEvent;
-      const command = bashEvent.input.command;
-
-      // Check for write patterns (redirect, tee, cp, mv, sed -i) to outside CWD
-      const outsideWrites = extractOutsideWritePaths(command, ctx.cwd).filter(
-        (p) => !isAllowedOutside(p, ctx.cwd),
-      );
-      if (outsideWrites.length > 0) {
-        if (ctx.hasUI) {
-          ctx.ui.notify(
-            `Blocked: bash write outside CWD - ${outsideWrites[0]}`,
-            "warning",
-          );
-        }
-        return { block: true, reason: "Bash write outside CWD blocked" };
-      }
-
-      // Check for delete operations
-      if (hasDeleteOp(command)) {
-        const { paths: rawPaths } = extractDeletePaths(command);
-
-        // Block if any extracted path (absolute or relative) escapes CWD.
-        for (const path of rawPaths) {
-          if (isOutsideCwd(path, ctx.cwd)) {
-            if (ctx.hasUI) {
-              ctx.ui.notify(
-                `Blocked: delete outside CWD — ${path}`,
-                "warning",
-              );
-            }
-            return { block: true, reason: "Delete outside CWD blocked" };
-          }
-        }
-
-        // If session approved, allow
-        if (deletionSessionApproved) {
-          return undefined;
-        }
-
-        // If no UI, block by default (non-interactive mode)
-        if (!ctx.hasUI) {
-          return {
-            block: true,
-            reason: "Delete in CWD requires confirmation (no UI available)",
-          };
-        }
-
-        // Show confirmation dialog + macOS notification
-        notifyMacOS(
-          "π ⚠️",
-          "Delete confirmation needed",
-          command.slice(0, 80),
-          "Glass",
-        );
-
-        const choice = await ctx.ui.select(
-          `⚠️  Delete in CWD:\n  ${command}\n\nAllow?`,
-          ["Yes (once)", "No", "Yes for session"],
-        );
-
-        // undefined (timeout/abort) or "No" → block
-        if (!choice || choice === "No") {
-          return { block: true, reason: "Delete blocked by user" };
-        }
-
-        // "Yes for session" → set flag and allow
-        if (choice === "Yes for session") {
-          deletionSessionApproved = true;
-          return undefined; // Allow
-        }
-
-        // "Yes (once)" → allow this one time
-        return undefined;
-      }
-
-      return undefined;
+      return (await checkBashCommand(bashEvent.input.command, ctx.cwd, ctx)) ?? undefined;
     }
 
     // Other tools: no intervention
     return undefined;
+  });
+
+  // User `!`/`!!` shell escapes bypass the bash tool entirely — same guard applies here.
+  pi.on("user_bash", async (event, ctx) => {
+    const verdict = await checkBashCommand(event.command, event.cwd ?? ctx.cwd, ctx);
+    if (!verdict) return undefined;
+    return {
+      result: { output: `Blocked: ${verdict.reason}`, exitCode: 1, cancelled: false, truncated: false },
+    };
   });
 }
