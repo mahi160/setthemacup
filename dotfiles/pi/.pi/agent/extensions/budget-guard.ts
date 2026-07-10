@@ -125,9 +125,11 @@ export default function (pi: ExtensionAPI): void {
       const { cost } = queryTotals(startOfDay.getTime());
 
       if (cost >= cfg.dailyUsd) {
+        // No one at the keyboard (headless/cron run) → default to declining, not hanging forever.
         const ok = await ctx.ui.confirm(
           `Budget cap hit ($${cost.toFixed(2)} / $${cfg.dailyUsd})`,
           "Continue anyway? This will exceed your daily budget.",
+          { timeout: 60_000 },
         );
         if (!ok) throw new Error("Budget guard: user declined to continue.");
         bypass = true;
@@ -166,6 +168,7 @@ export default function (pi: ExtensionAPI): void {
         const ok = await ctx.ui.confirm(
           `Message cap hit (${label})`,
           "You may be rate-limited. Continue anyway?",
+          { timeout: 60_000 },
         );
         if (!ok) throw new Error("Budget guard: user declined to continue.");
         bypass = true;
@@ -189,9 +192,35 @@ export default function (pi: ExtensionAPI): void {
 
   // ── /budget command ──────────────────────────────────────────────────────
 
+  const BUDGET_KEYS = [
+    "dailyUsd",
+    "softUsd",
+    "windowHours",
+    "windowMessages",
+    "softWindow",
+    "weeklyMessages",
+    "softWeekly",
+  ];
+  const BUDGET_MODES = ["auto", "cost", "messages"];
+
   pi.registerCommand("budget", {
     description:
       "Show budget usage or set caps. Usage: /budget [set <key> <N>] [mode <cost|messages|auto>]",
+    getArgumentCompletions: (prefix) => {
+      const parts = prefix.split(/\s+/).filter(Boolean);
+      const partial = prefix.endsWith(" ") ? "" : (parts.at(-1) ?? "");
+      const before = prefix.endsWith(" ") ? parts : parts.slice(0, -1);
+      const complete = (options: string[]) => {
+        const filtered = options.filter((o) => o.startsWith(partial));
+        return filtered.length
+          ? filtered.map((v) => ({ value: [...before, v].join(" "), label: v }))
+          : null;
+      };
+      if (before.length === 0) return complete(["set", "mode"]);
+      if (before[0] === "mode" && before.length === 1) return complete(BUDGET_MODES);
+      if (before[0] === "set" && before.length === 1) return complete(BUDGET_KEYS);
+      return null;
+    },
     handler: async (args, ctx: ExtensionContext) => {
       const cfg = cachedCfg;
       const mode = detectedMode;
