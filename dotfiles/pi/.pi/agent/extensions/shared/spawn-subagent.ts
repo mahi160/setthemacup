@@ -30,6 +30,17 @@ export interface WidgetState {
   retryAttempt: number;
 }
 
+// Accumulated usage across a subagent's assistant messages — subagents run as
+// a separate `pi --no-extensions` process, so the stats extension never sees
+// their API calls. This is what lets the caller record their real cost.
+export interface UsageTotals {
+  cost: number;
+  totalTokens: number;
+  input: number;
+  output: number;
+  requestCount: number;
+}
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 export const SPINNER_FRAMES = [
@@ -99,6 +110,7 @@ export function parseJsonEvents(
   state: WidgetState,
   textAcc: { value: string },
   errAcc?: { value: string },
+  usageAcc?: UsageTotals,
 ): void {
   let event: {
     type: string;
@@ -106,7 +118,17 @@ export function parseJsonEvents(
     args?: Record<string, unknown>;
     assistantMessageEvent?: { type: string; delta?: string };
     attempt?: number;
-    message?: { stopReason?: string; errorMessage?: string };
+    message?: {
+      role?: string;
+      stopReason?: string;
+      errorMessage?: string;
+      usage?: {
+        totalTokens?: number;
+        input?: number;
+        output?: number;
+        cost?: { total?: number };
+      };
+    };
   };
   try {
     event = JSON.parse(line);
@@ -148,6 +170,13 @@ export function parseJsonEvents(
       break;
     case "message_end": {
       const msg = event.message;
+      if (msg?.role === "assistant" && msg.usage && usageAcc) {
+        usageAcc.cost += msg.usage.cost?.total ?? 0;
+        usageAcc.totalTokens += msg.usage.totalTokens ?? 0;
+        usageAcc.input += msg.usage.input ?? 0;
+        usageAcc.output += msg.usage.output ?? 0;
+        usageAcc.requestCount++;
+      }
       if (msg?.stopReason === "error" && msg.errorMessage && errAcc) {
         // Extract human-readable message from "400 {\"error\":{\"message\":\"...\"}}"
         try {
@@ -183,10 +212,11 @@ export function spawnCleanSession(
   widgetState: WidgetState,
   onUpdate: () => void,
   tools?: string[],
-): Promise<{ exitCode: number | null; fullText: string; errorMessage?: string }> {
+): Promise<{ exitCode: number | null; fullText: string; errorMessage?: string; usage: UsageTotals }> {
   return new Promise((resolve) => {
     const textAcc = { value: "" };
     const errAcc = { value: "" };
+    const usageAcc: UsageTotals = { cost: 0, totalTokens: 0, input: 0, output: 0, requestCount: 0 };
     let lineBuffer = "";
 
     const args = [
@@ -225,18 +255,19 @@ export function spawnCleanSession(
       lineBuffer = lines.pop() ?? "";
       for (const line of lines) {
         if (line.trim()) {
-          parseJsonEvents(line, widgetState, textAcc, errAcc);
+          parseJsonEvents(line, widgetState, textAcc, errAcc, usageAcc);
           onUpdate();
         }
       }
     });
 
     proc.on("close", (code) => {
-      if (lineBuffer.trim()) parseJsonEvents(lineBuffer, widgetState, textAcc, errAcc);
+      if (lineBuffer.trim()) parseJsonEvents(lineBuffer, widgetState, textAcc, errAcc, usageAcc);
       resolve({
         exitCode: code,
         fullText: textAcc.value.trim(),
         errorMessage: errAcc.value || undefined,
+        usage: usageAcc,
       });
     });
 

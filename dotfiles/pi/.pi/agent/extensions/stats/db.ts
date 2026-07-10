@@ -407,19 +407,20 @@ export function recordError(
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export function getOverallStats(): OverallStats {
+  // Sourced from user_inputs directly, not sessions.cost/turns — a session that never got a
+  // clean session_shutdown (crash, kill -9, closed terminal) never runs finalizeSession, so its
+  // sessions row keeps ended_at NULL forever. Gating totals on sessions.ended_at silently drops
+  // every already-completed, already-paid-for turn from that session out of lifetime stats.
+  // turns is the one exception: it's only ever tracked per-session, so an ungracefully-ended
+  // session's turns are still lost here. ponytail: acceptable gap, cost/tokens (the numbers that
+  // matter) are now accurate; add a per-input turn counter if the turns total needs to be exact.
   return getDb()
     .prepare(`
-      SELECT COUNT(*)                  AS totalSessions,
-             (SELECT COALESCE(SUM(tokens_used), 0)
-              FROM user_inputs ui2
-              JOIN sessions s2 ON ui2.session_id = s2.id
-              WHERE ui2.ended_at IS NOT NULL AND s2.ended_at IS NOT NULL AND s2.turns > 0) AS totalTokens,
-             COALESCE(SUM(cost), 0)    AS totalCost,
-             COALESCE(SUM(turns), 0)   AS totalTurns,
-             (SELECT COUNT(*) FROM user_inputs ui3
-              JOIN sessions s3 ON ui3.session_id = s3.id
-              WHERE ui3.ended_at IS NOT NULL AND s3.ended_at IS NOT NULL AND s3.turns > 0) AS totalInputs
-      FROM sessions WHERE ended_at IS NOT NULL AND turns > 0
+      SELECT (SELECT COUNT(DISTINCT session_id) FROM user_inputs WHERE ended_at IS NOT NULL) AS totalSessions,
+             COALESCE((SELECT SUM(tokens_used) FROM user_inputs WHERE ended_at IS NOT NULL), 0) AS totalTokens,
+             COALESCE((SELECT SUM(cost_usd) FROM user_inputs WHERE ended_at IS NOT NULL), 0)    AS totalCost,
+             (SELECT COALESCE(SUM(turns), 0) FROM sessions)                                     AS totalTurns,
+             (SELECT COUNT(*) FROM user_inputs WHERE ended_at IS NOT NULL)                       AS totalInputs
     `)
     .get() as OverallStats;
 }
@@ -720,6 +721,39 @@ export function getRecentCostSum(limit = 50): number {
     `)
     .get(limit) as { totalCost: number } | undefined;
   return Number(row?.totalCost ?? 0);
+}
+
+// Subagents run as a separate `pi --no-extensions` process (see shared/spawn-subagent.ts) —
+// this extension never sees their tool_call/message_end events, so their real API cost/tokens
+// would otherwise vanish from every stat. Caller (agents/index.ts) records it after the fact.
+export function recordSubagentSpend(p: {
+  sessionId: string;
+  agentName: string;
+  provider: string;
+  modelId: string;
+  costUsd: number;
+  tokensUsed: number;
+  tokensInput: number;
+  tokensOutput: number;
+  timeMs: number;
+  requestCount: number;
+}): void {
+  const now = Date.now();
+  const id = `sub_${p.agentName}_${now}_${Math.random().toString(36).slice(2, 8)}`;
+  getDb()
+    .prepare(`
+      INSERT INTO user_inputs
+        (id, session_id, started_at, ended_at, time_ms, tokens_used, tokens_input, tokens_output,
+         provider, model_id, commands, cost_usd, request_count, success)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+    `)
+    .run(
+      id, p.sessionId, now - p.timeMs, now, p.timeMs,
+      p.tokensUsed, p.tokensInput, p.tokensOutput,
+      p.provider, p.modelId,
+      JSON.stringify({ [`agent:${p.agentName}`]: 1 }),
+      p.costUsd, p.requestCount,
+    );
 }
 
 export function recordQna(

@@ -30,8 +30,55 @@ import {
   SPINNER_FRAMES,
   type WidgetState,
 } from "../shared/spawn-subagent";
+import { basename } from "node:path";
 import { notifyMacOS } from "../shared/macOS-notify";
 import { runOverlay } from "../ask-user/index";
+
+// Subagents run as a separate `pi --no-extensions` process — this stats DB write
+// is how their real cost/tokens still make it into /stat and /cost. Dynamic
+// require (like ask-user/budget-guard do) so a missing/broken stats DB never
+// breaks agent dispatch itself.
+let _recordSpend:
+  | ((p: {
+      sessionId: string;
+      agentName: string;
+      provider: string;
+      modelId: string;
+      costUsd: number;
+      tokensUsed: number;
+      tokensInput: number;
+      tokensOutput: number;
+      timeMs: number;
+      requestCount: number;
+    }) => void)
+  | null = null;
+function tryRecordSpend(p: Parameters<NonNullable<typeof _recordSpend>>[0]): void {
+  try {
+    if (!_recordSpend) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const db = require("../stats/db.js") as { recordSubagentSpend: typeof _recordSpend };
+      _recordSpend = db.recordSubagentSpend;
+    }
+    _recordSpend?.(p);
+  } catch {
+    /* stats DB unavailable */
+  }
+}
+
+function sessionIdOf(ctx: AnyCtx): string {
+  try {
+    const file = ctx.sessionManager.getSessionFile();
+    return file ? basename(file, ".jsonl") : "ephemeral";
+  } catch {
+    return "ephemeral";
+  }
+}
+
+// Date.now() alone collides when the main model fires several tool calls (e.g.
+// two custom_agent calls) in the same synchronous tick — same millisecond, same
+// widget key, second run silently clobbers the first's widget. Counter guarantees
+// uniqueness regardless of timing.
+let widgetSeq = 0;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -128,7 +175,7 @@ async function run(
     modelId: agent.model.split("/")[1] ?? agent.model,
   };
 
-  const widgetKey = `agent-${agent.name}-${Date.now()}`;
+  const widgetKey = `agent-${agent.name}-${Date.now()}-${widgetSeq++}`;
   let widgetTui: { requestRender(): void } | undefined;
 
   ctx.ui.setWidget(
@@ -190,7 +237,7 @@ async function run(
   }, 100);
 
   try {
-    const { exitCode, fullText, errorMessage } = await spawnCleanSession(
+    const { exitCode, fullText, errorMessage, usage } = await spawnCleanSession(
       agent.model,
       agent.thinking,
       prompt,
@@ -199,6 +246,21 @@ async function run(
       () => scheduleRender(widgetTui),
       agent.tools,
     );
+    if (usage.requestCount > 0) {
+      const [provider, modelId] = agent.model.split("/");
+      tryRecordSpend({
+        sessionId: sessionIdOf(ctx),
+        agentName: agent.name,
+        provider: provider ?? agent.model,
+        modelId: modelId ?? agent.model,
+        costUsd: usage.cost,
+        tokensUsed: usage.totalTokens,
+        tokensInput: usage.input,
+        tokensOutput: usage.output,
+        timeMs: widgetState.elapsedMs,
+        requestCount: usage.requestCount,
+      });
+    }
     // pi exits 0 even on API errors — if no text but an error was captured, surface it
     if (!fullText && errorMessage) {
       return { exitCode: 1, text: errorMessage };
@@ -411,6 +473,13 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerCommand("sub", {
     description: "Run any agent with a custom task. Usage: /sub <name> <task>",
+    getArgumentCompletions: (prefix) => {
+      if (prefix.includes(" ")) return null; // agent name is the only completable token
+      const filtered = agents.filter((a) => a.name.startsWith(prefix));
+      return filtered.length
+        ? filtered.map((a) => ({ value: a.name, label: `${a.name} — ${a.description}` }))
+        : null;
+    },
     handler: async (args, ctx) => {
       const trimmed = args.trim();
 
