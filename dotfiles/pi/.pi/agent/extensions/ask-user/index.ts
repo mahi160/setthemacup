@@ -12,8 +12,9 @@ import {
   Container,
   Text,
   Spacer,
+  Editor,
 } from "@earendil-works/pi-tui";
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
+import { DynamicBorder, getSelectListTheme } from "@earendil-works/pi-coding-agent";
 
 // Multi-select checkbox component
 class MultiSelectComponent implements Component {
@@ -90,39 +91,42 @@ function unescape(s: string): string {
     .replace(/\\t/g, "\t");
 }
 
+// Free-text input — multi-line editor (same widget as the main chat box):
+// Enter submits, Shift+Enter (or \+Enter) inserts a newline, Esc cancels.
+// Grows/scrolls with content, so long answers aren't cramped into one line.
 async function runTextInput(
   uiCtx: ExtensionContext,
   question: string,
 ): Promise<string | null> {
-  let buffer = "";
-  return uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => ({
-    render: (w: number) => {
-      const c = new Container();
-      c.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
-      c.addChild(new Text(theme.fg("accent", theme.bold(question)), 1, 0));
-      c.addChild(new Spacer(1));
-      c.addChild(new Text(truncateToWidth(`  ${buffer}▌`, w), 1, 0));
-      c.addChild(new Spacer(1));
-      c.addChild(new Text(theme.fg("dim", "enter confirm • esc cancel"), 1, 0));
-      c.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
-      c.addChild(new Spacer(1));
-      return c.render(w);
-    },
-    invalidate: () => {},
-    handleInput: (data) => {
-      if (matchesKey(data, Key.enter)) {
-        done(buffer.trim() || null);
-      } else if (matchesKey(data, Key.escape)) {
-        done(null);
-      } else if (matchesKey(data, Key.backspace) || data === "\x7f" || data === "\x08") {
-        buffer = buffer.slice(0, -1);
+  const result = await uiCtx.ui.custom<string | null>((tui, theme, _kb, done) => {
+    const container = new Container();
+    container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+    container.addChild(new Text(theme.fg("accent", theme.bold(question)), 1, 0));
+    container.addChild(new Spacer(1));
+    const editor = new Editor(tui, {
+      borderColor: (s: string) => theme.fg("border", s),
+      selectList: getSelectListTheme(),
+    });
+    editor.focused = true;
+    editor.onSubmit = (text: string) => done(text.trim() || null);
+    container.addChild(editor);
+    container.addChild(new Spacer(1));
+    container.addChild(new Text(theme.fg("dim", "enter submit • shift+enter newline • esc cancel"), 1, 0));
+    container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+    return {
+      render: (w) => container.render(w),
+      invalidate: () => container.invalidate(),
+      handleInput: (data) => {
+        if (matchesKey(data, Key.escape)) {
+          done(null);
+          return;
+        }
+        editor.handleInput(data);
         tui.requestRender();
-      } else if (data.length >= 1 && data >= " ") {
-        buffer += data;
-        tui.requestRender();
-      }
-    },
-  }));
+      },
+    };
+  });
+  return result?.trim() || null;
 }
 
 export async function runOverlay(
@@ -222,13 +226,15 @@ export default function (pi: ExtensionAPI): void {
       "Single mode: pass 'question' (+ optional choices/multiSelect) — returns selected answer as string.",
       "Batch mode: pass 'questions' array — asks each in sequence, returns JSON array of {question, answer}.",
       "Use batch mode when you have several things to clarify at once.",
+      "IMPORTANT: only omit 'choices' for a genuine yes/no question — that always renders a Yes/No confirm dialog, nothing else.",
+      "For any open-ended question (free text expected), pass 'choices' with your best-guess options anyway — the UI always adds a 'Write my own…' option so the user can still type a free answer.",
     ].join(" "),
     parameters: Type.Object({
       question: Type.Optional(Type.String({ description: "Single question to ask" })),
       choices: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Choices for the single question (omit for yes/no confirm)",
+            "Choices for the single question. Omit ONLY for a genuine yes/no question (omitting always shows a Yes/No dialog). For open-ended questions, still pass likely-guess choices — a 'Write my own…' free-text option is always added automatically.",
         }),
       ),
       default: Type.Optional(
@@ -251,7 +257,7 @@ export default function (pi: ExtensionAPI): void {
         Type.Array(
           Type.Object({
             question: Type.String({ description: "The question to ask" }),
-            choices: Type.Optional(Type.Array(Type.String(), { description: "Answer choices; omit for yes/no confirm" })),
+            choices: Type.Optional(Type.Array(Type.String(), { description: "Answer choices. Omit ONLY for a genuine yes/no question; open-ended questions should still pass guess choices ('Write my own…' free-text is always added automatically)." })),
             default: Type.Optional(Type.String({ description: "Default if user presses Enter" })),
             multiSelect: Type.Optional(Type.Boolean({ description: "Allow picking multiple choices; returns comma-separated string" })),
           }),
