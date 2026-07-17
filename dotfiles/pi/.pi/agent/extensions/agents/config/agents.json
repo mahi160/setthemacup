@@ -30,8 +30,8 @@
       "icon": "󰡴",
       "type": "user",
       "output": "inline",
-      "model": "anthropic/claude-haiku-4-5",
-      "thinking": "medium",
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "high",
       "tools": ["bash", "read"],
       "file": "prompts/pr-check.md",
       "description": "Line-by-line senior-dev review of a PR, posts inline GitHub comments"
