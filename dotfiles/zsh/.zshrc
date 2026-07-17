@@ -1,3 +1,5 @@
+# Add deno completions to search path
+if [[ ":$FPATH:" != *":/Users/mahi/.zsh/completions:"* ]]; then export FPATH="/Users/mahi/.zsh/completions:$FPATH"; fi
 # ─── Homebrew prefix ──────────────────────────────────────────────────────────
 BREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
 
@@ -122,3 +124,4 @@ eval "$(atuin init zsh --disable-up-arrow)"  # Ctrl+R → fuzzy history (replace
 export PI_CACHE_RETENTION=long
 
 export PATH="$HOME/develop/flutter/bin:$PATH"
+. "/Users/mahi/.deno/env"
