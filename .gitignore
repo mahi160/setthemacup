@@ -10,8 +10,9 @@ dotfiles/pi/.pi/agent/npm/package-lock.json
 dotfiles/pi/.pi/*/sessions/*
 dotfiles/pi/.pi/*/auth*
 
-# pi copy (never track)
+# pi backup copies (never track) — match both the Finder "pi copy" name and pi-copy
 dotfiles/pi copy/
+dotfiles/pi-copy/
 
 # Broad safety net
 **/auth.json
