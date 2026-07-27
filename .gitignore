@@ -24,5 +24,8 @@ dotfiles/pi/.pi/agent/stats.db
 # PI run history
 dotfiles/pi/.pi/agent/run-history.jsonl
 **/.pi/agent/*.log
+
+# pi-subagents chain/run artifacts
+.pi-subagents/
 dotfiles/git/.gitconfig
 dotfiles/pi/.pi/agent/trust.json
