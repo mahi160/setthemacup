@@ -4,7 +4,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { createState, resetState, requestRender } from "./state";
-import { createTopWidget, createFooter } from "./render";
+import { createTopWidget, createTokenWidget, createFooter } from "./render";
 import { getGitDirty, resetGitCache } from "../shared/git";
 
 // Passive git-dirty refresh — no full re-render, just keeps shared/git's
@@ -40,11 +40,13 @@ export default function (pi: ExtensionAPI): void {
     // Backwards scan for latest plannotator entry — single pass, zero allocations
     for (let i = entries.length - 1; i >= 0; i--) {
       const e = entries[i];
-      if (e.type === "custom" && e.customType === "plannotator" && e.data?.phase) {
+      if (
+        e.type === "custom" &&
+        e.customType === "plannotator" &&
+        e.data?.phase
+      ) {
         state.plannotatorPhase = e.data.phase as
-          | "idle"
-          | "planning"
-          | "executing";
+          "idle" | "planning" | "executing";
         return true;
       }
     }
@@ -68,6 +70,9 @@ export default function (pi: ExtensionAPI): void {
     }, DIRTY_POLL_MS);
 
     if (ctx.hasUI) {
+      ctx.ui.setWidget("token-stats", createTokenWidget(state), {
+        placement: "aboveEditor",
+      });
       ctx.ui.setWidget("status-top", createTopWidget(ctx, pi, state), {
         placement: "aboveEditor",
       });
@@ -127,6 +132,7 @@ export default function (pi: ExtensionAPI): void {
     state.dirtyTimer = undefined;
     state.savedCtx = undefined;
     state.widgetTui = undefined;
+    state.widgetTokenTui = undefined;
     state.footerTui = undefined;
     state.footerDispose?.();
     state.footerDispose = undefined;

@@ -17,6 +17,7 @@ export interface FooterState {
   lastDirty: string; // last known git dirty string, for change-only re-render
   dirtyTimer: ReturnType<typeof setInterval> | undefined;
   widgetTui: { requestRender(): void } | undefined;
+  widgetTokenTui: { requestRender(): void } | undefined;
   footerTui: { requestRender(): void } | undefined;
   footerDispose: (() => void) | undefined;
 }
@@ -39,6 +40,7 @@ export function createState(): FooterState {
     lastDirty: "",
     dirtyTimer: undefined,
     widgetTui: undefined,
+    widgetTokenTui: undefined,
     footerTui: undefined,
     footerDispose: undefined,
   };
@@ -57,5 +59,6 @@ export function resetState(state: FooterState): void {
 
 export function requestRender(state: FooterState): void {
   state.widgetTui?.requestRender();
+  state.widgetTokenTui?.requestRender();
   state.footerTui?.requestRender();
 }
