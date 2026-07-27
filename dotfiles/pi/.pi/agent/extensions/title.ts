@@ -153,7 +153,7 @@ function renderHeader(
     `${BOLD}${gradientText(center(subtitle, width), 0.18)}${RESET}`,
     theme.fg("borderMuted", center(divider, width)),
     "",
-  ];
+  ].map((line) => truncateToWidth(line, width));
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
