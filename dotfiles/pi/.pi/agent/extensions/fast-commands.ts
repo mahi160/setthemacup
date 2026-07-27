@@ -157,9 +157,12 @@ export default function (pi: ExtensionAPI): void {
         try {
           await ctx.waitForIdle();
           const { model, task } = parseArgs(args);
+          // pi-subagents rejects an empty task, and these commands are meant to
+          // run with no args (defaults live in ../agents/*.md), so always send
+          // something non-empty.
           const finalTask = task
             ? `IMPORTANT — user instruction (follow this, it overrides the defaults above where they conflict): ${task}`
-            : "";
+            : "Proceed with your default instructions.";
           const res = await delegate(pi, cmd.agent, finalTask, ctx.cwd ?? process.cwd(), model);
           display(pi, cmd, res, ctx);
         } finally {
