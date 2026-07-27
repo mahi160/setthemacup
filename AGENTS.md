@@ -235,3 +235,19 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 - **No `background-blur-radius`** in ghostty — use `background-blur = N`
 - **No plugin format strings in tmux** (`#{battery_icon}` etc.) without a provider
 - **Do not commit or push** unless explicitly asked
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub Issues in `mahi160/setthemacup`, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
