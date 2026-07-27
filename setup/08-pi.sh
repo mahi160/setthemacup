@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 08-pi.sh — Install pi coding agent and its Claude extension.
+# 08-pi.sh — Install pi coding agent and its packages.
 
 [[ -z "${SETUP_LIB_LOADED:-}" ]] && source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -16,14 +16,13 @@ set_pi() {
     || { error "Failed to install pi."; log "Failed to install pi"; return 1; }
   success "pi installed."
 
-  local claude_ext="$HOME/.pi/agent/extensions/claude"
-  if [[ -f "$claude_ext/package.json" ]]; then
-    info "Installing pi claude extension dependencies..."
-    if (cd "$claude_ext" && pnpm install --frozen-lockfile 2>/dev/null); then
-      success "pi claude extension ready."
-    else
-      warn "pi claude extension install failed."
-    fi
+  # Packages are declared in dotfiles/pi/.pi/agent/settings.json and pi installs
+  # any missing ones on startup. Install up front so the first run is not blocked.
+  info "Installing pi packages..."
+  if pi install npm:@gotgenes/pi-anthropic-auth@2.0.1 >/dev/null 2>&1; then
+    success "pi packages ready."
+  else
+    warn "pi package install failed — pi will retry on next startup."
   fi
 
   log "pi installed"

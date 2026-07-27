@@ -57,7 +57,7 @@ Single step: `bash setup/main.sh apps` or `bash setup/02-apps.sh` directly.
 | 5 | `set_git` | global git identity (personal: mahi160) |
 | 6 | `set_node` | fnm → Node LTS → pnpm (NOT in subshell — exports to outer shell) |
 | 7 | `set_nvim` | LazyVim headless sync + nvim.12 headless bootstrap |
-| 8 | `set_pi` | pnpm install pi coding agent globally |
+| 8 | `set_pi` | pnpm install pi coding agent globally + `pi install` pinned packages |
 | 9 | `set_ai` | npx skills add for each entry in apps.json `ai_skills` |
 | 10 | `set_ssh` | generate ed25519 keys (personal + work), print pubkeys |
 | 11 | `set_mac_cleanup` | clear dock, disable Siri/Game Center/analytics |
@@ -191,6 +191,16 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 - Runs on login shells only (gated in `.zshrc`)
 - Logo: `pokemon-colorscripts -r 1 --no-title` (installed via `nicowillis/programs/pokemon-colorscripts-mac`)
 - Modules: title, os, kernel, host, uptime, memory, cpu — **no packages** (too slow)
+
+---
+
+## pi
+
+- Config: `~/.pi/agent/` (whole directory stowed from `dotfiles/pi/`)
+- Packages are declared in `settings.json` under `"packages"` — pi auto-installs missing ones on startup; `setup/08-pi.sh` also installs them up front
+- **Pin npm packages to an exact version** (`npm:pkg@1.2.3`). Unpinned `npm:` floats, and provider-overriding extensions see your OAuth token
+- Anthropic Claude Pro/Max OAuth compat is handled by `npm:@gotgenes/pi-anthropic-auth` — billing header, assistant `tool_use` ordering, prompt de-fingerprinting. Do **not** reintroduce a local extension for this
+- On bump: diff the package's `src/` (it ships TS, no bundled `dist`) and check `CLAUDE_CODE_VERSION` tracks the current Claude Code release
 
 ---
 

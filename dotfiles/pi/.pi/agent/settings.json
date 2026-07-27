@@ -43,6 +43,7 @@
   },
   "theme": "kanagawa-wave",
   "packages": [
+    "npm:@gotgenes/pi-anthropic-auth@2.0.1",
     "npm:@plannotator/pi-extension",
     "npm:pi-web-access"
   ],
