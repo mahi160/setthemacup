@@ -7,6 +7,8 @@ thinking: off
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+output: inline
+icon: 󰟌
 ---
 1. `git log --since="24 hours ago" --oneline --author="$(git config user.name)"`.
 2. `git diff HEAD~5...HEAD --stat` for recent changes.

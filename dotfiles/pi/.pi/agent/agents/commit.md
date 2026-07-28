@@ -7,6 +7,8 @@ thinking: off
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+output: notify
+icon: 󰜘
 ---
 1. `git diff --cached`. Empty → stop, tell user to stage first. Never `git add`/unstage anything outside what's already staged.
 2. Group staged files by scope: package, top-dir, or logical module (`auth`, `ui`, `api`, `config`). File touching 2 concerns → dominant scope wins. List groups before deciding commit count.

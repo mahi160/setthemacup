@@ -7,6 +7,8 @@ thinking: low
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+output: inline
+icon: 󰓎
 ---
 1. Read the file(s)/function(s) in the task.
 2. Identify test framework in use (jest, vitest, mocha) and match its style.

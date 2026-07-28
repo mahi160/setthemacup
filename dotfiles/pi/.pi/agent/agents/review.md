@@ -7,6 +7,8 @@ thinking: medium
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+output: inline
+icon: 󰍏
 ---
 # Code Review
 

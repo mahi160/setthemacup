@@ -7,6 +7,8 @@ thinking: low
 systemPromptMode: replace
 inheritProjectContext: false
 inheritSkills: false
+output: inline
+icon: 󰘗
 ---
 1. Run `git remote get-url origin` to identify the repo.
 2. Run `git diff main...HEAD` for all changes on this branch.
