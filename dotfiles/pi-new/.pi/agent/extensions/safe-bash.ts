@@ -15,6 +15,8 @@
  *    - Allows reads anywhere
  *    - Exempts /tmp and /var/folders (ephemeral OS scratch space)
  *
+ * /yolo toggles both rules off for the rest of the session (resets on session_start).
+ *
  * Known limitations (v1):
  * - Symlink bypass via "ln -s /outside; edit link-in-cwd" not blocked
  * - Shell metacharacters in paths may confuse pattern matching
@@ -34,11 +36,12 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { homedir } from "node:os";
 import { resolve, relative, isAbsolute } from "node:path";
-import { notifyMacOS } from "./shared/macOS-notify.js";
+import { notify } from "./shared/notify.js";
 
 // ── Session State ──────────────────────────────────────────────────────────
 
 let deletionSessionApproved = false;
+let yoloActive = false;
 
 // ── Path Analysis Helpers ──────────────────────────────────────────────────
 
@@ -117,7 +120,7 @@ function extractDeletePaths(
 
     const argsString = deleteMatch[2] || "";
 
-    // Check for dynamic tokens: $VAR, ${VAR}, $(...), `...`, $((...))  
+    // Check for dynamic tokens: $VAR, ${VAR}, $(...), `...`, $((...))
     if (/\$|`|\$\(|\$\{/.test(argsString)) {
       hasDynamic = true;
     }
@@ -180,13 +183,19 @@ function extractOutsideWritePaths(
   }
 
   // --- cp: last path argument (relative or absolute) is the destination ---
+  // Exempt when source is already in an allowed-outside prefix (e.g. staging
+  // a fix in /tmp then copying it into a real config path is an intentional,
+  // explicit move — not an accidental outside-CWD write).
   const cpRegex = /\bcp\b([^;|&\n]+)/g;
   for (const match of command.matchAll(cpRegex)) {
     const args = match[1] || "";
     const pathTokens = extractTokens(args);
-    // Last path token is likely the destination
     if (pathTokens.length > 0) {
-      addIfOutside(pathTokens[pathTokens.length - 1]!);
+      const dest = pathTokens[pathTokens.length - 1]!;
+      const sources = pathTokens.slice(0, -1);
+      if (!sources.some((s) => isAllowedOutside(s, cwd))) {
+        addIfOutside(dest);
+      }
     }
   }
 
@@ -198,14 +207,22 @@ function extractOutsideWritePaths(
     // Check for -t flag form: mv -t dest src
     const tFlagMatch = args.match(/-t\s+([^\s]+)/);
     if (tFlagMatch) {
-      addIfOutside(tFlagMatch[1]!);
+      const dest = tFlagMatch[1]!;
+      const sources = extractTokens(args.replace(/-t\s+[^\s]+/, ""));
+      if (!sources.some((s) => isAllowedOutside(s, cwd))) {
+        addIfOutside(dest);
+      }
       continue;
     }
 
     // Positional form: last path is dest (relative or absolute)
     const pathTokens = extractTokens(args);
     if (pathTokens.length > 0) {
-      addIfOutside(pathTokens[pathTokens.length - 1]!);
+      const dest = pathTokens[pathTokens.length - 1]!;
+      const sources = pathTokens.slice(0, -1);
+      if (!sources.some((s) => isAllowedOutside(s, cwd))) {
+        addIfOutside(dest);
+      }
     }
   }
 
@@ -236,6 +253,8 @@ async function checkBashCommand(
   cwd: string,
   ctx: ExtensionContext,
 ): Promise<BashVerdict> {
+  if (yoloActive) return undefined;
+
   // Write patterns (redirect, tee, cp, mv, sed -i) to outside CWD
   const outsideWrites = extractOutsideWritePaths(command, cwd).filter(
     (p) => !isAllowedOutside(p, cwd),
@@ -265,7 +284,7 @@ async function checkBashCommand(
     return { block: true, reason: "Delete in CWD requires confirmation (no UI available)" };
   }
 
-  notifyMacOS("π ⚠️", "Delete confirmation needed", command.slice(0, 80), "Glass");
+  notify({ title: "π ⚠️", subtitle: "Delete confirmation needed", body: command.slice(0, 80), sound: "question" });
 
   // No response in 60s (headless run, stepped away) → treat like timeout/abort: block.
   const choice = await ctx.ui.select(
@@ -286,15 +305,31 @@ async function checkBashCommand(
 // ── Extension ──────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
-  // Reset deletion approval on session start
+  // Reset per-session state on session start
   pi.on("session_start", () => {
     deletionSessionApproved = false;
+    yoloActive = false;
+  });
+
+  // /yolo — toggle safe-bash off for the rest of this session
+  pi.registerCommand("yolo", {
+    description: "Toggle safe-bash off for this session (no delete confirm, no outside-CWD block)",
+    handler: async (_args, ctx) => {
+      yoloActive = !yoloActive;
+      ctx.ui.notify(
+        yoloActive
+          ? "⚠ yolo mode ON — safe-bash disabled for this session"
+          : "safe-bash re-enabled",
+        yoloActive ? "warning" : "success",
+      );
+    },
   });
 
   // Inject system prompt note
   pi.on("before_agent_start", (event, _ctx) => {
-    const note =
-      "\n\n[safe-bash active: deletes in CWD require confirmation; no writes/edits/deletes outside CWD except /tmp and /var/folders]";
+    const note = yoloActive
+      ? "\n\n[safe-bash disabled this session (yolo mode) — no delete confirm, no outside-CWD block]"
+      : "\n\n[safe-bash active: deletes in CWD require confirmation; no writes/edits/deletes outside CWD except /tmp and /var/folders]";
     return {
       systemPrompt: event.systemPrompt + note,
     };
@@ -302,6 +337,8 @@ export default function (pi: ExtensionAPI): void {
 
   // Main tool interception
   pi.on("tool_call", async (event, ctx) => {
+    if (yoloActive) return undefined;
+
     // --- Write tool: block if outside CWD ---
     if (isToolCallEventType("write", event)) {
       const writeEvent = event as WriteToolCallEvent;
@@ -344,6 +381,7 @@ export default function (pi: ExtensionAPI): void {
 
   // User `!`/`!!` shell escapes bypass the bash tool entirely — same guard applies here.
   pi.on("user_bash", async (event, ctx) => {
+    if (yoloActive) return undefined;
     const verdict = await checkBashCommand(event.command, event.cwd ?? ctx.cwd, ctx);
     if (!verdict) return undefined;
     return {

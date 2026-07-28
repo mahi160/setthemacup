@@ -69,6 +69,7 @@ export function seedGitBranch(cwd: string | undefined): void {
       cwd: dir,
       encoding: "utf8",
       timeout: 3_000,
+      stdio: ["ignore", "pipe", "pipe"], // execFileSync inherits stderr by default — silence expected "not a git repo" noise
     }).trim();
   } catch {
     _branch = "";

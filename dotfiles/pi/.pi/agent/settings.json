@@ -1,32 +1,52 @@
 {
   "lastChangelogVersion": "0.82.1",
-  "theme": "kanagawa-wave",
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-5",
+  "defaultProvider": "google",
+  "defaultModel": "gemini-flash-latest",
   "defaultThinkingLevel": "high",
   "enabledModels": [
-    "anthropic/claude-opus-5",
+    "anthropic/claude-haiku-4-5",
     "anthropic/claude-sonnet-5",
-    "anthropic/claude-haiku-4-5"
+    "anthropic/claude-opus-5"
   ],
-  "packages": [
-    "npm:@gotgenes/pi-anthropic-auth",
-    "git:github.com/DietrichGebert/ponytail",
-    "npm:pi-subagents",
-    "npm:@plannotator/pi-extension",
-    "npm:pi-web-access",
-    "npm:pi-ask-user@0.13.0"
-  ],
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 40000,
+    "keepRecentTokens": 30000
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "provider": {
+      "timeoutMs": 300000,
+      "maxRetries": 0
+    }
+  },
+  "enableSkillCommands": true,
+  "showHardwareCursor": true,
   "editorPaddingX": 1,
-  "outputPad": 1,
   "terminal": {
+    "clearOnShrink": false,
     "showTerminalProgress": true
   },
   "hideThinkingBlock": true,
-  "collapseChangelog": true,
   "quietStartup": true,
-  "defaultProjectTrust": "ask",
+  "collapseChangelog": true,
+  "enableInstallTelemetry": false,
+  "autocompleteMaxVisible": 7,
+  "doubleEscapeAction": "tree",
+  "treeFilterMode": "no-tools",
+  "branchSummary": {
+    "skipPrompt": true
+  },
   "warnings": {
     "anthropicExtraUsage": false
+  },
+  "theme": "kanagawa-wave",
+  "packages": [
+    "npm:@plannotator/pi-extension",
+    "npm:pi-web-access"
+  ],
+  "images": {
+    "blockImages": false
   }
 }
