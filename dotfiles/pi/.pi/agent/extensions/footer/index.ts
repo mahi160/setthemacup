@@ -26,39 +26,10 @@ export default function (pi: ExtensionAPI): void {
     }
   }
 
-  function syncPlannotatorPhase(ctx: ExtensionContext): boolean {
-    const entries = ctx.sessionManager.getEntries() as Array<{
-      type: string;
-      customType?: string;
-      data?: { phase?: string };
-    }>;
-
-    // Skip scanning if no new entries — avoids filter/pop allocation per poll
-    if (entries.length === state.lastEntryCount) return false;
-    state.lastEntryCount = entries.length;
-
-    // Backwards scan for latest plannotator entry — single pass, zero allocations
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const e = entries[i];
-      if (
-        e.type === "custom" &&
-        e.customType === "plannotator" &&
-        e.data?.phase
-      ) {
-        state.plannotatorPhase = e.data.phase as
-          "idle" | "planning" | "executing";
-        return true;
-      }
-    }
-    return false;
-  }
-
   pi.on("session_start", (_, ctx) => {
     state.savedCtx = ctx;
     resetState(state);
     resetGitCache();
-    state.plannotatorPhase = "executing"; // Default to build
-    syncPlannotatorPhase(ctx); // pick up phase on resume/fork
 
     clearInterval(state.dirtyTimer);
     state.dirtyTimer = setInterval(() => {
@@ -100,17 +71,13 @@ export default function (pi: ExtensionAPI): void {
     state.lastTurnCost += u.cost?.total ?? 0;
   });
 
-  pi.on("agent_settled", (_, ctx) => {
-    safe(() => {
-      syncPlannotatorPhase(ctx);
-      requestRender(state);
-    });
+  pi.on("agent_settled", () => {
+    safe(() => requestRender(state));
   });
 
-  pi.on("turn_end", (_, ctx) => {
+  pi.on("turn_end", () => {
     safe(() => {
       state.cachedUsage = undefined;
-      syncPlannotatorPhase(ctx);
       requestRender(state);
     });
   });

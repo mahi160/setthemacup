@@ -158,18 +158,10 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
               ).join(div)
             : "";
 
-        const isPlanning = state.plannotatorPhase === "planning";
-        const label = isPlanning ? " PLAN " : " BUILD ";
-        const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
-        const fgColor = isPlanning ? "success" : "accent";
-        const modePart = theme.bg(bg, theme.fg(fgColor, label));
-
         const costPart = theme.fg("dim", fmtCost(state.sessionCost));
         const reqPart = theme.fg("dim", ` ${state.sessionRequests}`);
 
-        const left = [modePart, costPart, reqPart, ctxPart]
-          .filter(Boolean)
-          .join(div);
+        const left = [costPart, reqPart, ctxPart].filter(Boolean).join(div);
         return [buildLine(left, toolPart, width), ""];
       },
       invalidate() {

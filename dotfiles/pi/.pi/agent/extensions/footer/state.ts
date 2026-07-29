@@ -11,8 +11,6 @@ export interface FooterState {
   lastTurnCacheRead: number;
   lastTurnCost: number;
   savedCtx: ExtensionContext | undefined;
-  plannotatorPhase: "idle" | "planning" | "executing";
-  lastEntryCount: number; // scan cursor for plannotator phase entries
   branch: string; // mirrored from footerData via the footer's onBranchChange (only setFooter gets footerData)
   lastDirty: string; // last known git dirty string, for change-only re-render
   dirtyTimer: ReturnType<typeof setInterval> | undefined;
@@ -34,8 +32,6 @@ export function createState(): FooterState {
     lastTurnCacheRead: 0,
     lastTurnCost: 0,
     savedCtx: undefined,
-    plannotatorPhase: "idle",
-    lastEntryCount: 0,
     branch: "",
     lastDirty: "",
     dirtyTimer: undefined,
@@ -49,8 +45,6 @@ export function createState(): FooterState {
 export function resetState(state: FooterState): void {
   state.toolCounts.clear();
   state.cachedUsage = undefined;
-  state.plannotatorPhase = "idle";
-  state.lastEntryCount = 0;
   state.lastDirty = "";
   state.sessionCost = 0;
   state.sessionHasData = false;
