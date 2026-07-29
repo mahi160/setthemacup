@@ -1,52 +1,29 @@
 {
   "lastChangelogVersion": "0.82.1",
-  "defaultProvider": "google",
-  "defaultModel": "gemini-flash-latest",
+  "theme": "kanagawa-wave",
+  "packages": [
+    "npm:@gotgenes/pi-anthropic-auth",
+    "npm:pi-web-access",
+    "npm:pi-subagents",
+    "npm:@juicesharp/rpiv-ask-user-question"
+  ],
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-5",
   "defaultThinkingLevel": "high",
   "enabledModels": [
-    "anthropic/claude-haiku-4-5",
+    "anthropic/claude-opus-5",
     "anthropic/claude-sonnet-5",
-    "anthropic/claude-opus-5"
+    "anthropic/claude-haiku-4-5"
   ],
-  "compaction": {
-    "enabled": true,
-    "reserveTokens": 40000,
-    "keepRecentTokens": 30000
-  },
-  "retry": {
-    "enabled": true,
-    "maxRetries": 3,
-    "provider": {
-      "timeoutMs": 300000,
-      "maxRetries": 0
-    }
-  },
   "enableSkillCommands": true,
-  "showHardwareCursor": true,
-  "editorPaddingX": 1,
   "terminal": {
-    "clearOnShrink": false,
     "showTerminalProgress": true
   },
+  "steeringMode": "all",
   "hideThinkingBlock": true,
-  "quietStartup": true,
-  "collapseChangelog": true,
-  "enableInstallTelemetry": false,
-  "autocompleteMaxVisible": 7,
-  "doubleEscapeAction": "tree",
-  "treeFilterMode": "no-tools",
-  "branchSummary": {
-    "skipPrompt": true
-  },
   "warnings": {
     "anthropicExtraUsage": false
   },
-  "theme": "kanagawa-wave",
-  "packages": [
-    "npm:@plannotator/pi-extension",
-    "npm:pi-web-access"
-  ],
-  "images": {
-    "blockImages": false
-  }
+  "showHardwareCursor": true,
+  "quietStartup": true
 }

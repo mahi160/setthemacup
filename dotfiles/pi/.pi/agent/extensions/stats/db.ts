@@ -130,15 +130,6 @@ export interface CacheRatio {
   ratio: number;
 }
 
-export interface CompactionRecord {
-  id: number;
-  sessionId: string;
-  compactedAt: number;
-  tokensBefore: number;
-  tokensAfter: number;
-  tokensSaved: number;
-}
-
 export interface ErrorRecord {
   id: number;
   sessionId: string;
@@ -234,7 +225,9 @@ function migrate(db: SqlDb): void {
       tools               TEXT    DEFAULT '{}',
       commands            TEXT    DEFAULT '{}',
       skills              TEXT    DEFAULT '{}',
-      cost_usd            REAL    DEFAULT 0
+      cost_usd            REAL    DEFAULT 0,
+      request_count       INTEGER DEFAULT 0,
+      success             INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS compactions (
@@ -260,30 +253,6 @@ function migrate(db: SqlDb): void {
     CREATE INDEX IF NOT EXISTS idx_sess_started ON sessions     (started_at);
     CREATE INDEX IF NOT EXISTS idx_comp_sess    ON compactions  (session_id);
     CREATE INDEX IF NOT EXISTS idx_err_sess     ON errors       (session_id);
-  `);
-
-  // Additive migrations for DBs created by older versions
-  const addCol = (table: string, col: string, def: string) => {
-    try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`); } catch { /* exists */ }
-  };
-  addCol("user_inputs", "tokens_input",       "INTEGER DEFAULT 0");
-  addCol("user_inputs", "tokens_output",      "INTEGER DEFAULT 0");
-  addCol("user_inputs", "tokens_cache_read",  "INTEGER DEFAULT 0");
-  addCol("user_inputs", "tokens_cache_write", "INTEGER DEFAULT 0");
-  addCol("user_inputs", "branch",             "TEXT DEFAULT ''");
-  addCol("user_inputs", "request_count",      "INTEGER DEFAULT 0");
-  addCol("user_inputs", "success",            "INTEGER DEFAULT 0");
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS qna (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id  TEXT    NOT NULL,
-      asked_at    INTEGER NOT NULL,
-      question    TEXT    DEFAULT '',
-      answer      TEXT    DEFAULT '',
-      choices_json TEXT   DEFAULT 'null'
-    );
-    CREATE INDEX IF NOT EXISTS idx_ui_ended ON user_inputs (ended_at, started_at);
   `);
 }
 
@@ -358,8 +327,8 @@ export function finalizeInputRecord(
   tokensOutput: number,
   tokensCacheRead: number,
   tokensCacheWrite: number,
-  requestCount = 0,
-  hasError = false,
+  requestCount: number,
+  hasError: boolean,
 ): void {
   getDb()
     .prepare(`
@@ -544,16 +513,6 @@ export function getRecentSessions(limit = 6): RecentSession[] {
     .all(limit) as RecentSession[];
 }
 
-export function getToollessInputCount(sinceTs = 0): { total: number; toolless: number } {
-  return getDb()
-    .prepare(`
-      SELECT COUNT(*) AS total,
-             COALESCE(SUM(CASE WHEN tools='{}' THEN 1 ELSE 0 END), 0) AS toolless
-      FROM user_inputs WHERE started_at > ? AND ended_at IS NOT NULL
-    `)
-    .get(sinceTs) as { total: number; toolless: number };
-}
-
 export function getStreak(): number {
   const rows = getDb()
     .prepare(`
@@ -646,17 +605,6 @@ export function getCacheRatio(sinceTs = 0): CacheRatio {
   return { cacheRead: cr, totalInput: ti, ratio: (cr + ti) > 0 ? cr / (cr + ti) : 0 };
 }
 
-export function getCompactions(limit = 10): CompactionRecord[] {
-  return getDb()
-    .prepare(`
-      SELECT id, session_id AS sessionId, compacted_at AS compactedAt,
-             tokens_before AS tokensBefore, tokens_after AS tokensAfter,
-             tokens_saved AS tokensSaved
-      FROM compactions ORDER BY compacted_at DESC LIMIT ?
-    `)
-    .all(limit) as CompactionRecord[];
-}
-
 export function getCompactionSummary(): { total: number; tokensSaved: number } {
   const row = getDb()
     .prepare("SELECT COUNT(*) AS total, COALESCE(SUM(tokens_saved), 0) AS tokensSaved FROM compactions")
@@ -687,82 +635,6 @@ export function getErrorSummary(): { total: number; today: number } {
   return { total: Number(row?.total ?? 0), today: Number(row?.today ?? 0) };
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// ── Budget + QnA ─────────────────────────────────────────────────────────────
-
-export interface BudgetTotals {
-  cost: number;
-  inputs: number;
-  requests: number;
-}
-
-export function getBudgetTotals(sinceMs: number): BudgetTotals {
-  const row = getDb()
-    .prepare(`
-      SELECT COALESCE(SUM(cost_usd), 0)      AS cost,
-             COUNT(*)                        AS inputs,
-             COALESCE(SUM(request_count), 0) AS requests
-      FROM user_inputs WHERE started_at >= ? AND ended_at IS NOT NULL
-    `)
-    .get(sinceMs) as BudgetTotals | undefined;
-  return row ?? { cost: 0, inputs: 0, requests: 0 };
-}
-
-export function getRecentCostSum(limit = 50): number {
-  const row = getDb()
-    .prepare(`
-      SELECT COALESCE(SUM(cost_usd), 0) AS totalCost
-      FROM (SELECT cost_usd FROM user_inputs WHERE ended_at IS NOT NULL ORDER BY started_at DESC LIMIT ?)
-    `)
-    .get(limit) as { totalCost: number } | undefined;
-  return Number(row?.totalCost ?? 0);
-}
-
-// Subagents run as a separate `pi --no-extensions` process (see shared/spawn-subagent.ts) —
-// this extension never sees their tool_call/message_end events, so their real API cost/tokens
-// would otherwise vanish from every stat. Caller (agents/index.ts) records it after the fact.
-export function recordSubagentSpend(p: {
-  sessionId: string;
-  agentName: string;
-  provider: string;
-  modelId: string;
-  costUsd: number;
-  tokensUsed: number;
-  tokensInput: number;
-  tokensOutput: number;
-  timeMs: number;
-  requestCount: number;
-}): void {
-  const now = Date.now();
-  const id = `sub_${p.agentName}_${now}_${Math.random().toString(36).slice(2, 8)}`;
-  getDb()
-    .prepare(`
-      INSERT INTO user_inputs
-        (id, session_id, started_at, ended_at, time_ms, tokens_used, tokens_input, tokens_output,
-         provider, model_id, commands, cost_usd, request_count, success)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)
-    `)
-    .run(
-      id, p.sessionId, now - p.timeMs, now, p.timeMs,
-      p.tokensUsed, p.tokensInput, p.tokensOutput,
-      p.provider, p.modelId,
-      JSON.stringify({ [`agent:${p.agentName}`]: 1 }),
-      p.costUsd, p.requestCount,
-    );
-}
-
-export function recordQna(
-  sessionId: string,
-  question: string,
-  answer: string,
-  choices: string[] | null,
-): void {
-  getDb()
-    .prepare("INSERT INTO qna (session_id, asked_at, question, answer, choices_json) VALUES (?,?,?,?,?)")
-    .run(sessionId, Date.now(), question.slice(0, 500), answer.slice(0, 200), JSON.stringify(choices));
 }

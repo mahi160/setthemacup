@@ -1,9 +1,7 @@
 /**
- * html.ts — Pre-rendered static HTML dashboard.
+ * html.ts — pre-rendered static HTML dashboard.
  *
- * All data is server-side rendered. No React, no Babel.
- * Inline JS for theme toggle, period toggle, and PNG share.
- * html-to-image (tiny, ~10kb) for share card → clipboard PNG.
+ * All data is server-side rendered. No React, no build step, no CDN scripts.
  */
 
 import type {
@@ -19,10 +17,9 @@ import type {
   ToolStat,
   WeeklyStat,
   CacheRatio,
-  CompactionRecord,
   ErrorRecord,
 } from "./db.js";
-import { fmtTokens, fmtCost, fmtMs, fmtDate, fmtPct, escHtml } from "./format.js";
+import { fmtDate, fmtPct, escHtml } from "./format.js";
 import { KANAGAWA_CSS } from "./themes/kanagawa.css.js";
 
 // ── Report data interface ─────────────────────────────────────────────────────
@@ -43,12 +40,10 @@ export interface ReportData {
   tokenBreakdown: TokenBreakdown;
   cacheRatio: CacheRatio;
   weekCacheRatio: CacheRatio;
-  compactions: CompactionRecord[];
   compactionSummary: { total: number; tokensSaved: number };
   errorSummary: { total: number; today: number };
   errors: ErrorRecord[];
   streak: number;
-  toolless: { total: number; toolless: number };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -224,7 +219,7 @@ function recentTable(recent: RecentSession[], span: number): string {
     <th class="r" title="Total wall-clock duration of the session">dur</th>
   </tr>`;
   const rows = recent.map(s =>
-    `<tr><td class="muted">${fmtDate(s.started_at)}</td><td>${escHtml(s.cwd?.split("/").pop() ?? "—")}</td><td class="r">${s.turns}</td><td class="r">${fmtNum(s.tokens)}</td><td class="r cost">${fmt$(s.cost)}</td><td class="r muted">${fmtMs(s.duration ?? 0)}</td></tr>`
+    `<tr><td class="muted">${fmtDate(s.started_at)}</td><td>${escHtml(s.cwd?.split("/").pop() ?? "—")}</td><td class="r">${s.turns}</td><td class="r">${fmtNum(s.tokens)}</td><td class="r cost">${fmt$(s.cost)}</td><td class="r muted">${fmtTime(s.duration ?? 0)}</td></tr>`
   ).join("");
   return card("recent sessions", "", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
 }
@@ -238,7 +233,7 @@ function wasteTable(waste: TokenWasteEntry[], span: number): string {
     <th class="r" title="Wall-clock time for this input">time</th>
   </tr>`;
   const rows = waste.map(w =>
-    `<tr><td class="muted">${fmtDate(w.started_at)}</td><td>${escHtml(w.model_id)}</td><td class="r warn">${fmtNum(w.tokens_used)}</td><td class="r muted">${fmtMs(w.time_ms)}</td></tr>`
+    `<tr><td class="muted">${fmtDate(w.started_at)}</td><td>${escHtml(w.model_id)}</td><td class="r warn">${fmtNum(w.tokens_used)}</td><td class="r muted">${fmtTime(w.time_ms)}</td></tr>`
   ).join("");
   return card("high-token no-tool inputs", "≥5k tok, 0 tool calls", `<div class="t-wrap"><table class="tbl"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`, span);
 }
@@ -260,7 +255,6 @@ export function buildHtml(d: ReportData): string {
   const toolMax = Math.max(...d.tools.map(t => t.total), 1);
   const projMax = Math.max(...d.projects.map(p => p.inputs), 1);
   const respMax = Math.max(...d.histogram.map(r => r.count), 1);
-  const date = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -270,8 +264,7 @@ export function buildHtml(d: ReportData): string {
 <title>π stats</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/html-to-image@1.11.13/dist/html-to-image.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${KANAGAWA_CSS}</style>
 </head>
 <body>
@@ -288,7 +281,6 @@ export function buildHtml(d: ReportData): string {
     <button class="toggle on" data-period="today">today</button>
     <button class="toggle" data-period="week">week</button>
     <button class="toggle" id="theme-toggle">◑ theme</button>
-    <button class="toggle share-btn" id="share-btn">↥ share</button>
   </div>
 </header>
 
@@ -314,52 +306,6 @@ ${recentTable(d.recent, d.waste.length > 0 ? 7 : 12)}
 ${wasteTable(d.waste, d.recent.length > 0 ? 5 : 12)}
 ${errorsTable(d.errors, 12)}
 </main>
-
-<!-- HIDDEN SHARE CARD (for PNG capture) -->
-<div id="share-wrap" style="position:fixed;left:-9999px;top:0">
-  <div id="share-card" class="share-card">
-    <div class="sc-gradient"></div>
-    <div class="sc-inner">
-      <div class="sc-brand">
-        <div class="sc-logo">π</div>
-        <div class="sc-brand-text">
-          <div class="sc-title">Today's Vibe Check</div>
-          <div class="sc-date">${escHtml(date)}</div>
-        </div>
-      </div>
-      <div class="sc-grid">
-        <div class="sc-stat">
-          <div class="sc-val">${fmtNum(d.today.inputs)}</div>
-          <div class="sc-lbl">prompts shipped</div>
-        </div>
-        <div class="sc-stat">
-          <div class="sc-val">${fmtNum(d.today.tokens)}</div>
-          <div class="sc-lbl">tokens burned</div>
-        </div>
-        <div class="sc-stat">
-          <div class="sc-val sc-cost">${fmt$(d.today.cost)}</div>
-          <div class="sc-lbl">cost of vibes</div>
-        </div>
-        <div class="sc-stat">
-          <div class="sc-val sc-streak">${d.streak}d 🔥</div>
-          <div class="sc-lbl">streak</div>
-        </div>
-        <div class="sc-stat">
-          <div class="sc-val">${fmtTime(d.today.timeMs)}</div>
-          <div class="sc-lbl">active time</div>
-        </div>
-        <div class="sc-stat">
-          <div class="sc-val sc-cache">${cachePct}</div>
-          <div class="sc-lbl">cache hit</div>
-        </div>
-      </div>
-      <div class="sc-foot">
-        <span>π stats</span>
-        <span>powered by mass-approving AI suggestions</span>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- FOOTER -->
 <footer class="footer">
@@ -400,44 +346,6 @@ document.querySelectorAll("[data-period]").forEach(function(btn){
     document.querySelectorAll("[data-period]").forEach(function(b){b.classList.toggle("on",b===btn)});
   };
 });
-
-// Share as PNG to clipboard
-document.getElementById("share-btn").onclick=async function(){
-  var btn=this;
-  var wrap=document.getElementById("share-wrap");
-  var card=document.getElementById("share-card");
-  btn.textContent="↥ capturing…";
-  try {
-    // Briefly make visible for capture
-    wrap.style.position="absolute";
-    wrap.style.left="0";
-    wrap.style.top="0";
-    wrap.style.zIndex="-1";
-    wrap.style.opacity="0";
-
-    var dataUrl=await htmlToImage.toPng(card,{
-      pixelRatio:2,
-      cacheBust:true,
-      backgroundColor:document.documentElement.dataset.theme==="light"?"#f2ecbc":"#16161d"
-    });
-
-    wrap.style.position="fixed";
-    wrap.style.left="-9999px";
-    wrap.style.opacity="";
-    wrap.style.zIndex="";
-
-    var res=await fetch(dataUrl);
-    var blob=await res.blob();
-    await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);
-    btn.textContent="✓ copied!";
-  } catch(e) {
-    wrap.style.position="fixed";
-    wrap.style.left="-9999px";
-    btn.textContent="✗ failed";
-    console.error(e);
-  }
-  setTimeout(function(){btn.textContent="↥ share"},2000);
-};
 </script>
 </body>
 </html>`;
