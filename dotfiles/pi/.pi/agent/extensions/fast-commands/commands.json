@@ -1,0 +1,8 @@
+[
+  { "name": "commit", "model": "anthropic/claude-haiku-4-5", "thinking": "low", "prompt": "commit.md" },
+  { "name": "standup", "model": "anthropic/claude-haiku-4-5", "thinking": "low", "prompt": "standup.md" },
+  { "name": "pr", "model": "anthropic/claude-sonnet-5", "thinking": "medium", "prompt": "pr.md" },
+  { "name": "pr-check", "model": "anthropic/claude-sonnet-5", "thinking": "medium", "prompt": "pr-check.md" },
+  { "name": "test", "model": "anthropic/claude-sonnet-5", "thinking": "medium", "prompt": "test.md" },
+  { "name": "review", "model": "anthropic/claude-sonnet-5", "thinking": "high", "prompt": "review.md" }
+]
