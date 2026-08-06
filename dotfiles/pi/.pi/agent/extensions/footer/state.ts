@@ -3,20 +3,17 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 export interface FooterState {
   toolCounts: Map<string, number>;
   cachedUsage: ReturnType<ExtensionContext["getContextUsage"]>;
-  agentRunning: boolean;
-  sessionStartedAt: number;  // wall time when session began — for elapsed display
-  sessionCost: number;       // cumulative cost across all runs in this session
-  sessionHasData: boolean;   // true after first assistant message — unlocks cost display
-  sessionRequests: number;   // count of assistant round-trips (LLM requests) this session
-  lastTurnInput: number;     // input tokens for last assistant message
-  lastTurnOutput: number;    // output tokens for last assistant message
-  lastTurnCacheRead: number; // cache read tokens for last assistant message
-  lastTurnCost: number;      // cost for last assistant message
-  idleTimer: ReturnType<typeof setInterval> | undefined;
+  sessionCost: number; // cumulative cost across all runs in this session
+  sessionHasData: boolean; // true after first assistant message — unlocks cost display
+  sessionRequests: number; // count of assistant round-trips (LLM requests) this session
+  lastTurnInput: number;
+  lastTurnOutput: number;
+  lastTurnCacheRead: number;
+  lastTurnCost: number;
   savedCtx: ExtensionContext | undefined;
-  plannotatorPhase: "idle" | "planning" | "executing";
-  branch: string;
-  lastEntryCount: number;
+  branch: string; // mirrored from footerData via the footer's onBranchChange (only setFooter gets footerData)
+  lastDirty: string; // last known git dirty string, for change-only re-render
+  dirtyTimer: ReturnType<typeof setInterval> | undefined;
   widgetTui: { requestRender(): void } | undefined;
   widgetTokenTui: { requestRender(): void } | undefined;
   footerTui: { requestRender(): void } | undefined;
@@ -27,8 +24,6 @@ export function createState(): FooterState {
   return {
     toolCounts: new Map<string, number>(),
     cachedUsage: undefined,
-    agentRunning: false,
-    sessionStartedAt: Date.now(),
     sessionCost: 0,
     sessionHasData: false,
     sessionRequests: 0,
@@ -36,11 +31,10 @@ export function createState(): FooterState {
     lastTurnOutput: 0,
     lastTurnCacheRead: 0,
     lastTurnCost: 0,
-    idleTimer: undefined,
     savedCtx: undefined,
-    plannotatorPhase: "idle",
     branch: "",
-    lastEntryCount: 0,
+    lastDirty: "",
+    dirtyTimer: undefined,
     widgetTui: undefined,
     widgetTokenTui: undefined,
     footerTui: undefined,
@@ -51,11 +45,8 @@ export function createState(): FooterState {
 export function resetState(state: FooterState): void {
   state.toolCounts.clear();
   state.cachedUsage = undefined;
-  state.agentRunning = false;
-  state.plannotatorPhase = "idle";
-  state.lastEntryCount = 0;
-  state.sessionStartedAt = Date.now(); // reset clock for new session
-  state.sessionCost = 0;               // reset cost for new session
+  state.lastDirty = "";
+  state.sessionCost = 0;
   state.sessionHasData = false;
   state.sessionRequests = 0;
 }

@@ -12,6 +12,7 @@ import type {
   ExtensionContext,
   Theme,
 } from "@earendil-works/pi-coding-agent";
+import { visibleWidth, truncateToWidth } from "@earendil-works/pi-tui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -138,9 +139,12 @@ function renderHeader(
   const lines = _asciiCache.lines;
 
   const proj = basename(cwd) || "session";
-  const subtitle = `${modelId}  ·  ${proj}  ·  "${quote}"`;
+  let subtitle = `${modelId}  ·  ${proj}  ·  "${quote}"`;
+  if (visibleWidth(subtitle) > width - 2) {
+    subtitle = truncateToWidth(subtitle, width - 2);
+  }
   const divider = "─".repeat(
-    Math.max(0, Math.min(subtitle.length + 4, width - 4)),
+    Math.max(0, Math.min(visibleWidth(subtitle) + 4, width - 4)),
   );
 
   return [
@@ -149,7 +153,7 @@ function renderHeader(
     `${BOLD}${gradientText(center(subtitle, width), 0.18)}${RESET}`,
     theme.fg("borderMuted", center(divider, width)),
     "",
-  ];
+  ].map((line) => truncateToWidth(line, width));
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
