@@ -1,0 +1,28 @@
+{
+  "lastChangelogVersion": "0.83.0",
+  "theme": "kanagawa-wave",
+  "packages": [
+    "npm:@gotgenes/pi-anthropic-auth",
+    "npm:pi-web-access",
+    "npm:@juicesharp/rpiv-ask-user-question"
+  ],
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-5",
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "anthropic/claude-opus-5",
+    "anthropic/claude-sonnet-5",
+    "anthropic/claude-haiku-4-5"
+  ],
+  "enableSkillCommands": true,
+  "terminal": {
+    "showTerminalProgress": true
+  },
+  "steeringMode": "all",
+  "hideThinkingBlock": true,
+  "warnings": {
+    "anthropicExtraUsage": false
+  },
+  "showHardwareCursor": true,
+  "quietStartup": true
+}

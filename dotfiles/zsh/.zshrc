@@ -48,7 +48,7 @@ alias gp="git config --local user.name \"mahi160\" && git config --local user.em
 alias gw="git config --local user.name \"salauddin-sifat-qp\" && git config --local user.email \"salauddin.sifat@questionpro.com\""
 
 # ─── Tools ────────────────────────────────────────────────────────────────────
-alias a='command pi'
+alias a='command pi -ns'
 alias of="onefetch"
 alias note="$SETTHEMACUP/scripts/note.sh"
 alias dev="$SETTHEMACUP/scripts/dev.sh"

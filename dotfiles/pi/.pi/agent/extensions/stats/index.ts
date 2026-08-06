@@ -1,17 +1,16 @@
 /**
- * stats/index.ts — Pi usage stats extension.
+ * stats/index.ts — Pi usage stats extension (v3).
  *
- * Tracks per-session, per-input, compaction, and error data in SQLite
- * (~/.pi/agent/stats.db, node:sqlite — no npm install needed).
+ * Tracks per-session, per-input, compaction, and error data.
  *
  * Commands:
  *   /stat  → opens HTML dashboard in browser
  *   /cost  → quick today's cost notification
  *
  * Features:
- *   - Auto-compact reminder / auto-compact at high context usage
- *   - Skill usage tracked by watching for `read` calls into a skill's SKILL.md
- *     (native skills are loaded via the read tool — see pi's skills.js)
+ *   - Auto-compact reminder at >80% context
+ *   - Session auto-naming (git branch or first prompt)
+ *   - Compaction + error tracking
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -20,9 +19,10 @@ import { randomUUID } from "node:crypto";
 
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, basename, dirname } from "node:path";
+import { join, basename } from "node:path";
 import { spawn } from "node:child_process";
 
+import { bus } from "../shared/bus.js";
 import { getGitBranch, seedGitBranch } from "../shared/git.js";
 
 import {
@@ -32,6 +32,7 @@ import {
   finalizeSession,
   getCacheRatio,
   getCompactionSummary,
+  getCompactions,
   getDailyCosts,
   getDailyStats,
   getDurationHistogram,
@@ -44,6 +45,7 @@ import {
   getTodayStats,
   getTokenBreakdown,
   getTokenWaste,
+  getToollessInputCount,
   getTopProjects,
   getTopToolsByInputs,
   getWeeklyStats,
@@ -59,6 +61,7 @@ import { fmtTokens, fmtCost } from "./format.js";
 const STATS_CONFIG = {
   weekDays: 7,
   topToolsLimit: 10,
+  topModelsLimit: 6,
   topProjectsLimit: 8,
   chartDays: 30,
   recentSessionsLimit: 6,
@@ -78,6 +81,7 @@ interface SessionState {
   commands: Map<string, number>;
   skills: Map<string, number>;
   models: Array<{ provider: string; modelId: string; selectedAt: number }>;
+  requestCount: number;
 }
 
 interface InputState {
@@ -120,12 +124,11 @@ function parseInputPrefix(text: string): { commands: Map<string, number> } {
   return { commands };
 }
 
-// Native skills are loaded by the model calling `read` on a SKILL.md file
-// (see pi core's formatSkillsForPrompt: "Use the read tool to load a skill's
-// file"). No separate skill-invocation event exists, so this is the signal.
-function skillNameFromReadPath(path: unknown): string | undefined {
-  if (typeof path !== "string" || !path.endsWith("/SKILL.md")) return undefined;
-  return basename(dirname(path));
+function resolveSessionId(ctx: ExtensionContext): string {
+  const sm = ctx.sessionManager as unknown as { getSessionId?(): string };
+  if (typeof sm.getSessionId === "function") return sm.getSessionId();
+  const file = ctx.sessionManager.getSessionFile();
+  return file ? basename(file, ".jsonl") : `ephemeral_${Date.now()}`;
 }
 
 // ── Extension ─────────────────────────────────────────────────────────────────
@@ -136,11 +139,12 @@ export default function (pi: ExtensionAPI): void {
   let lastCompactWarning = 0;
   let compacting = false;
   let pendingSlash: string | null = null;
+  let unsubscribeSkill: (() => void) | undefined;
 
   // ── Session lifecycle ───────────────────────────────────────────────────
 
   pi.on("session_start", (_, ctx: ExtensionContext) => {
-    const id = ctx.sessionManager.getSessionId();
+    const id = resolveSessionId(ctx);
     const now = Date.now();
     seedGitBranch(ctx.cwd);
     session = {
@@ -154,10 +158,17 @@ export default function (pi: ExtensionAPI): void {
       models: ctx.model
         ? [{ provider: ctx.model.provider, modelId: ctx.model.id, selectedAt: now }]
         : [],
+      requestCount: 0,
     };
     upsertSession(id, now, ctx.cwd ?? "");
     lastCompactWarning = 0;
     compacting = false;
+  });
+
+  unsubscribeSkill = bus.on("skill_invoked", (data) => {
+    const { name } = data as { name: string };
+    if (session) inc(session.skills, name);
+    if (currentInput) inc(currentInput.skills, name);
   });
 
   pi.on("model_select", (event) => {
@@ -206,6 +217,7 @@ export default function (pi: ExtensionAPI): void {
       modelId: currentInput.modelId,
       branch: currentInput.branch,
     });
+
   });
 
   pi.on("message_end", (event) => {
@@ -225,14 +237,6 @@ export default function (pi: ExtensionAPI): void {
   pi.on("tool_execution_start", (event) => {
     if (session) inc(session.tools, event.toolName);
     if (currentInput) inc(currentInput.tools, event.toolName);
-
-    if (event.toolName === "read") {
-      const skill = skillNameFromReadPath((event.args as { path?: unknown })?.path);
-      if (skill) {
-        if (session) inc(session.skills, skill);
-        if (currentInput) inc(currentInput.skills, skill);
-      }
-    }
   });
 
   pi.on("turn_end", (_, ctx: ExtensionContext) => {
@@ -319,7 +323,7 @@ export default function (pi: ExtensionAPI): void {
     }
   });
 
-  // ── Command tracking ─────────────────────────────────────────────────────
+  // ── Command + skill tracking ────────────────────────────────────────────
 
   pi.on("input", (event) => {
     const text = event.text.trim();
@@ -351,6 +355,8 @@ export default function (pi: ExtensionAPI): void {
     } catch (e) {
       console.error("[pi-stats] finalizeSession failed:", e);
     }
+    unsubscribeSkill?.();
+    unsubscribeSkill = undefined;
     session = null;
     closeDb();
   });
@@ -361,7 +367,6 @@ export default function (pi: ExtensionAPI): void {
     description: "Open usage stats dashboard in browser",
     handler: async (_, ctx: ExtensionContext) => {
       const { start, end } = weekRange();
-      const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
 
       const data = {
         generatedAt: new Date().toLocaleString(),
@@ -376,13 +381,15 @@ export default function (pi: ExtensionAPI): void {
         recent: getRecentSessions(STATS_CONFIG.recentSessionsLimit),
         histogram: getDurationHistogram(),
         waste: getTokenWaste(),
-        tokenBreakdown: getTokenBreakdown(startOfDay),
-        cacheRatio: getCacheRatio(startOfDay),
+        tokenBreakdown: getTokenBreakdown(new Date(new Date().setHours(0,0,0,0)).getTime()),
+        cacheRatio: getCacheRatio(new Date(new Date().setHours(0,0,0,0)).getTime()),
         weekCacheRatio: getCacheRatio(start),
+        compactions: getCompactions(),
         compactionSummary: getCompactionSummary(),
         errorSummary: getErrorSummary(),
         errors: getRecentErrors(),
         streak: getStreak(),
+        toolless: getToollessInputCount(start),
       };
 
       const html = buildHtml(data);

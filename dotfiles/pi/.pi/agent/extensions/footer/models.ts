@@ -1,14 +1,29 @@
-// Provider icon lookup. Display names come from ctx.model.name and
-// ctx.modelRegistry.getProviderDisplayName() (pi >=0.82) instead of
-// hand-maintained tables that inevitably drift out of date.
-export const PROVIDER_ICONS: Record<string, string> = {
-  anthropic: "\u{f06a9}", // 󰚩
-  "openai-codex": "\u{f06a9}", // 󰚩
-  google: "\u{f02ad}", // 󰊭
-  "github-copilot": "\u{f02a4}", // 󰊤
+export const MODEL_NAMES: Record<string, string> = {
+  "claude-opus-4-8": "Opus 4.8",
+  "claude-opus-4-6": "Opus 4.6",
+  "claude-sonnet-4-6": "Sonnet 4.6",
+  "claude-sonnet-5": "Sonnet 5",
+  "claude-haiku-4-5": "Haiku 4.5",
+  "gpt-5.5": "GPT 5.5",
+  "gemini-flash-latest": "Flash",
+  "gemini-flash-lite-latest": "Flash Lite",
 };
 
-export function getProviderIcon(provider: string | undefined): string {
-  if (!provider) return "";
-  return PROVIDER_ICONS[provider] ?? "";
+export const PROVIDER_NAMES: Record<string, { name: string; icon: string }> = {
+  anthropic: { name: "Anthropic", icon: "󰚩" },
+  "openai-codex": { name: "OpenAI", icon: "󰚩" },
+  google: { name: "Google", icon: "󰊭" },
+  "github-copilot": { name: "Copilot", icon: "󰊤" },
+};
+
+export function getModelDisplayName(id: string | undefined): string {
+  if (!id) return "—";
+  return MODEL_NAMES[id.toLowerCase()] ?? id;
+}
+
+export function getProviderDisplay(
+  provider: string | undefined,
+): { name: string; icon: string } | undefined {
+  if (!provider) return undefined;
+  return PROVIDER_NAMES[provider];
 }

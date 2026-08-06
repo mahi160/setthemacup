@@ -7,47 +7,48 @@ import { basename } from "node:path";
 import type { FooterState } from "./state";
 import { fmt, fmtCost, buildLine } from "./format";
 import { getGitDirty } from "../shared/git";
-import { getProviderIcon } from "./models";
+import { getModelDisplayName, getProviderDisplay } from "./models";
 
 // Tool name → nerd font icon. Falls back to generic ⚙ for unknowns.
 const TOOL_ICONS: Record<string, string> = {
-  bash: "\uF120",
-  read: "\uF06E",
-  write: "\uF040",
-  edit: "\uF044",
-  grep: "\uF002",
-  find: "\uF07C",
-  ls: "\uF0CA",
-  web_search: "\uF0AC",
-  code_search: "\uF121",
-  fetch_content: "\uF0C1",
-  get_search_content: "\uF0C1",
-  ask_user: "\uF128",
-  ask_user_question: "\uF128",
-  plannotator_submit_plan: "\uF0AE",
+  bash:                               "\uF120", // 
+  read:                               "\uF06E", // 
+  write:                              "\uF040", // 
+  edit:                               "\uF044", // 
+  grep:                               "\uF002", // 
+  find:                               "\uF07C", // 
+  ls:                                 "\uF0CA", // 
+  web_search:                         "\uF0AC", // 
+  code_search:                        "\uF121", // 
+  fetch_content:                      "\uF0C1", // 
+  get_search_content:                 "\uF0C1", // 
+  ask_user:                           "\uF128", // 
+  ask_user_question:                  "\uF128", // 
+  plannotator_submit_plan:            "\uF0AE", // 
+  mcp__plannotator__submit_plan:      "\uF0AE",
+  mcp__ask_user:                      "\uF128",
+  mcp__ask_user_question:             "\uF128",
+  mcp__webaccess__web_search:         "\uF0AC",
+  mcp__webaccess__code_search:        "\uF121",
+  mcp__webaccess__fetch_content:      "\uF0C1",
+  mcp__webaccess__get_search_content: "\uF0C1",
 };
-
-const MCP_PREFIX = /^mcp__[^_]+__/;
 
 function toolIcon(name: string): string {
   return (
-    TOOL_ICONS[name] ?? TOOL_ICONS[name.replace(MCP_PREFIX, "")] ?? "\u2699"
+    TOOL_ICONS[name] ??
+    // strip mcp__provider__ prefix and try again
+    TOOL_ICONS[name.replace(/^mcp__[^_]+__/, "")] ??
+    "\u2699" // ⚙ fallback
   );
 }
 
-interface TuiHandle {
-  requestRender(): void;
-}
+interface TuiHandle { requestRender(): void }
 interface FooterData {
   getGitBranch(): string | null;
   onBranchChange(cb: () => void): () => void;
 }
 
-/**
- * Last-turn token/cost stats. Rendered aboveEditor so it sits directly
- * under the latest message — not in the footer, which sits below the
- * editor.
- */
 export function createTokenWidget(state: FooterState) {
   return (tui: TuiHandle, theme: Theme) => {
     state.widgetTokenTui = tui;
@@ -70,11 +71,6 @@ export function createTokenWidget(state: FooterState) {
   };
 }
 
-/**
- * Top status line: provider/model/thinking-level ⟷ cwd + git branch/dirty.
- * Cached per-width; render() is cheap to call often since dirty/branch reads
- * are themselves cached in shared/git and footerData.
- */
 export function createTopWidget(
   ctx: ExtensionContext,
   pi: ExtensionAPI,
@@ -85,16 +81,13 @@ export function createTopWidget(
     return {
       render(width: number): string[] {
         const model = ctx.model;
-        const icon = getProviderIcon(model?.provider);
-        const providerName = model?.provider
-          ? ctx.modelRegistry.getProviderDisplayName(model.provider)
-          : undefined;
+        const prov = getProviderDisplay(model?.provider);
         const sep = theme.fg("borderMuted", " │ ");
 
         const modelPart = [
-          providerName ? theme.fg("accent", `${icon} ${providerName}`) : "",
-          theme.fg("warning", model?.name ?? "—"),
-          ctx.thinkingLevel ? theme.fg("muted", `(${ctx.thinkingLevel})`) : "",
+          prov ? theme.fg("accent", `${prov.icon} ${prov.name}`) : "",
+          theme.fg("warning", getModelDisplayName(model?.id)),
+          theme.fg("muted", `(${pi.getThinkingLevel()})`),
         ]
           .filter(Boolean)
           .join(" ");
@@ -116,21 +109,19 @@ export function createTopWidget(
   };
 }
 
-/**
- * Footer: mode badge + session totals + context usage ⟷ tool call counts,
- * plus a second row with last-turn token deltas.
- */
 export function createFooter(ctx: ExtensionContext, state: FooterState) {
   return (tui: TuiHandle, theme: Theme, footerData: FooterData) => {
     state.footerTui = tui;
 
     state.footerDispose?.();
+    state.footerDispose = undefined;
+
     state.branch = footerData.getGitBranch() ?? "";
     const dispose = footerData.onBranchChange(() => {
       state.branch = footerData.getGitBranch() ?? "";
-      state.widgetTui?.requestRender();
       tui.requestRender();
     });
+
     state.footerDispose = dispose;
 
     return {
@@ -151,6 +142,7 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
             );
         }
 
+        // Array.from does one-pass iteration, avoids spread + map allocations
         const toolPart =
           state.toolCounts.size > 0
             ? Array.from(state.toolCounts, ([n, c]) =>
@@ -158,10 +150,19 @@ export function createFooter(ctx: ExtensionContext, state: FooterState) {
               ).join(div)
             : "";
 
+        const isPlanning = state.plannotatorPhase === "planning";
+        const label = isPlanning ? " PLAN " : " BUILD ";
+        const bg = isPlanning ? "toolSuccessBg" : "toolPendingBg";
+        const fgColor = isPlanning ? "success" : "accent";
+        const modePart = theme.bg(bg, theme.fg(fgColor, label));
+
         const costPart = theme.fg("dim", fmtCost(state.sessionCost));
+
         const reqPart = theme.fg("dim", ` ${state.sessionRequests}`);
 
-        const left = [costPart, reqPart, ctxPart].filter(Boolean).join(div);
+        const left = [modePart, costPart, reqPart, ctxPart]
+          .filter(Boolean)
+          .join(div);
         return [buildLine(left, toolPart, width), ""];
       },
       invalidate() {

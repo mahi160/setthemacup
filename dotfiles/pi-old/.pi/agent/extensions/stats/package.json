@@ -1,0 +1,5 @@
+{
+  "name": "pi-stats",
+  "version": "1.0.0",
+  "description": "Per-session usage stats with compaction and error tracking. Uses node:sqlite — no npm install needed."
+}
