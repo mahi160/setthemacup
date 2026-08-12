@@ -32,7 +32,6 @@ import {
 } from "../shared/spawn-subagent";
 import { basename } from "node:path";
 import { notifyMacOS } from "../shared/macOS-notify";
-import { runOverlay } from "../ask-user/index";
 
 // Subagents run as a separate `pi --no-extensions` process — this stats DB write
 // is how their real cost/tokens still make it into /stat and /cost. Dynamic
@@ -52,11 +51,15 @@ let _recordSpend:
       requestCount: number;
     }) => void)
   | null = null;
-function tryRecordSpend(p: Parameters<NonNullable<typeof _recordSpend>>[0]): void {
+function tryRecordSpend(
+  p: Parameters<NonNullable<typeof _recordSpend>>[0],
+): void {
   try {
     if (!_recordSpend) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const db = require("../stats/db.js") as { recordSubagentSpend: typeof _recordSpend };
+      const db = require("../stats/db.js") as {
+        recordSubagentSpend: typeof _recordSpend;
+      };
       _recordSpend = db.recordSubagentSpend;
     }
     _recordSpend?.(p);
@@ -124,7 +127,7 @@ function load(): LoadedAgent[] {
 // and runInteractive() below pauses, asks the real user via the parent session's
 // overlay, then re-runs the agent with the answer folded in.
 const ASK_HINT =
-  '\n\nIf something is genuinely ambiguous and you need user input, output ONLY: `ASK: <your question>` as your entire final message — nothing else. You will get the answer back and can continue.';
+  "\n\nIf something is genuinely ambiguous and you need user input, output ONLY: `ASK: <your question>` as your entire final message — nothing else. You will get the answer back and can continue.";
 
 const MAX_ASKS = 3;
 
@@ -285,14 +288,17 @@ async function runInteractive(
   let prompt = initialPrompt;
   for (let attempt = 0; attempt <= MAX_ASKS; attempt++) {
     const result = await run(agent, prompt, signal, ctx);
-    const match = result.exitCode === 0 ? result.text.trim().match(/^ASK:\s*([\s\S]+)$/i) : null;
+    const match =
+      result.exitCode === 0
+        ? result.text.trim().match(/^ASK:\s*([\s\S]+)$/i)
+        : null;
     if (!match || attempt === MAX_ASKS) return result;
 
     const question = match[1].trim();
     let answer: string;
     try {
       // ponytail: cast — runOverlay wants ExtensionContext, AnyCtx covers both shapes pi actually passes here
-      answer = await runOverlay(ctx as ExtensionContext, { question });
+      // answer = await runOverlay(ctx as ExtensionContext, { question });
     } catch {
       return result; // no interactive UI available (e.g. headless main session) — surface the ASK as-is
     }
@@ -322,7 +328,12 @@ function display(
       `✗ /${agent.name} failed${tail ? `: ${tail.slice(0, 120)}` : ` (exit ${exitCode})`}`,
       "error",
     );
-    notifyMacOS(`${agent.icon}  ✗ /${agent.name}`, "Agent failed", tail.slice(0, 100) || `exit ${exitCode}`, "Basso");
+    notifyMacOS(
+      `${agent.icon}  ✗ /${agent.name}`,
+      "Agent failed",
+      tail.slice(0, 100) || `exit ${exitCode}`,
+      "Basso",
+    );
     return;
   }
 
@@ -362,7 +373,12 @@ function display(
     .filter(Boolean)
     .slice(0, 2)
     .join(" · ");
-  notifyMacOS(`${agent.icon}  /${agent.name}`, agent.label, preview.slice(0, 100) || "Done", "Hero");
+  notifyMacOS(
+    `${agent.icon}  /${agent.name}`,
+    agent.label,
+    preview.slice(0, 100) || "Done",
+    "Hero",
+  );
 }
 
 // ── Prompt building ───────────────────────────────────────────────────────────
@@ -404,7 +420,9 @@ export default function (pi: ExtensionAPI): void {
 
   // Concurrency guard — only one user-triggered command at a time
   let activeCommand = "";
-  const resetGuard = () => { activeCommand = ""; };
+  const resetGuard = () => {
+    activeCommand = "";
+  };
   pi.on("session_start", resetGuard);
   pi.on("session_shutdown", resetGuard);
 
@@ -414,11 +432,18 @@ export default function (pi: ExtensionAPI): void {
     fn: () => Promise<void>,
   ): Promise<void> {
     if (activeCommand) {
-      ctx.ui.notify(`/${activeCommand} is already running — wait for it`, "warning");
+      ctx.ui.notify(
+        `/${activeCommand} is already running — wait for it`,
+        "warning",
+      );
       return;
     }
     activeCommand = name;
-    try { await fn(); } finally { activeCommand = ""; }
+    try {
+      await fn();
+    } finally {
+      activeCommand = "";
+    }
   }
 
   const userAgents = agents.filter((a) => a.type === "user");
@@ -429,16 +454,17 @@ export default function (pi: ExtensionAPI): void {
   for (const agent of userAgents) {
     pi.registerCommand(agent.name, {
       description: agent.description,
-      handler: (args, ctx) => guarded(agent.name, ctx, async () => {
-        await ctx.waitForIdle();
-        const abort = new AbortController();
-        const extra = args.trim();
-        const prompt = extra
-          ? `${agent.prompt}\n\nIMPORTANT — user instruction (follow this, it overrides the defaults above where they conflict): ${extra}`
-          : agent.prompt;
-        const result = await runInteractive(agent, prompt, abort.signal, ctx);
-        display(pi, agent, result, ctx);
-      }),
+      handler: (args, ctx) =>
+        guarded(agent.name, ctx, async () => {
+          await ctx.waitForIdle();
+          const abort = new AbortController();
+          const extra = args.trim();
+          const prompt = extra
+            ? `${agent.prompt}\n\nIMPORTANT — user instruction (follow this, it overrides the defaults above where they conflict): ${extra}`
+            : agent.prompt;
+          const result = await runInteractive(agent, prompt, abort.signal, ctx);
+          display(pi, agent, result, ctx);
+        }),
     });
   }
 
@@ -457,14 +483,30 @@ export default function (pi: ExtensionAPI): void {
           Type.Array(Type.String(), { description: "Paths to focus on" }),
         ),
         maxFiles: Type.Optional(
-          Type.Number({ description: "Max files/findings to return. Default 20" }),
+          Type.Number({
+            description: "Max files/findings to return. Default 20",
+          }),
         ),
       }),
       async execute(_id, params, signal, _onUpdate, ctx) {
-        const prompt = buildAgentPrompt(agent, params.task, params.paths, params.maxFiles);
-        const { exitCode, text } = await runInteractive(agent, prompt, signal, ctx);
-        if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
-        return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
+        const prompt = buildAgentPrompt(
+          agent,
+          params.task,
+          params.paths,
+          params.maxFiles,
+        );
+        const { exitCode, text } = await runInteractive(
+          agent,
+          prompt,
+          signal,
+          ctx,
+        );
+        if (exitCode === 0)
+          return { content: [{ type: "text", text: text || "(no output)" }] };
+        return {
+          isError: true,
+          content: [{ type: "text", text: text || `Agent exited ${exitCode}` }],
+        };
       },
     });
   }
@@ -477,7 +519,10 @@ export default function (pi: ExtensionAPI): void {
       if (prefix.includes(" ")) return null; // agent name is the only completable token
       const filtered = agents.filter((a) => a.name.startsWith(prefix));
       return filtered.length
-        ? filtered.map((a) => ({ value: a.name, label: `${a.name} — ${a.description}` }))
+        ? filtered.map((a) => ({
+            value: a.name,
+            label: `${a.name} — ${a.description}`,
+          }))
         : null;
     },
     handler: async (args, ctx) => {
@@ -512,7 +557,12 @@ export default function (pi: ExtensionAPI): void {
       await guarded(`sub:${name}`, ctx, async () => {
         await ctx.waitForIdle();
         const abort = new AbortController();
-        const result = await runInteractive(agent, buildAgentPrompt(agent, task), abort.signal, ctx);
+        const result = await runInteractive(
+          agent,
+          buildAgentPrompt(agent, task),
+          abort.signal,
+          ctx,
+        );
         display(pi, agent, result, ctx);
       });
     },
@@ -527,11 +577,12 @@ export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "custom_agent",
     label: "Custom Agent",
-    description:
-      `Dispatch a named agent with a free-form task. Use for user-facing agents not exposed as dedicated tools. Available user agents: ${userAgentRoster}`,
+    description: `Dispatch a named agent with a free-form task. Use for user-facing agents not exposed as dedicated tools. Available user agents: ${userAgentRoster}`,
     promptSnippet: `Dispatch a named agent. User agents (only reachable here): ${userAgentRoster}`,
     parameters: Type.Object({
-      name: Type.String({ description: `Agent name. User agents: ${userAgentRoster}` }),
+      name: Type.String({
+        description: `Agent name. User agents: ${userAgentRoster}`,
+      }),
       task: Type.String({ description: "Task description" }),
       paths: Type.Optional(
         Type.Array(Type.String(), { description: "Paths to focus on" }),
@@ -552,9 +603,18 @@ export default function (pi: ExtensionAPI): void {
       }
 
       const prompt = buildAgentPrompt(agent, params.task, params.paths);
-      const { exitCode, text } = await runInteractive(agent, prompt, signal, ctx);
-      if (exitCode === 0) return { content: [{ type: "text", text: text || "(no output)" }] };
-      return { isError: true, content: [{ type: "text", text: text || `Agent exited ${exitCode}` }] };
+      const { exitCode, text } = await runInteractive(
+        agent,
+        prompt,
+        signal,
+        ctx,
+      );
+      if (exitCode === 0)
+        return { content: [{ type: "text", text: text || "(no output)" }] };
+      return {
+        isError: true,
+        content: [{ type: "text", text: text || `Agent exited ${exitCode}` }],
+      };
     },
   });
 

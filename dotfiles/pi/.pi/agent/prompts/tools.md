@@ -23,7 +23,7 @@ description: Show all available tools and when to use them
 - **mcp__webaccess__get_search_content** — retrieve full results from prior searches by responseId
 
 ### User Interaction
-- **mcp__ask_user** — keyboard-driven structured questions (choices or free-text)
+- **mcp__ask_user_question** — structured questions with options + free-text fallback
 
 ### Planning
 - **plannotator_submit_plan** — submit multi-step markdown plan for review
@@ -42,7 +42,7 @@ description: Show all available tools and when to use them
 | Multi-file exploration | Bash (grep, find) |
 | Research APIs / libraries | mcp__webaccess__code_search |
 | Answer factual questions | mcp__webaccess__web_search (multi-query) |
-| Clarify ambiguous requirements | mcp__ask_user (keyboard choices) |
+| Clarify ambiguous requirements | mcp__ask_user_question (structured choices) |
 | Complex multi-step work | plannotator_submit_plan (then execute) |
 
 **Pro tip:** This template is always available. Type `/tools` in the editor to bring it back.

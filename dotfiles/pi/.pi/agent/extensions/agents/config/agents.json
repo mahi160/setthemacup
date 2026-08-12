@@ -73,6 +73,18 @@
       "description": "Write tests for a file or function"
     },
     {
+      "name": "onboard",
+      "label": "Onboard",
+      "icon": "",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "high",
+      "tools": ["read", "grep", "find", "ls", "bash", "write"],
+      "file": "prompts/onboard.md",
+      "description": "Deep onboarding audit of the repo, written to ONBOARDING.html"
+    },
+    {
       "name": "scout",
       "label": "Repo Scout",
       "icon": "",

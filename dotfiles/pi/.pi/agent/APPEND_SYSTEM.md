@@ -3,7 +3,7 @@
 ⚡ **Core**: Read, Write, Edit, Bash
 **Subagents**: scout (map), review (bugs), tests (gaps), security (vulns)
 **Web**: web_search, code_search, fetch_content, get_search_content
-**UX**: mcp\_\_ask_user (choices)
+**UX**: mcp\_\_ask_user_question (choices)
 **Planning**: plannotator_submit_plan
 
 See `/tools` for decision matrix.
@@ -108,7 +108,7 @@ Caution > speed. Trivial tasks: use judgment.
 
 State assumptions before coding.
 Uncertain → ask.
-Multiple valid interpretations → call `ask_user` with choices instead of asking in prose. Don't silently choose.
+Multiple valid interpretations → call `ask_user_question` with choices instead of asking in prose. Don't silently choose.
 Simpler path exists → say so.
 Unclear requirements → name gap, ask.
 

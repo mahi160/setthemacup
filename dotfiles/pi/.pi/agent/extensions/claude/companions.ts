@@ -68,15 +68,8 @@ export const COMPANIONS: CompanionSpec[] = [
 		],
 	},
 	{
-		dirName: "ask-user",
-		packageName: "ask-user",
-		aliases: [
-			["ask_user", "mcp__ask_user"],
-		],
-	},
-	{
-		dirName: "pi-coding-agent",
-		packageName: "@earendil-works/pi-coding-agent",
+		dirName: "rpiv-ask-user-question",
+		packageName: "@juicesharp/rpiv-ask-user-question",
 		aliases: [
 			["ask_user_question", "mcp__ask_user_question"],
 		],

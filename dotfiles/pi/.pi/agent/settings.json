@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.83.0",
+  "lastChangelogVersion": "0.84.1",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-5",
+  "defaultModel": "claude-sonnet-5",
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "anthropic/claude-haiku-4-5",
@@ -42,10 +42,7 @@
     "anthropicExtraUsage": false
   },
   "theme": "kanagawa-wave",
-  "packages": [
-    "npm:@plannotator/pi-extension",
-    "npm:pi-web-access"
-  ],
+  "packages": ["npm:pi-web-access", "npm:@juicesharp/rpiv-ask-user-question"],
   "images": {
     "blockImages": false
   }

@@ -96,9 +96,9 @@ export default function (pi: ExtensionAPI): void {
   // ─── ask_user: Notify when question is asked ───
 
   pi.on("tool_call", (event, ctx) => {
-    if (isToolCallEventType("ask_user", event)) {
-      const params = event.input as { question?: string; questions?: Array<{ question: string }> };
-      const first = params.question ?? params.questions?.[0]?.question ?? "";
+    if (isToolCallEventType("ask_user_question", event)) {
+      const params = event.input as { questions?: Array<{ question: string }> };
+      const first = params.questions?.[0]?.question ?? "";
       notifyMacOS("π ?", "Waiting for input", first.slice(0, 80), ASK_SOUND);
     }
   });
