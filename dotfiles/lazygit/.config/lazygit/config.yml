@@ -22,6 +22,11 @@ gui:
       - '#e46876' # lotusRed
     defaultFgColor:
       - '#dcd7ba' # lotusInk1
+customCommands:
+  - key: '<c-p>'
+    command: 'git push --no-verify'
+    context: 'global'
+    loadingText: 'Pushing without verify...'
 git:
   diffRenderers:
     - colorArg: always
