@@ -6,18 +6,24 @@
 #   --cmd  <cmd>    dev server command    (default: auto-detect from lockfile)
 #   --name <name>   tmux session name     (default: basename of dir)
 #   --window <cmd>  extra window + cmd    (repeatable)
+#   --worktree <branch>        create/reuse a git worktree for <branch> and open a session for it
+#   --remove-worktree <branch> kill its session + remove the worktree
 #
 # Examples:
 #   dev
 #   dev --dir ~/projects/myapp
 #   dev --cmd "bun run start"
 #   dev --window "pnpm test" --window "pnpm lint"
+#   dev --worktree feature-x
+#   dev --remove-worktree feature-x
 
 # ─── Defaults ─────────────────────────────────────────────────────────────────
 WORK_DIR="$(pwd)"
 SESSION_NAME=""
 DEV_CMD=""
 EXTRA_WINDOWS=()
+WORKTREE_BRANCH=""
+RM_WORKTREE_BRANCH=""
 
 # ─── Parse flags ──────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -26,6 +32,8 @@ while [[ $# -gt 0 ]]; do
     --cmd)    DEV_CMD="$2";           shift 2 ;;
     --name)   SESSION_NAME="$2";      shift 2 ;;
     --window) EXTRA_WINDOWS+=("$2");  shift 2 ;;
+    --worktree)        WORKTREE_BRANCH="$2";    shift 2 ;;
+    --remove-worktree) RM_WORKTREE_BRANCH="$2"; shift 2 ;;
     *)
       echo "Unknown flag: $1"
       echo "Usage: dev [--dir <path>] [--cmd <cmd>] [--name <name>] [--window <cmd>]..."
@@ -39,6 +47,47 @@ WORK_DIR="$(cd "$WORK_DIR" 2>/dev/null && pwd)" || {
   echo "Error: directory '$WORK_DIR' not found."
   exit 1
 }
+
+# ─── Worktrees ────────────────────────────────────────────────────────────────
+# ponytail: git worktree + tmux already do this, no need for an extra tool
+if [[ -n "$RM_WORKTREE_BRANCH" ]]; then
+  repo_root="$(git -C "$WORK_DIR" rev-parse --show-toplevel 2>/dev/null)" || { echo "Error: not a git repo."; exit 1; }
+  repo_name="$(basename "$repo_root")"
+  slug="${RM_WORKTREE_BRANCH//\//-}"
+  wt_path="$HOME/.worktrees/$repo_name/$slug"
+  sess="${repo_name}-${slug}"
+  tmux kill-session -t "$sess" 2>/dev/null
+  git -C "$repo_root" worktree remove "$wt_path" --force 2>/dev/null || rm -rf "$wt_path"
+  echo "Removed worktree '$RM_WORKTREE_BRANCH' (session: $sess)"
+  exit 0
+fi
+
+if [[ -n "$WORKTREE_BRANCH" ]]; then
+  repo_root="$(git -C "$WORK_DIR" rev-parse --show-toplevel 2>/dev/null)" || { echo "Error: not a git repo."; exit 1; }
+  repo_name="$(basename "$repo_root")"
+  slug="${WORKTREE_BRANCH//\//-}"
+  wt_path="$HOME/.worktrees/$repo_name/$slug"
+  if [[ ! -d "$wt_path" ]]; then
+    mkdir -p "$(dirname "$wt_path")"
+    if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$WORKTREE_BRANCH"; then
+      git -C "$repo_root" worktree add "$wt_path" "$WORKTREE_BRANCH" || exit 1
+    else
+      git -C "$repo_root" worktree add -b "$WORKTREE_BRANCH" "$wt_path" || exit 1
+    fi
+
+    # untracked files git won't copy: env + deps
+    cp "$repo_root"/.env* "$wt_path"/ 2>/dev/null
+    if [[ -f "$wt_path/package.json" ]]; then
+      echo "Installing deps in $wt_path ..."
+      if   [[ -f "$wt_path/bun.lock" ]];          then (cd "$wt_path" && bun install)
+      elif [[ -f "$wt_path/pnpm-lock.yaml" ]];    then (cd "$wt_path" && pnpm install)
+      elif [[ -f "$wt_path/package-lock.json" ]]; then (cd "$wt_path" && npm install)
+      fi
+    fi
+  fi
+  WORK_DIR="$wt_path"
+  [[ -z "$SESSION_NAME" ]] && SESSION_NAME="${repo_name}-${slug}"
+fi
 
 [[ -z "$SESSION_NAME" ]] && SESSION_NAME="$(basename "$WORK_DIR")"
 
