@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.84.1",
+  "lastChangelogVersion": "0.84.2",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-5",
+  "defaultModel": "claude-opus-5",
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "anthropic/claude-haiku-4-5",
@@ -28,7 +28,7 @@
     "clearOnShrink": false,
     "showTerminalProgress": true
   },
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "quietStartup": true,
   "collapseChangelog": true,
   "enableInstallTelemetry": false,
@@ -42,7 +42,10 @@
     "anthropicExtraUsage": false
   },
   "theme": "kanagawa-wave",
-  "packages": ["npm:pi-web-access", "npm:@juicesharp/rpiv-ask-user-question"],
+  "packages": [
+    "npm:pi-web-access",
+    "npm:@juicesharp/rpiv-ask-user-question"
+  ],
   "images": {
     "blockImages": false
   }

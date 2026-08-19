@@ -691,7 +691,7 @@
         }
       }
     ],
-    "checkedAt": 1786507972491,
+    "checkedAt": 1787111332416,
     "lastModified": 1786351890000,
     "etag": "W/\"7572a78e60b78526600ed2a9b74b579d\""
   },
@@ -1141,14 +1141,18 @@
         },
         "contextWindow": 1000000,
         "maxTokens": 128000,
+        "compat": {
+          "allowedFallbackModels": [
+            "claude-opus-4-8",
+            "claude-opus-5"
+          ],
+          "forceAdaptiveThinking": true,
+          "supportsStrictTools": true
+        },
         "thinkingLevelMap": {
           "off": null,
           "xhigh": "xhigh",
           "max": "max"
-        },
-        "compat": {
-          "forceAdaptiveThinking": true,
-          "supportsStrictTools": true
         }
       },
       {
@@ -1347,14 +1351,17 @@
         },
         "contextWindow": 1000000,
         "maxTokens": 128000,
-        "thinkingLevelMap": {
-          "xhigh": "xhigh",
-          "max": "max"
-        },
         "compat": {
+          "allowedFallbackModels": [
+            "claude-opus-4-8"
+          ],
           "forceAdaptiveThinking": true,
           "supportsTemperature": false,
           "supportsStrictTools": true
+        },
+        "thinkingLevelMap": {
+          "xhigh": "xhigh",
+          "max": "max"
         }
       },
       {
@@ -1459,9 +1466,9 @@
         }
       }
     ],
-    "checkedAt": 1786507973065,
-    "lastModified": 1786091894000,
-    "etag": "W/\"2174ed7392c0d5376beba2c4ee0b170f\""
+    "checkedAt": 1787111332921,
+    "lastModified": 1787050102000,
+    "etag": "W/\"1d32d5cd7a7db4f6fd3eee002d5aae5b\""
   },
   "github-copilot": {
     "models": [
