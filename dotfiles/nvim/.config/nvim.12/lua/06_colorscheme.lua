@@ -11,6 +11,7 @@ vim.g.gruvbox_material_transparent_background = 2
 require("kanagawa").setup({
 	theme = "wave",
 	undercurl = true,
+	transparent = true,
 	commentStyle = { italic = true },
 	functionStyle = { italic = true },
 	keywordStyle = { italic = true },

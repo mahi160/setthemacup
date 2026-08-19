@@ -1,6 +1,23 @@
 local au = vim.api.nvim_create_autocmd
 local ag = vim.api.nvim_create_augroup
 
+require("colorpeek").setup()
+
+-- Relative number off while typing, back on when leaving insert mode
+au("InsertEnter", {
+	group = ag("number_insert", { clear = true }),
+	callback = function()
+		vim.o.relativenumber = false
+	end,
+})
+
+au("InsertLeave", {
+	group = ag("number_normal", { clear = true }),
+	callback = function()
+		vim.o.relativenumber = true
+	end,
+})
+
 -- Enable spell check for prose files
 au("FileType", {
 	group = ag("spell_files", { clear = true }),

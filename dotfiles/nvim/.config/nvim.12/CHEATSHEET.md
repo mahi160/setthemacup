@@ -25,6 +25,9 @@
 | `<leader>bd` | Delete current buffer |
 | `<leader>bo` | Close all other buffers |
 | `<leader>qq` | Quit all buffers |
+| `<leader>qs` | Save session for cwd |
+| `<leader>ql` | Load session (local or latest) |
+| `<leader>qd` | Delete session for cwd |
 | `<leader>tu` | Toggle undo tree |
 
 ## Tabs (window layouts)
@@ -119,7 +122,10 @@ Examples: `daf` (delete function), `cil` (change inside loop), `vac` (select cla
 | `<leader>gh` | Show git history at cursor |
 | `<leader>gb` | Show blame (vertical split) |
 | `<leader>gl` | Show file log |
-| *hunks* | Visible in sign column via mini.diff |
+| `gh` | Apply (stage) hunk / hunk textobject |
+| `gH` | Reset (discard) hunk |
+| `]h / [h` | Next/prev hunk |
+| `]H / [H` | Last/first hunk |
 
 ## Diagnostics & References — Trouble
 
@@ -195,6 +201,17 @@ Examples: `daf` (delete function), `cil` (change inside loop), `vac` (select cla
 
 - `inccommand = "split"` — Live preview of `:s` substitutions
 - To enable clipboard sync with system: uncomment `clipboard:append("unnamedplus")` in `01_core.lua`
+- `relativenumber` auto-disables in insert mode, restores on leaving it
+
+## Color Preview (colorpeek)
+
+- Hold cursor on a `#rrggbb`, `#rgb`, `rgb()`, `hsl()`, or `oklch()` value → swatch + hex shown as virtual text (eol)
+- Works in any buffer/filetype — not limited to LSPs with color-capability (`vim.lsp.document_color` still enabled separately)
+
+## Sessions (mini.sessions)
+
+- Local `Session.vim` per project cwd — autoloads on `nvim` with no file args, autosaves on quit
+- `<leader>qs` save, `<leader>ql` load, `<leader>qd` delete (see Buffers & Windows)
 
 ---
 

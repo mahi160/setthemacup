@@ -31,6 +31,10 @@ require("mini.notify").setup()
 vim.notify = require("mini.notify").make_notify()
 
 require("mini.pairs").setup()
+
+-- Autoread local (per-cwd) Session.vim on startup, autowrite on exit —
+-- mirrors persistence.nvim; zero extra deps, mini.nvim already vendors it.
+require("mini.sessions").setup({ autoread = true })
 require("mini.snippets").setup({ snippets = { require("mini.snippets").gen_loader.from_lang() } })
 require("mini.splitjoin").setup()
 require("mini.statusline").setup()
