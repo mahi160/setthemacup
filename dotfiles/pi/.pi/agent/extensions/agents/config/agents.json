@@ -37,6 +37,18 @@
       "description": "Line-by-line senior-dev review of a PR, posts inline GitHub comments"
     },
     {
+      "name": "roast",
+      "label": "Roast",
+      "icon": "󰈸",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "low",
+      "tools": ["bash", "read", "grep"],
+      "file": "prompts/roast.md",
+      "description": "Brutal review of unstaged changes (or a given target): bugs, regressions, AI smells, missing tests"
+    },
+    {
       "name": "standup",
       "label": "Standup",
       "icon": "󰟌",
@@ -83,6 +95,18 @@
       "tools": ["read", "grep", "find", "ls", "bash", "write"],
       "file": "prompts/onboard.md",
       "description": "Deep onboarding audit of the repo, written to ONBOARDING.html"
+    },
+    {
+      "name": "css-audit",
+      "label": "CSS Audit",
+      "icon": "",
+      "type": "user",
+      "output": "inline",
+      "model": "anthropic/claude-sonnet-5",
+      "thinking": "medium",
+      "tools": ["read", "edit", "grep", "find", "ls"],
+      "file": "prompts/css-audit.md",
+      "description": "Audit + rewrite a CSS file and its markup: property order, logical properties, rem units, CSS vars, minimal nesting"
     },
     {
       "name": "scout",
