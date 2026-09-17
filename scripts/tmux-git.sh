@@ -10,22 +10,12 @@
 #   ⎇ main ↑2  1.2M
 #   ⎇ main ~5 ?2  892K
 
-# Theme-aware colours — reads ~/.config/kanagawa-variant
-VARIANT=$(cat "$HOME/.config/kanagawa-variant" 2>/dev/null || echo "wave")
-
-if [[ "$VARIANT" == "lotus" ]]; then
-  B='#[fg=#4d699b]'  # lotusBlue4   — branch
-  G='#[fg=#6f894e]'  # lotusGreen   — ahead ↑
-  Y='#[fg=#cc6d00]'  # lotusOrange  — modified ~
-  R='#[fg=#c84053]'  # lotusRed     — untracked ?
-  D='#[fg=#716e61]'  # lotusGray2   — size
-else
-  B='#[fg=#7e9cd8]'  # crystalBlue  — branch
-  G='#[fg=#98bb6c]'  # springGreen  — ahead ↑
-  Y='#[fg=#e6c384]'  # carpYellow   — modified ~
-  R='#[fg=#e46876]'  # waveRed      — untracked ?
-  D='#[fg=#727169]'  # fujiGray     — size
-fi
+# Gruvbox Material colours
+B='#[fg=#7daea3]'  # aqua   — branch
+G='#[fg=#a9b665]'  # green  — ahead ↑
+Y='#[fg=#e78a4e]'  # orange — modified ~
+R='#[fg=#ea6962]'  # red    — untracked ?
+D='#[fg=#928374]'  # gray   — size
 X='#[fg=default]'  # reset
 
 path="${1:-.}"

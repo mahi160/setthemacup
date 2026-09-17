@@ -28,6 +28,22 @@ if [ -z "$NOTE_TEXT" ]; then
   exit 0
 fi
 
+# LP:/WU: prefix -> route to the Busybox project-OS vault's Daily note Inbox
+# instead of the general Mindflayer journal. Everything else falls through
+# to the existing behavior below, unchanged.
+if [[ "$NOTE_TEXT" =~ ^(LP|WU): ]]; then
+  BUSYBOX_DAILY="$HOME/Documents/Notes/Busybox/Daily"
+  BUSYBOX_TEMPLATE="$HOME/Documents/Notes/Busybox/Templates/Daily.md"
+  mkdir -p "$BUSYBOX_DAILY"
+  DAILY_FILE="$BUSYBOX_DAILY/${YEAR}-$(date +%m)-${DAY}.md"
+  if [ ! -f "$DAILY_FILE" ]; then
+    sed "s/{{date:YYYY-MM-DD}}/${YEAR}-$(date +%m)-${DAY}/" "$BUSYBOX_TEMPLATE" >"$DAILY_FILE" 2>/dev/null \
+      || printf '# %s-%s-%s\n\n## Inbox\n\n-\n' "$YEAR" "$(date +%m)" "$DAY" >"$DAILY_FILE"
+  fi
+  echo "- [$TIME] $NOTE_TEXT" >>"$DAILY_FILE"
+  exit 0
+fi
+
 # Prefix icon based on type
 [[ "$NOTE_TYPE" == "learn" ]] && NOTE_TEXT="󰑴 $NOTE_TEXT" || NOTE_TEXT="$NOTE_TEXT"
 
