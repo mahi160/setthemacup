@@ -26,6 +26,15 @@ set_pi() {
   fi
 
   log "pi installed"
+
+  if command -v herdr >/dev/null 2>&1; then
+    info "Linking herdr dev-layout plugin..."
+    if herdr plugin link "$SCRIPTS_DIR/herdr-dev-layout" --enabled >/dev/null 2>&1; then
+      success "herdr dev-layout plugin linked."
+    else
+      warn "herdr dev-layout plugin link failed (non-fatal)."
+    fi
+  fi
   )
 }
 

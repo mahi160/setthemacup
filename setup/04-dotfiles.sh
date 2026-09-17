@@ -10,7 +10,7 @@ set_dotfiles() {
 
     # Stow dotfiles (all 11 packages — pi is included; entire ~/.pi/agent is symlinked)
     info "Stowing dotfiles from $DOTFILES_DIR..."
-    local packages=(fastfetch pi git ghostty lazygit nvim starship stow tmux yazi zsh)
+    local packages=(fastfetch pi pi-new git ghostty herdr lazygit nvim starship stow tmux yazi zsh)
     for pkg in "${packages[@]}"; do
       local conflicts
       conflicts=$(stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 |
