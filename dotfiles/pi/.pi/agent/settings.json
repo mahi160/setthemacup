@@ -43,6 +43,7 @@
     "extensions/pi-focus/index.ts",
     "extensions/pi-claude/index.ts",
     "extensions/pi-spawn/index.ts",
+    "extensions/pi-notify/index.ts",
     "extensions/pi-footer/index.ts",
     "extensions/pi-permissions/index.ts"
   ],
