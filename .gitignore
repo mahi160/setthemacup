@@ -15,6 +15,7 @@ dotfiles/pi/.pi/*/auth*
 **/.pi/agent/sessions/
 **/.pi/agent/stats.db*
 **/.pi/agent/run-history.jsonl
+**/.pi/web-search-cache/
 
 # PI stats database
 dotfiles/pi/.pi/agent/stats.db-wal
@@ -29,3 +30,6 @@ dotfiles/pi/.pi/agent/run-history.jsonl
 .pi-subagents/
 dotfiles/git/.gitconfig
 dotfiles/pi/.pi/agent/trust.json
+
+# Local pi backups
+/pi-old-2/
