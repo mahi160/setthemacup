@@ -1,5 +1,5 @@
-# theme = Gruvbox Material Dark
-theme = Kanagawa Wave
+theme = Gruvbox Material Dark
+# theme = Kanagawa Wave
 
 # font-family = JetBrainsMono Nerd Font
 font-family = Maple Mono NF
@@ -28,7 +28,7 @@ window-padding-balance = true
 background-blur = 240
 background-opacity = 0.95
 
-background-image = ~/Pictures/pokemon_bg/68.png
+background-image = ~/Pictures/pokemon_bg/315.png
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right
