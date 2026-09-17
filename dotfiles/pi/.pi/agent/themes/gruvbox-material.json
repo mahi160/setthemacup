@@ -30,6 +30,8 @@
     "dim": "bg4",
     "text": "",
     "thinkingText": "gray",
+    "scrollbarTrack": "bg3",
+    "scrollbarThumb": "gray",
     "selectedBg": "bg1",
     "userMessageBg": "bg1",
     "userMessageText": "fg0",

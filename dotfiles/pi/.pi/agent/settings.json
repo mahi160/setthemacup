@@ -1,11 +1,30 @@
 {
-  "lastChangelogVersion": "0.84.2",
+  "theme": "gruvbox-material",
+  "enableSkillCommands": true,
+  "terminal": {
+    "showTerminalProgress": false
+  },
+  "steeringMode": "all",
+  "transport": "auto",
+  "hideThinkingBlock": false,
+  "markdown": {
+    "mermaid": "final"
+  },
+  "showCacheMissNotices": false,
+  "collapseChangelog": true,
+  "quietStartup": true,
+  "defaultProjectTrust": "ask",
+  "warnings": {
+    "anthropicExtraUsage": false
+  },
+  "tuiMode": "regular",
+  "fullscreenExitOutput": "transcript",
+  "fullscreenScrollbar": "auto",
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-5",
-  "defaultThinkingLevel": "high",
+  "defaultModel": "anthropic/claude-sonnet-5",
   "enabledModels": [
-    "anthropic/claude-haiku-4-5",
     "anthropic/claude-sonnet-5",
+    "anthropic/claude-haiku-4-5",
     "anthropic/claude-opus-5"
   ],
   "compaction": {
@@ -13,40 +32,23 @@
     "reserveTokens": 40000,
     "keepRecentTokens": 30000
   },
-  "retry": {
-    "enabled": true,
-    "maxRetries": 3,
-    "provider": {
-      "timeoutMs": 300000,
-      "maxRetries": 0
-    }
-  },
-  "enableSkillCommands": true,
-  "showHardwareCursor": true,
-  "editorPaddingX": 1,
-  "terminal": {
-    "clearOnShrink": false,
-    "showTerminalProgress": true
-  },
-  "hideThinkingBlock": false,
-  "quietStartup": true,
-  "collapseChangelog": true,
-  "enableInstallTelemetry": false,
-  "autocompleteMaxVisible": 7,
-  "doubleEscapeAction": "tree",
-  "treeFilterMode": "no-tools",
-  "branchSummary": {
-    "skipPrompt": true
-  },
-  "warnings": {
-    "anthropicExtraUsage": false
-  },
-  "theme": "kanagawa-wave",
   "packages": [
+    "npm:@signalridge/pi-plan-mode",
+    "npm:pi-mcp-adapter",
     "npm:pi-web-access",
-    "npm:@juicesharp/rpiv-ask-user-question"
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "npm:pi-lens"
   ],
-  "images": {
-    "blockImages": false
+  "extensions": [
+    "extensions/pi-focus/index.ts",
+    "extensions/pi-claude/index.ts",
+    "extensions/pi-spawn/index.ts",
+    "extensions/pi-footer/index.ts",
+    "extensions/pi-permissions/index.ts"
+  ],
+  "lastChangelogVersion": "0.85.1",
+  "modelThinkingLevels": {
+    "anthropic/claude-sonnet-5": "medium",
+    "google/gemini-flash-lite-latest": "low"
   }
 }
