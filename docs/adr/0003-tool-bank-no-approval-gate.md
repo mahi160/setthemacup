@@ -1,0 +1,5 @@
+# Tool-bank saves are agent-authored with no human approval gate
+
+`tool-bank` lets the agent persist a saved tool (bash code + typed param schema, registered globally via `pi.registerTool()`) by calling `save_tool` directly — no human review step sits between the call and the tool becoming a standing, auto-invocable part of every future session's tool set. The alternative (a pending/approved queue) was considered and rejected: it slows growth of the registry for a security gain that's marginal here, since extensions and the existing `bash` tool already run with full system permissions, so a saved tool executes with no more privilege than the agent already has ad hoc.
+
+The gap this leaves — a bad or subtly wrong tool persisting unnoticed — is covered by visibility, not review: every `save_tool` call fires a `ctx.ui.notify()` toast and appends one line (name, timestamp, description) to a plain-text save log. `save_tool` also rejects on name collision, so a bad save can't silently clobber a working one; it can only add a new name to be noticed and pruned by hand.
