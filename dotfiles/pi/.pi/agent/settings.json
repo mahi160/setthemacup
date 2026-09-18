@@ -2,11 +2,12 @@
   "theme": "gruvbox-material",
   "enableSkillCommands": true,
   "terminal": {
-    "showTerminalProgress": false
+    "showTerminalProgress": false,
+    "images": "kitty"
   },
   "steeringMode": "all",
   "transport": "auto",
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "markdown": {
     "mermaid": "final"
   },
@@ -45,9 +46,9 @@
     "extensions/pi-focus/index.ts",
     "extensions/pi-claude/index.ts",
     "extensions/pi-spawn/index.ts",
-    "extensions/pi-notify/index.ts",
     "extensions/pi-footer/index.ts",
-    "extensions/pi-permissions/index.ts"
+    "extensions/pi-permissions/index.ts",
+    "extensions/pi-peon-question/index.ts"
   ],
   "lastChangelogVersion": "0.85.1",
   "modelThinkingLevels": {

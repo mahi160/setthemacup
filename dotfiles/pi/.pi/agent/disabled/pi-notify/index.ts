@@ -9,10 +9,14 @@ type Outcome = {
 
 const MIN_DURATION_MS = 3_000;
 const SUCCESS_SOUND = "Glass";
-const ERROR_SOUND = "Basso";
 const SOUND_DIR = "/System/Library/Sounds";
 
-function notify(title: string, subtitle: string, message: string, sound: string): void {
+function notify(
+  title: string,
+  subtitle: string,
+  message: string,
+  sound?: string,
+): void {
   if (process.platform !== "darwin") return;
 
   execFile(
@@ -23,11 +27,14 @@ function notify(title: string, subtitle: string, message: string, sound: string)
     // terminal-notifier may not be installed on every machine.
   });
 
-  // peon-ping handles sounds now
-  // execFile("afplay", [`${SOUND_DIR}/${sound}.aiff`], { stdio: "ignore" }).on(
-  //   "error",
-  //   () => {},
-  // );
+  // peon-ping handles task.complete/task.error sounds; keep the local
+  // sound only for events peon-ping's adapter doesn't cover (ui_prompt).
+  if (!sound) return;
+
+  execFile("afplay", [`${SOUND_DIR}/${sound}.aiff`], { stdio: "ignore" }).on(
+    "error",
+    () => {},
+  );
 }
 
 function formatDuration(ms: number): string {
@@ -37,15 +44,18 @@ function formatDuration(ms: number): string {
 
 function assistantOutcome(messages: unknown[]): Outcome {
   const assistant = messages
-    .filter((message): message is {
-      role: "assistant";
-      stopReason?: string;
-      errorMessage?: string;
-      content?: unknown;
-    } =>
-      typeof message === "object" &&
-      message !== null &&
-      (message as { role?: string }).role === "assistant",
+    .filter(
+      (
+        message,
+      ): message is {
+        role: "assistant";
+        stopReason?: string;
+        errorMessage?: string;
+        content?: unknown;
+      } =>
+        typeof message === "object" &&
+        message !== null &&
+        (message as { role?: string }).role === "assistant",
     )
     .at(-1);
 
@@ -104,7 +114,7 @@ export default function (pi: ExtensionAPI): void {
       outcome.failed ? "π ✗" : "π ✓",
       subtitle,
       outcome.preview,
-      outcome.failed ? ERROR_SOUND : SUCCESS_SOUND,
+      // peon-ping already plays a sound on Stop/task.complete.
     );
   });
 
