@@ -23,10 +23,11 @@ function notify(title: string, subtitle: string, message: string, sound: string)
     // terminal-notifier may not be installed on every machine.
   });
 
-  execFile("afplay", [`${SOUND_DIR}/${sound}.aiff`], { stdio: "ignore" }).on(
-    "error",
-    () => {},
-  );
+  // peon-ping handles sounds now
+  // execFile("afplay", [`${SOUND_DIR}/${sound}.aiff`], { stdio: "ignore" }).on(
+  //   "error",
+  //   () => {},
+  // );
 }
 
 function formatDuration(ms: number): string {
