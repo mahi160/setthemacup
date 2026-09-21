@@ -7,7 +7,7 @@
   },
   "steeringMode": "all",
   "transport": "auto",
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "markdown": {
     "mermaid": "final"
   },
@@ -50,7 +50,7 @@
     "extensions/pi-permissions/index.ts",
     "extensions/pi-peon-question/index.ts"
   ],
-  "lastChangelogVersion": "0.85.1",
+  "lastChangelogVersion": "0.86.1",
   "modelThinkingLevels": {
     "anthropic/claude-sonnet-5": "medium",
     "google/gemini-flash-lite-latest": "low"
