@@ -2,7 +2,7 @@
  * Minimal permission gate, built only on the public ExtensionAPI (pi.on("tool_call")).
  *
  * Policy:
- * - read: always allowed, except secure files (blocked outright).
+ * - read: always allowed.
  * - write / edit / delete (rm via bash): allowed inside cwd.
  * - write / edit / delete outside cwd: ask, with Once / This session / None(deny).
  * - bash commands are scanned for path tokens and gated the same way.
@@ -114,10 +114,6 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("tool_call", async (event: ToolCallEvent, ctx: ExtensionContext) => {
 		if (event.toolName === "read") {
-			const resolved = resolvePath(event.input.path, ctx.cwd);
-			if (isSecurePath(resolved)) {
-				return { block: true, reason: `Refusing to read secure path: ${resolved}` };
-			}
 			return undefined;
 		}
 
