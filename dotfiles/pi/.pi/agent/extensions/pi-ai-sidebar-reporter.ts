@@ -1,0 +1,1 @@
+/Users/mahi/Documents/Coding/Projects/tmux-ai-sidebar/extensions/pi-ai-sidebar-reporter.ts
