@@ -42,7 +42,7 @@ import type {
 	Theme,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
-import type { Component } from "@earendil-works/pi-tui";
+import type { Component, TUI } from "@earendil-works/pi-tui";
 import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
 type ExecFn = (command: string, args: string[], options?: ExecOptions) => Promise<ExecResult>;
@@ -69,6 +69,19 @@ const WIDGET_KEY = "pi-spawn";
 const BODY_LINES = 3;
 const LINE_WIDTH = 78;
 const RESULT_MESSAGE_TYPE = "pi-spawn-result";
+const SPINNER_FRAMES = ["⠳", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+const SPINNER_TICK_MS = 100;
+
+/** Readable one-liner for a tool call — bash command, file path, grep pattern, or bare name. */
+function formatTool(name: string | undefined, args: Record<string, unknown> | undefined): string {
+	if (!name) return "";
+	const n = name.toLowerCase();
+	if (!args) return n;
+	if (n === "bash" && typeof args.command === "string") return `bash: ${args.command.slice(0, 60)}`;
+	if ((n === "read" || n === "write" || n === "edit") && typeof args.path === "string") return `${n}: ${args.path}`;
+	if (n === "grep" && typeof args.pattern === "string") return `grep: ${args.pattern}`;
+	return n;
+}
 
 /** Bordered box, redrawn on every requestRender — ┌ title ┐ frame around wrapped body lines. */
 function drawBox(title: string, body: string[], theme: Theme, borderColor: ThemeColor): Component {
@@ -150,6 +163,10 @@ interface AskAnswer {
 interface ActiveRun {
 	header: string;
 	log: string[];
+	currentTool: string;
+	frame: number;
+	elapsedMs: number;
+	tui?: TUI;
 	pending?: { req: AskRequest; resolve: (a: AskAnswer) => void };
 	render: () => void;
 }
@@ -179,6 +196,7 @@ interface RunOptions {
 	thinking: string;
 	tools?: string; // omit for full default tool access
 	onLog: (line: string) => void;
+	onTool: (label: string) => void; // "" clears the current-tool display
 	onAsk: (req: AskRequest) => Promise<AskAnswer>;
 }
 
@@ -275,7 +293,10 @@ function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }>
 					break;
 				}
 				case "tool_execution_start":
-					opts.onLog(`[tool] ${data.toolName}`);
+					opts.onTool(formatTool(data.toolName as string | undefined, data.args as Record<string, unknown> | undefined));
+					break;
+				case "tool_execution_end":
+					opts.onTool("");
 					break;
 				case "agent_settled":
 					send({ id: "final", type: "get_last_assistant_text" });
@@ -296,7 +317,10 @@ function renderRunningBox(run: ActiveRun, theme: Theme): Component {
 		const q = run.pending.req.title ?? run.pending.req.message ?? "question";
 		body.push(theme.fg("warning", `❓ press ${ANSWER_KEY_HINT} to answer: ${q}`));
 	} else {
-		for (const line of run.log.slice(-BODY_LINES)) body.push(theme.fg("dim", line));
+		const spin = theme.fg("warning", SPINNER_FRAMES[run.frame % SPINNER_FRAMES.length]);
+		body.push(`${spin} ${theme.fg("dim", `${(run.elapsedMs / 1000).toFixed(1)}s`)}`);
+		if (run.currentTool) body.push(theme.fg("dim", `⟳ ${run.currentTool}`));
+		for (const line of run.log.slice(-(BODY_LINES - body.length))) body.push(theme.fg("dim", line));
 	}
 	return drawBox(run.header, body, theme, run.pending ? "warning" : "borderAccent");
 }
@@ -320,17 +344,31 @@ async function runWithBox(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	header: string,
-	opts: Omit<RunOptions, "onLog" | "onAsk">,
+	opts: Omit<RunOptions, "onLog" | "onTool" | "onAsk">,
 ): Promise<void> {
-	const run: ActiveRun = { header, log: [], render: () => {} };
-	run.render = () => ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => renderRunningBox(run, theme));
+	const run: ActiveRun = { header, log: [], currentTool: "", frame: 0, elapsedMs: 0, render: () => {} };
+	run.render = () =>
+		ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => {
+			run.tui = tui;
+			return renderRunningBox(run, theme);
+		});
 	active = run;
 	run.render();
+
+	const spinnerTimer = setInterval(() => {
+		run.frame++;
+		run.elapsedMs += SPINNER_TICK_MS;
+		run.tui?.requestRender();
+	}, SPINNER_TICK_MS);
 
 	const { text, error } = await runChildPi({
 		...opts,
 		onLog: (line) => {
 			run.log.push(line);
+			run.render();
+		},
+		onTool: (label) => {
+			run.currentTool = label;
 			run.render();
 		},
 		onAsk: (req) =>
@@ -340,6 +378,7 @@ async function runWithBox(
 			}),
 	});
 
+	clearInterval(spinnerTimer);
 	active = undefined;
 	ctx.ui.setWidget(WIDGET_KEY, undefined);
 	sendResult(pi, header, text, error);
@@ -350,13 +389,14 @@ async function runWithTmux(
 	pi: ExtensionAPI,
 	exec: ExecFn,
 	header: string,
-	opts: Omit<RunOptions, "onLog" | "onAsk">,
+	opts: Omit<RunOptions, "onLog" | "onTool" | "onAsk">,
 ): Promise<void> {
 	if (!process.env.TMUX) {
 		// Not inside tmux: no surface to show progress or ask questions on.
 		const { text, error } = await runChildPi({
 			...opts,
 			onLog: () => {},
+			onTool: () => {},
 			onAsk: async () => ({ cancelled: true }),
 		});
 		sendResult(pi, header, text, error);
@@ -401,6 +441,7 @@ async function runWithTmux(
 	const { text, error } = await runChildPi({
 		...opts,
 		onLog: (line) => void appendLog(line),
+		onTool: (label) => label && void appendLog(`[tool] ${label}`),
 		onAsk: askViaTmux,
 	});
 
