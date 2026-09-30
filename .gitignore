@@ -33,3 +33,7 @@ dotfiles/pi/.pi/agent/trust.json
 
 # Local pi backups
 /pi-old-2/
+
+# pi-blackhole runtime state
+dotfiles/pi/.pi/agent/pi-blackhole/*-pending*.json
+**/.pi/agent/mcp-auth.json

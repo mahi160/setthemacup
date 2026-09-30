@@ -9,6 +9,7 @@ type Outcome = {
 
 const MIN_DURATION_MS = 3_000;
 const SUCCESS_SOUND = "Glass";
+const FAILURE_SOUND = "Basso";
 const SOUND_DIR = "/System/Library/Sounds";
 
 function notify(
@@ -27,8 +28,6 @@ function notify(
     // terminal-notifier may not be installed on every machine.
   });
 
-  // peon-ping handles task.complete/task.error sounds; keep the local
-  // sound only for events peon-ping's adapter doesn't cover (ui_prompt).
   if (!sound) return;
 
   execFile("afplay", [`${SOUND_DIR}/${sound}.aiff`], { stdio: "ignore" }).on(
@@ -114,7 +113,7 @@ export default function (pi: ExtensionAPI): void {
       outcome.failed ? "π ✗" : "π ✓",
       subtitle,
       outcome.preview,
-      // peon-ping already plays a sound on Stop/task.complete.
+      outcome.failed ? FAILURE_SOUND : SUCCESS_SOUND,
     );
   });
 
