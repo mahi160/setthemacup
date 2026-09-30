@@ -176,7 +176,8 @@
       "desc": "Docker Desktop replacement — lighter and faster"
     },
 
-    { "name": "font-jetbrains-mono-nerd-font", "desc": "Primary coding font" }
+    { "name": "font-jetbrains-mono-nerd-font", "desc": "Coding font" },
+    { "name": "font-monaspace-nf", "desc": "Primary coding font (Ghostty)" }
   ],
 
   "mas": [],
