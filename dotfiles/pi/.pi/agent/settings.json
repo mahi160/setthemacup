@@ -1,12 +1,10 @@
 {
   "theme": "gruvbox-material",
-  "enableSkillCommands": true,
   "terminal": {
     "showTerminalProgress": false,
     "images": "kitty"
   },
   "steeringMode": "all",
-  "transport": "auto",
   "hideThinkingBlock": true,
   "markdown": {
     "mermaid": "final"
@@ -18,9 +16,6 @@
   "warnings": {
     "anthropicExtraUsage": false
   },
-  "tuiMode": "regular",
-  "fullscreenExitOutput": "transcript",
-  "fullscreenScrollbar": "auto",
   "defaultProvider": "anthropic",
   "defaultModel": "anthropic/claude-opus-5-5",
   "enabledModels": [
@@ -37,8 +32,7 @@
     "npm:@signalridge/pi-plan-mode@1.4.1",
     "npm:pi-web-access@0.33.0",
     "npm:pi-lens@4.3.0",
-    "npm:@upstash/context7-pi@0.1.2",
-    "npm:pi-blackhole@0.5.10"
+    "npm:@upstash/context7-pi@0.1.2"
   ],
   "extensions": [
     "extensions/pi-claude/index.ts",
@@ -46,13 +40,12 @@
     "extensions/pi-footer/index.ts",
     "extensions/pi-permissions/index.ts",
     "extensions/pi-notify/index.ts",
-    "extensions/rpiv-ask-user-question/index.ts"
+    "extensions/pi-ask/index.ts"
   ],
   "lastChangelogVersion": "0.99.1",
   "modelThinkingLevels": {
     "anthropic/claude-sonnet-5-5": "high",
     "anthropic/claude-haiku-4-5": "high",
-    "anthropic/claude-opus-5-5": "low",
-    "google/gemini-flash-lite-latest": "low"
+    "anthropic/claude-opus-5-5": "low"
   }
 }
