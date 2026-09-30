@@ -164,6 +164,7 @@ interface ActiveRun {
 	header: string;
 	log: string[];
 	currentTool: string;
+	streamText: string[];
 	frame: number;
 	elapsedMs: number;
 	tui?: TUI;
@@ -197,6 +198,7 @@ interface RunOptions {
 	tools?: string; // omit for full default tool access
 	onLog: (line: string) => void;
 	onTool: (label: string) => void; // "" clears the current-tool display
+	onText: (recentLines: string[]) => void; // streamed model output, last N non-empty lines
 	onAsk: (req: AskRequest) => Promise<AskAnswer>;
 }
 
@@ -218,6 +220,7 @@ function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }>
 
 		let stderr = "";
 		let settled = false;
+		const textAcc = { value: "" };
 
 		const send = (obj: Record<string, unknown>) => {
 			child.stdin.write(`${JSON.stringify(obj)}\n`);
@@ -285,6 +288,20 @@ function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }>
 				case "agent_start":
 					opts.onLog("investigating…");
 					break;
+				case "message_update": {
+					const ame = (data.assistantMessageEvent ?? {}) as { type?: string; delta?: string };
+					if (ame.type === "text_delta" && ame.delta) {
+						textAcc.value += ame.delta;
+						opts.onText(
+							textAcc.value
+								.split("\n")
+								.map((l) => l.trim())
+								.filter(Boolean)
+								.slice(-2),
+						);
+					}
+					break;
+				}
 				case "message_end": {
 					const msg = data.message as { role?: string; stopReason?: string; errorMessage?: string } | undefined;
 					if (msg?.role === "assistant" && msg.stopReason === "error") {
@@ -320,7 +337,8 @@ function renderRunningBox(run: ActiveRun, theme: Theme): Component {
 		const spin = theme.fg("warning", SPINNER_FRAMES[run.frame % SPINNER_FRAMES.length]);
 		body.push(`${spin} ${theme.fg("dim", `${(run.elapsedMs / 1000).toFixed(1)}s`)}`);
 		if (run.currentTool) body.push(theme.fg("dim", `⟳ ${run.currentTool}`));
-		for (const line of run.log.slice(-(BODY_LINES - body.length))) body.push(theme.fg("dim", line));
+		const rest = run.streamText.length > 0 ? run.streamText : run.log;
+		for (const line of rest.slice(-(BODY_LINES - body.length))) body.push(theme.fg("dim", line));
 	}
 	return drawBox(run.header, body, theme, run.pending ? "warning" : "borderAccent");
 }
@@ -344,16 +362,18 @@ async function runWithBox(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	header: string,
-	opts: Omit<RunOptions, "onLog" | "onTool" | "onAsk">,
+	opts: Omit<RunOptions, "onLog" | "onTool" | "onText" | "onAsk">,
 ): Promise<void> {
-	const run: ActiveRun = { header, log: [], currentTool: "", frame: 0, elapsedMs: 0, render: () => {} };
-	run.render = () =>
-		ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => {
-			run.tui = tui;
-			return renderRunningBox(run, theme);
-		});
+	const run: ActiveRun = { header, log: [], currentTool: "", streamText: [], frame: 0, elapsedMs: 0, render: () => {} };
+	// setWidget builds+mounts the Component once; calling it again on every update would
+	// dispose and rebuild the whole widget (choppy/stuck during fast text-delta streams).
+	// Redraws instead go through tui.requestRender() on the same live Component below.
+	run.render = () => run.tui?.requestRender();
+	ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => {
+		run.tui = tui;
+		return renderRunningBox(run, theme);
+	});
 	active = run;
-	run.render();
 
 	const spinnerTimer = setInterval(() => {
 		run.frame++;
@@ -369,6 +389,10 @@ async function runWithBox(
 		},
 		onTool: (label) => {
 			run.currentTool = label;
+			run.render();
+		},
+		onText: (lines) => {
+			run.streamText = lines;
 			run.render();
 		},
 		onAsk: (req) =>
@@ -389,7 +413,7 @@ async function runWithTmux(
 	pi: ExtensionAPI,
 	exec: ExecFn,
 	header: string,
-	opts: Omit<RunOptions, "onLog" | "onTool" | "onAsk">,
+	opts: Omit<RunOptions, "onLog" | "onTool" | "onText" | "onAsk">,
 ): Promise<void> {
 	if (!process.env.TMUX) {
 		// Not inside tmux: no surface to show progress or ask questions on.
@@ -397,6 +421,7 @@ async function runWithTmux(
 			...opts,
 			onLog: () => {},
 			onTool: () => {},
+			onText: () => {},
 			onAsk: async () => ({ cancelled: true }),
 		});
 		sendResult(pi, header, text, error);
@@ -442,6 +467,7 @@ async function runWithTmux(
 		...opts,
 		onLog: (line) => void appendLog(line),
 		onTool: (label) => label && void appendLog(`[tool] ${label}`),
+		onText: () => {},
 		onAsk: askViaTmux,
 	});
 

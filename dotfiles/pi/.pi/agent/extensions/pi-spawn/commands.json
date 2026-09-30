@@ -19,8 +19,8 @@
 	},
 	{
 		"name": "pr-check",
-		"model": "anthropic/claude-sonnet-5",
-		"thinking": "medium",
+		"model": "anthropic/claude-opus-5-5",
+		"thinking": "low",
 		"prompt": "pr-check.md"
 	},
 	{
