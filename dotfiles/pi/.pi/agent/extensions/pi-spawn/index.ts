@@ -159,20 +159,37 @@ interface AskAnswer {
 	cancelled?: boolean;
 }
 
-/** The one run currently in flight (box mode only — one run at a time). */
+/** One run in flight (box mode). Several can run at once, each with its own widget. */
 interface ActiveRun {
+	id: string;
 	header: string;
+	abort: AbortController;
 	log: string[];
 	currentTool: string;
 	streamText: string[];
 	frame: number;
-	elapsedMs: number;
+	startedAt: number;
 	tui?: TUI;
 	pending?: { req: AskRequest; resolve: (a: AskAnswer) => void };
 	render: () => void;
 }
 
-let active: ActiveRun | undefined;
+const runs = new Map<string, ActiveRun>();
+
+function runLabel(run: ActiveRun): string {
+	const secs = ((Date.now() - run.startedAt) / 1000).toFixed(0);
+	const status = run.pending ? "❓ waiting" : run.currentTool ? `⟳ ${run.currentTool}` : "running";
+	return truncate(`[${run.id}] ${run.header} · ${secs}s · ${status}`, 120);
+}
+
+/** Pick one run (skips the dialog when only one exists). */
+async function pickRun(ui: ExtensionUIContext, title: string): Promise<ActiveRun | undefined> {
+	const list = [...runs.values()];
+	if (list.length <= 1) return list[0];
+	const labels = list.map(runLabel);
+	const choice = await ui.select(title, labels);
+	return choice === undefined ? undefined : list[labels.indexOf(choice)];
+}
 
 /** JSONL framing per docs: split on \n only, tolerate trailing \r. */
 function attachJsonlReader(stream: NodeJS.ReadableStream, onLine: (line: string) => void): void {
@@ -196,6 +213,7 @@ interface RunOptions {
 	model: string;
 	thinking: string;
 	tools?: string; // omit for full default tool access
+	signal?: AbortSignal;
 	onLog: (line: string) => void;
 	onTool: (label: string) => void; // "" clears the current-tool display
 	onText: (recentLines: string[]) => void; // streamed model output, last N non-empty lines
@@ -241,6 +259,7 @@ function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }>
 		};
 
 		child.on("error", (err) => finish({ text: "", error: err.message }));
+		opts.signal?.addEventListener("abort", () => finish({ text: "", error: "killed by user" }), { once: true });
 		child.stderr.on("data", (d) => {
 			stderr += d.toString();
 		});
@@ -328,6 +347,14 @@ function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }>
 	});
 }
 
+/** Live component: body rebuilt from `run` on every render, so requestRender() shows fresh state. */
+function liveRunningBox(run: ActiveRun, theme: Theme): Component {
+	return {
+		render: (width: number) => renderRunningBox(run, theme).render(width),
+		invalidate() {},
+	};
+}
+
 function renderRunningBox(run: ActiveRun, theme: Theme): Component {
 	const body: string[] = [];
 	if (run.pending) {
@@ -335,7 +362,7 @@ function renderRunningBox(run: ActiveRun, theme: Theme): Component {
 		body.push(theme.fg("warning", `❓ press ${ANSWER_KEY_HINT} to answer: ${q}`));
 	} else {
 		const spin = theme.fg("warning", SPINNER_FRAMES[run.frame % SPINNER_FRAMES.length]);
-		body.push(`${spin} ${theme.fg("dim", `${(run.elapsedMs / 1000).toFixed(1)}s`)}`);
+		body.push(`${spin} ${theme.fg("dim", `${((Date.now() - run.startedAt) / 1000).toFixed(1)}s`)}`);
 		if (run.currentTool) body.push(theme.fg("dim", `⟳ ${run.currentTool}`));
 		const rest = run.streamText.length > 0 ? run.streamText : run.log;
 		for (const line of rest.slice(-(BODY_LINES - body.length))) body.push(theme.fg("dim", line));
@@ -364,31 +391,43 @@ async function runWithBox(
 	header: string,
 	opts: Omit<RunOptions, "onLog" | "onTool" | "onText" | "onAsk">,
 ): Promise<void> {
-	const run: ActiveRun = { header, log: [], currentTool: "", streamText: [], frame: 0, elapsedMs: 0, render: () => {} };
+	const run: ActiveRun = {
+		id: randomUUID().slice(0, 6),
+		header,
+		abort: new AbortController(),
+		log: [],
+		currentTool: "",
+		streamText: [],
+		frame: 0,
+		startedAt: Date.now(),
+		render: () => {},
+	};
+	const widgetKey = `${WIDGET_KEY}:${run.id}`;
 	// setWidget builds+mounts the Component once; calling it again on every update would
 	// dispose and rebuild the whole widget (choppy/stuck during fast text-delta streams).
 	// Redraws instead go through tui.requestRender() on the same live Component below.
 	run.render = () => run.tui?.requestRender();
-	ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => {
+	ctx.ui.setWidget(widgetKey, (tui, theme) => {
 		run.tui = tui;
-		return renderRunningBox(run, theme);
+		return liveRunningBox(run, theme);
 	});
-	active = run;
+	runs.set(run.id, run);
 
 	const spinnerTimer = setInterval(() => {
 		run.frame++;
-		run.elapsedMs += SPINNER_TICK_MS;
 		run.tui?.requestRender();
 	}, SPINNER_TICK_MS);
 
 	const { text, error } = await runChildPi({
 		...opts,
+		signal: run.abort.signal,
 		onLog: (line) => {
 			run.log.push(line);
 			run.render();
 		},
 		onTool: (label) => {
 			run.currentTool = label;
+			if (label) run.log.push(`⟳ ${label}`);
 			run.render();
 		},
 		onText: (lines) => {
@@ -398,13 +437,14 @@ async function runWithBox(
 		onAsk: (req) =>
 			new Promise<AskAnswer>((resolve) => {
 				run.pending = { req, resolve: (a) => resolve(a) };
+				run.log.push(`[ask] ${req.title ?? req.message ?? req.method}`);
 				run.render();
 			}),
 	});
 
 	clearInterval(spinnerTimer);
-	active = undefined;
-	ctx.ui.setWidget(WIDGET_KEY, undefined);
+	runs.delete(run.id);
+	ctx.ui.setWidget(widgetKey, undefined);
 	sendResult(pi, header, text, error);
 }
 
@@ -495,21 +535,38 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerShortcut(ANSWER_KEY_HINT, {
-		description: "pi-spawn: answer pending question, or view full run log",
+		description: "pi-spawn: answer oldest pending question, or view a run log",
 		handler: async (shortcutCtx) => {
-			if (!active) {
+			if (runs.size === 0) {
 				shortcutCtx.ui.notify("pi-spawn: no active run", "info");
 				return;
 			}
-			if (active.pending) {
-				const { req, resolve } = active.pending;
+			const waiting = [...runs.values()].find((r) => r.pending);
+			if (waiting?.pending) {
+				const { req, resolve } = waiting.pending;
 				const answer = await showAskDialog(shortcutCtx.ui, req);
-				active.pending = undefined;
-				active.render();
+				waiting.pending = undefined;
+				waiting.render();
 				resolve(answer);
 				return;
 			}
-			pi.appendEntry(LOG_ENTRY_TYPE, { header: active.header, lines: active.log });
+			const run = await pickRun(shortcutCtx.ui, "pi-spawn: view log of");
+			if (run) pi.appendEntry(LOG_ENTRY_TYPE, { header: run.header, lines: run.log });
+		},
+	});
+
+	pi.registerCommand("spawns", {
+		description: "List running spawns; view a run's log or kill it",
+		handler: async (_args, ctx) => {
+			if (runs.size === 0) {
+				ctx.ui.notify("pi-spawn: no active run", "info");
+				return;
+			}
+			const run = await pickRun(ctx.ui, "Running spawns");
+			if (!run) return;
+			const action = await ctx.ui.select(runLabel(run), ["View log", "Kill"]);
+			if (action === "View log") pi.appendEntry(LOG_ENTRY_TYPE, { header: run.header, lines: run.log });
+			else if (action === "Kill") run.abort.abort();
 		},
 	});
 
