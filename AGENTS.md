@@ -199,8 +199,11 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 - Config: `~/.pi/agent/` (whole directory stowed from `dotfiles/pi/`)
 - Packages are declared in `settings.json` under `"packages"` — pi auto-installs missing ones on startup; `setup/08-pi.sh` also installs them up front
 - **Pin npm packages to an exact version** (`npm:pkg@1.2.3`). Unpinned `npm:` floats, and provider-overriding extensions see your OAuth token
-- Anthropic Claude Pro/Max OAuth compat is handled by `npm:@gotgenes/pi-anthropic-auth` — billing header, assistant `tool_use` ordering, prompt de-fingerprinting. Do **not** reintroduce a local extension for this
-- On bump: diff the package's `src/` (it ships TS, no bundled `dist`) and check `CLAUDE_CODE_VERSION` tracks the current Claude Code release
+- MCP servers live in `mcp.json` and use pi's built-in MCP support. Do not install `pi-mcp-adapter`: it replaces the built-in support
+- Anthropic Claude Pro/Max OAuth compat comes from pi itself (Claude Code headers and tool-name casing in pi-ai) plus the local `extensions/pi-claude`, which renames non-Claude-Code tools to `mcp__pi__<name>` on the wire and maps calls back. Set `PI_CLAUDE_CODE_USE_DISABLE_TOOL_RENAME=1` to send the original names
+- `extensions/pi-permissions` never prompts: writes are allowed inside cwd, `~/.pi`, and temp dirs; everything else is read-only; secret paths are always blocked
+- Local extensions import only host-provided modules (`@earendil-works/*`, `typebox`), so they need no `package.json` or `node_modules`
+- `models-store.json`, `web-search-cache/`, `auth.json`, `mcp-auth.json`, `trust.json`, `sessions/`, and `npm/` are pi-managed and gitignored
 
 ---
 
