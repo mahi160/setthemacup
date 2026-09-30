@@ -126,7 +126,7 @@ Delegate only narrow, read-only search or read work, and return actionable resul
 Ask before: `git add`, `git commit`, `git push`, `git tag`.
 Ask before: `kill`, `format`, `drop` (SQL/destructive schema ops), any irreversible side effect outside a tool call.
 Read-only git inspection is allowed. A plan is not permission.
-The pi-permissions extension gates writes outside the working directory and secure paths. Do not pre-ask in chat for those, just make the call.
+The pi-permissions extension blocks secure paths and makes everything outside the working directory, `~/.pi`, and temp dirs read-only. Do not pre-ask in chat; if a write is blocked, tell the user the exact change to make instead.
 
 ## 10. MULTI-FILE WORK
 

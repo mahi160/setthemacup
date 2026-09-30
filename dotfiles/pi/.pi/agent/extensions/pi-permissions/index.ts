@@ -1,23 +1,19 @@
 /**
  * Minimal permission gate, built only on the public ExtensionAPI (pi.on("tool_call")).
  *
- * Policy:
- * - read: always allowed.
- * - write / edit / delete (rm via bash): allowed inside cwd.
- * - write / edit / delete outside cwd: ask, with Once / This session / None(deny).
- * - bash commands are scanned for path tokens and gated the same way.
+ * Policy (no prompts, so nothing ever waits on a dialog):
+ * - Secure paths (keys, credentials, .env, …): always blocked, read or write.
+ * - Reads: allowed anywhere.
+ * - Writes (write / edit / mutating bash): allowed inside cwd, ~/.pi, and temp dirs;
+ *   blocked everywhere else (read-only).
  */
 
 import { existsSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { isAbsolute, resolve, sep } from "node:path";
-import type {
-	ExtensionAPI,
-	ExtensionContext,
-	ToolCallEvent,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 
-// Substring/regex checks against the resolved absolute path. Never readable, never silently written.
+// Regex checks against the resolved absolute path. Never readable, never written.
 const SECURE_PATTERNS: RegExp[] = [
 	/\.ssh(\/|$)/,
 	/\.aws(\/|$)/,
@@ -35,117 +31,133 @@ const SECURE_PATTERNS: RegExp[] = [
 	/(^|\/)credentials(\.json)?$/i,
 	/(^|\/)secrets?\./i,
 	/(^|\/)\.git-credentials$/,
+	/(^|\/)\.pi\/agent\/(mcp-)?auth\.json$/,
 ];
 
-// First word of a bash pipeline segment that mutates the filesystem.
-const MUTATING_VERBS =
-	/\b(rm|mv|cp|touch|mkdir|rmdir|unlink|truncate|tee|dd|ln|install|rsync|sed\s+-i|chmod|chown)\b/;
-const REDIRECT_RE = />>?|<>/;
+// Tools whose `path` input is only read.
+const READ_TOOLS = new Set(["read", "grep", "find", "ls"]);
 
-function expandHome(p: string): string {
-	if (p === "~") return homedir();
-	if (p.startsWith("~/")) return resolve(homedir(), p.slice(2));
-	return p;
-}
+// Every non-flag arg is written/deleted.
+const ALL_ARGS_VERBS = new Set(["rm", "rmdir", "unlink", "touch", "mkdir", "truncate", "tee", "chmod", "chown", "mv"]);
+// Only the last non-flag arg (destination) is written.
+const DEST_VERBS = new Set(["cp", "rsync", "install", "ln"]);
 
-function resolvePath(p: string, cwd: string): string {
-	const expanded = expandHome(p);
-	const abs = isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
+function realOrSelf(p: string): string {
 	try {
-		return existsSync(abs) ? realpathSync(abs) : abs;
+		return existsSync(p) ? realpathSync(p) : p;
 	} catch {
-		return abs;
+		return p;
 	}
 }
 
-function isOutsideCwd(resolved: string, cwd: string): boolean {
-	const resolvedCwd = resolve(cwd);
-	return resolved !== resolvedCwd && !resolved.startsWith(resolvedCwd + sep);
+function resolvePath(p: string, cwd: string): string {
+	const expanded = p === "~" ? homedir() : p.startsWith("~/") ? resolve(homedir(), p.slice(2)) : p;
+	return realOrSelf(isAbsolute(expanded) ? expanded : resolve(cwd, expanded));
+}
+
+function isInside(p: string, root: string): boolean {
+	return p === root || p.startsWith(root.endsWith(sep) ? root : root + sep);
 }
 
 function isSecurePath(resolved: string): boolean {
 	return SECURE_PATTERNS.some((re) => re.test(resolved));
 }
 
-// Rough path-token extraction from a shell command: whitespace-split, drop flags/operators/pure numbers.
+// ~/.pi is a stow symlink, so match both the link path and its real target.
+function writableRoots(cwd: string): string[] {
+	const piHome = resolve(homedir(), ".pi");
+	const roots = [resolve(cwd), piHome, tmpdir(), "/tmp", "/dev/null"];
+	return [...new Set([...roots, ...roots.map(realOrSelf)])];
+}
+
+function isWritable(resolved: string, cwd: string): boolean {
+	return writableRoots(cwd).some((root) => isInside(resolved, root));
+}
+
+const unquote = (t: string) => t.replace(/^['"]|['"]$/g, "");
+
+/**
+ * Paths a bash command writes to: redirect targets, plus args of mutating verbs
+ * (all args for rm/mv/touch/…, destination for cp/rsync/ln, files for sed -i,
+ * search roots for find -delete/-exec, of= for dd). Tracks `cd` across segments.
+ */
+function extractWriteTargets(command: string, startCwd: string): string[] {
+	const targets: string[] = [];
+	let cwd = startCwd;
+	for (const segment of command.split(/&&|\|\||;|\||\n/)) {
+		const tokens = segment.trim().split(/\s+/).filter(Boolean);
+		const args: string[] = [];
+		for (let i = 0; i < tokens.length; i++) {
+			const redirect = tokens[i].match(/^(?:\d*|&)(>>?|>\|)(&?)(.*)$/);
+			if (redirect) {
+				if (redirect[2]) continue; // 2>&1: fd dup, no file
+				const target = redirect[3] || tokens[++i];
+				if (target) targets.push(resolvePath(unquote(target), cwd));
+				continue;
+			}
+			args.push(unquote(tokens[i]));
+		}
+
+		const verbAt = args.findIndex((t) => ALL_ARGS_VERBS.has(t) || DEST_VERBS.has(t) || t === "sed" || t === "find" || t === "dd" || t === "cd");
+		if (verbAt === -1) continue;
+		const verb = args[verbAt];
+		const rest = args.slice(verbAt + 1);
+		const operands = rest.filter((t) => !t.startsWith("-"));
+		const push = (ps: string[]) => targets.push(...ps.map((p) => resolvePath(p, cwd)));
+
+		if (verb === "cd") cwd = resolvePath(operands[0] ?? "~", cwd);
+		else if (ALL_ARGS_VERBS.has(verb)) push(operands);
+		else if (DEST_VERBS.has(verb)) push(operands.slice(-1));
+		else if (verb === "sed" && rest.some((t) => /^-[a-zA-Z]*i/.test(t) || t.startsWith("--in-place"))) push(operands.slice(1));
+		else if (verb === "find" && rest.some((t) => t === "-delete" || t === "-exec" || t === "-execdir")) {
+			push(rest.slice(0, rest.findIndex((t) => t.startsWith("-"))));
+		} else if (verb === "dd") push(rest.filter((t) => t.startsWith("of=")).map((t) => t.slice(3)));
+	}
+	return targets;
+}
+
+// Rough path-token extraction: whitespace-split, strip quotes and redirect prefixes (2>/dev/null), keep path-like tokens.
 function extractPathTokens(command: string): string[] {
 	return command
 		.split(/\s+/)
-		.map((t) => t.replace(/^['"]|['"]$/g, ""))
-		.filter(
-			(t) =>
-				t.length > 0 &&
-				!t.startsWith("-") &&
-				(t.includes("/") || t.startsWith("~")),
-		)
+		.map((t) => t.replace(/^\d*(>>?|<>?)&?/, "").replace(/^['"]|['"]$/g, ""))
+		.filter((t) => t.length > 0 && !t.startsWith("-") && (t.includes("/") || t.startsWith("~")))
 		.filter((t) => !/^https?:\/\//.test(t));
 }
 
+type Decision = { block: true; reason: string } | undefined;
+
+function blockWrite(target: string): Decision {
+	return { block: true, reason: `Read-only outside cwd, ~/.pi and temp dirs: ${target}` };
+}
+
 export default function (pi: ExtensionAPI) {
-	// Reset every session: "This session" approval only lasts the session.
-	let sessionAllowOutsideCwd = false;
+	pi.on("tool_call", (event: ToolCallEvent, ctx: ExtensionContext): Decision => {
+		const input = event.input as { path?: unknown; command?: unknown };
 
-	pi.on("session_start", () => {
-		sessionAllowOutsideCwd = false;
-	});
-
-	async function askOutsideCwd(
-		ctx: ExtensionContext,
-		description: string,
-	): Promise<{ block?: boolean; reason?: string } | undefined> {
-		if (sessionAllowOutsideCwd) return undefined;
-		if (!ctx.hasUI) {
-			return {
-				block: true,
-				reason: "Outside-cwd write blocked (no UI for confirmation)",
-			};
-		}
-		const choice = await ctx.ui.select(
-			`Outside working directory:\n\n  ${description}\n\nAllow?`,
-			["Allow once", "Allow for this session", "Deny"],
-		);
-		if (choice === "Allow for this session") {
-			sessionAllowOutsideCwd = true;
-			return undefined;
-		}
-		if (choice === "Allow once") return undefined;
-		return { block: true, reason: "Blocked by user (outside cwd)" };
-	}
-
-	pi.on("tool_call", async (event: ToolCallEvent, ctx: ExtensionContext) => {
-		if (event.toolName === "read") {
-			return undefined;
+		if (READ_TOOLS.has(event.toolName)) {
+			if (typeof input.path !== "string") return undefined;
+			const resolved = resolvePath(input.path, ctx.cwd);
+			return isSecurePath(resolved) ? { block: true, reason: `Refusing access to secure path: ${resolved}` } : undefined;
 		}
 
 		if (event.toolName === "write" || event.toolName === "edit") {
-			const resolved = resolvePath(event.input.path, ctx.cwd);
-			if (isOutsideCwd(resolved, ctx.cwd)) {
-				return askOutsideCwd(ctx, `${event.toolName} ${resolved}`);
-			}
-			return undefined;
+			if (typeof input.path !== "string") return undefined;
+			const resolved = resolvePath(input.path, ctx.cwd);
+			if (isSecurePath(resolved)) return { block: true, reason: `Refusing access to secure path: ${resolved}` };
+			return isWritable(resolved, ctx.cwd) ? undefined : blockWrite(resolved);
 		}
 
-		if (event.toolName === "bash") {
-			const command = event.input.command as string;
-			const tokens = extractPathTokens(command);
-			const resolvedTokens = tokens.map((t) => resolvePath(t, ctx.cwd));
+		if (event.toolName === "bash" && typeof input.command === "string") {
+			const command = input.command;
+			const resolvedTokens = extractPathTokens(command).map((t) => resolvePath(t, ctx.cwd));
 
-			const securedHit = resolvedTokens.find((p) => isSecurePath(p));
-			if (securedHit) {
-				return {
-					block: true,
-					reason: `Refusing bash access to secure path: ${securedHit}`,
-				};
-			}
+			const securedHit = resolvedTokens.find(isSecurePath);
+			if (securedHit) return { block: true, reason: `Refusing bash access to secure path: ${securedHit}` };
 
-			const isMutating = MUTATING_VERBS.test(command) || REDIRECT_RE.test(command);
-			if (!isMutating) return undefined;
-
-			const outsideHit = resolvedTokens.find((p) => isOutsideCwd(p, ctx.cwd));
-			if (outsideHit) {
-				return askOutsideCwd(ctx, `bash: ${command}`);
-			}
-			return undefined;
+			// ponytail: parses direct verbs only; writes via bash -c, scripts, git -C, npm --prefix pass unchecked
+			const outsideHit = extractWriteTargets(command, ctx.cwd).find((p) => !isWritable(p, ctx.cwd));
+			return outsideHit ? blockWrite(outsideHit) : undefined;
 		}
 
 		return undefined;
