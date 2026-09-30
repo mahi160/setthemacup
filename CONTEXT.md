@@ -40,3 +40,77 @@ The tool-bank tool an agent calls to persist a new saved tool. Rejects the call 
 **Save log**:
 An append-only plain-text file the tool-bank writes one line to on every successful `save_tool` call (name, timestamp, description), plus a live `ctx.ui.notify()` toast. Exists because saving has no human-approval gate — this is the only audit trail for what got persisted.
 _Avoid_: audit log (no structured format, just a scannable trail)
+
+## Reflex
+
+**Reflex**:
+The `pi-reflex` extension (`dotfiles/pi/.pi/agent/extensions/pi-reflex/`): puts Jev between the model and its tools as an always-on risk gate, and routes delegations to profiles. Replaces `pi-permissions`.
+_Avoid_: jev extension, router, auto mode
+
+**Jev**:
+TypeSafe AI's System One model: an external API that takes a state plus typed questions (Choice, Score, Noul) and returns calibrated probabilities with confidence. It decides; it never generates text, plans, or calls tools.
+_Avoid_: system one AI (the model class, not this model), router (that's the extension's job, not Jev's)
+
+**Orchestrator**:
+The main-session model (e.g. `opus-5` high) that plans and decides *when* a piece of work should be delegated. Jev never splits work — only the orchestrator does.
+_Avoid_: main thread, planner
+
+**Delegation**:
+The orchestrator handing one self-contained subtask to a child pi process, with Jev choosing *which* model and thinking level runs it.
+_Avoid_: subagent (the `pi-subagents` package's generic mechanism), fast command (fixed-model slash commands in `pi-spawn`)
+
+**Risk gate**:
+The check every tool call passes before it runs, in the main session and in every delegated child. Two layers: the hard floor first, then Jev for everything the floor doesn't decide.
+_Avoid_: permission prompt (that's the old always-ask behaviour this replaces)
+
+**Hard floor**:
+The deterministic, model-free rules inside the risk gate that deny outright — secure paths (keys, `.env`, credentials) and a short list of irreversible commands. Jev can never override it, because Jev can be steered by adversarial content in tool arguments.
+_Avoid_: blocklist, safety rules
+
+**Verdict**:
+The risk gate's outcome for one tool call: **allow** (runs silently), **flag** (asks the user), or **deny** (blocked, reason returned to the model). Low Jev confidence always yields flag, never allow.
+_Avoid_: decision, result
+
+**Profile**:
+A named, user-defined bundle of model, thinking level, and tool allowlist (e.g. `scout` = haiku/low, read-only) that a delegation runs under. Jev picks one profile per delegation with a single Choice; the orchestrator may pin one instead, which skips Jev.
+_Avoid_: tier, agent, persona
+
+**Profile registry**:
+`pi-reflex/profiles.json` — the ordered profile list, weakest first, one entry per profile: `{name, model, thinking, tools, description}`. `description` is the option text Jev reads. Starting set: `scout`, `commit`, `write`, `think`.
+_Avoid_: profile config
+
+**Escalation**:
+When Jev's profile Choice has low confidence, the delegation runs under the stronger of the top two candidates. Profile strength is its position in the profile list, weakest first.
+_Avoid_: fallback (that implies going weaker)
+
+**Writer profile**:
+A profile whose tool allowlist can mutate files or run bash. Writer delegations run one at a time; read-only profiles may run in parallel with each other.
+_Avoid_: write profile (`write` is also the name of one specific profile)
+
+**Delegation result**:
+What a finished delegation returns to the orchestrator: the child's final answer plus the list of files it changed — never its full transcript.
+_Avoid_: output, transcript
+
+**Flag relay**:
+How a flag verdict inside a delegated child reaches the user: the child's confirm request is shown immediately as a real dialog in the parent session, labelled with the child's profile and task; simultaneous flags queue. The child waits for the answer and resumes.
+_Avoid_: ask-bridge (that's `pi-spawn`'s deferred `ctrl+shift+a` mechanism — Jev routing does not reuse it)
+
+**Hazard question**:
+One atomic Noul the risk gate asks Jev about a tool call (irreversible? outside project? network egress? shared/remote state? matches current task?), alongside one severity Score. Code — not Jev — combines them into a verdict, and a flag names the hazard questions that fired.
+_Avoid_: risk check, safety question
+
+**Fail closed**:
+The rule for when Jev is unreachable, slow, or errors: the risk gate yields flag for anything the hard floor didn't decide, and delegation runs under the strongest profile. An outage costs convenience, never safety or capability.
+_Avoid_: fallback mode, degraded mode
+
+**Mutating call**:
+Any tool call that is not on the known read-only list (`read`, `grep`, `find`, `ls`). Only mutating calls reach Jev; read-only calls pass the hard floor alone. Unknown tools are mutating by default, and `bash` is always mutating.
+_Avoid_: write call, dangerous call
+
+**Orchestrator mode**:
+A per-session toggle that removes write, edit, and bash from the main session's model, leaving read-only tools plus `delegate`, so every change must go through a delegation. Off by default; the risk gate is always on regardless.
+_Avoid_: auto mode, delegate mode
+
+**Verdict log**:
+An append-only JSONL file with one line per mutating call (tool, truncated args, hazard probabilities, severity, confidence, verdict, the user's answer to a flag) and one per delegation routing decision (task, profile, confidence, escalated or not). The audit trail for silent allows and the labelled data for tuning thresholds.
+_Avoid_: audit log, save log (that's the tool-bank's)
