@@ -1,0 +1,26 @@
+gui:
+  theme:
+    activeBorderColor:
+      - '#7e9cd8' # crystalBlue
+      - bold
+    inactiveBorderColor:
+      - '#54546d' # sumiInk6
+    optionsTextColor:
+      - '#7e9cd8' # crystalBlue
+    selectedLineBgColor:
+      - '#2d4f67' # waveBlue2
+    selectedRangeBgColor:
+      - '#2d4f67' # waveBlue2
+    cherryPickedCommitBgColor:
+      - '#223249' # waveBlue1
+    cherryPickedCommitFgColor:
+      - '#e6c384' # carpYellow
+    unstagedChangesColor:
+      - '#e46876' # waveRed
+    defaultFgColor:
+      - '#dcd7ba' # fujiWhite
+git:
+  diffRenderers:
+    - colorArg: always
+      command: >-
+        delta --paging=never --line-numbers --syntax-theme=base16 --hunk-header-style=omit --file-style="bold #e6c384" --file-decoration-style=none --minus-style="syntax #43242b" --plus-style="syntax #2b3328" --minus-emph-style="syntax #5c2b33" --plus-emph-style="syntax #3b4a30" --line-numbers-minus-style="#e46876" --line-numbers-plus-style="#98bb6c" --line-numbers-zero-style="#727169" --line-numbers-left-format="{nm:>4} " --line-numbers-right-format="{np:>4}│"

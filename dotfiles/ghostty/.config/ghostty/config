@@ -1,5 +1,5 @@
-theme = Gruvbox Material Dark
-# theme = Kanagawa Wave
+# theme: symlink to theme.d/<name>, managed by scripts/toggle-theme.sh
+config-file = ?theme
 
 # font-family = JetBrainsMono Nerd Font
 # font-family = Monaspace Argon NF
@@ -30,7 +30,7 @@ window-padding-balance = true
 background-blur = 240
 background-opacity = 0.95
 
-background-image = ~/Pictures/pokemon_bg/63.png
+background-image = ~/Pictures/pokemon_bg/462.png
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right

@@ -1,0 +1,26 @@
+gui:
+  theme:
+    activeBorderColor:
+      - '#a7c080' # green
+      - bold
+    inactiveBorderColor:
+      - '#859289' # grey1
+    optionsTextColor:
+      - '#7fbbb3' # blue
+    selectedLineBgColor:
+      - '#374145' # bg2
+    selectedRangeBgColor:
+      - '#374145' # bg2
+    cherryPickedCommitBgColor:
+      - '#414b50' # bg3
+    cherryPickedCommitFgColor:
+      - '#dbbc7f' # yellow
+    unstagedChangesColor:
+      - '#e67e80' # red
+    defaultFgColor:
+      - '#d3c6aa' # fg
+git:
+  diffRenderers:
+    - colorArg: always
+      command: >-
+        delta --paging=never --line-numbers --syntax-theme=base16 --hunk-header-style=omit --file-style="bold #dbbc7f" --file-decoration-style=none --minus-style="syntax #493b40" --plus-style="syntax #3c4841" --minus-emph-style="syntax #5c3f45" --plus-emph-style="syntax #4b5a48" --line-numbers-minus-style="#e67e80" --line-numbers-plus-style="#a7c080" --line-numbers-zero-style="#859289" --line-numbers-left-format="{nm:>4} " --line-numbers-right-format="{np:>4}│"

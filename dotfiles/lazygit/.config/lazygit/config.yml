@@ -2,33 +2,9 @@ gui:
   nerdFontsVersion: "3"
   border: rounded
   expandFocusedSidePanel: true
-  theme:
-    activeBorderColor:
-      - '#d8a657' # material yellow
-      - bold
-    inactiveBorderColor:
-      - '#928374' # material gray
-    optionsTextColor:
-      - '#7daea3' # material blue
-    selectedLineBgColor:
-      - '#3c3836' # material bg1
-    selectedRangeBgColor:
-      - '#3c3836' # material bg1
-    cherryPickedCommitBgColor:
-      - '#504945' # material bg2
-    cherryPickedCommitFgColor:
-      - '#d8a657' # material yellow
-    unstagedChangesColor:
-      - '#ea6962' # material red
-    defaultFgColor:
-      - '#d4be98' # material fg0
+# gui.theme + git.diffRenderers: theme.d/<name>.yml via LG_CONFIG_FILE (.zshenv)
 customCommands:
   - key: '<c-p>'
     command: 'git push --no-verify'
     context: 'global'
     loadingText: 'Pushing without verify...'
-git:
-  diffRenderers:
-    - colorArg: always
-      command: >-
-        delta --paging=never --line-numbers --syntax-theme=base16 --hunk-header-style=omit --file-style="bold #d8a657" --file-decoration-style=none --minus-style="syntax #3a1e1e" --plus-style="syntax #2e3520" --minus-emph-style="syntax #5a2620" --plus-emph-style="syntax #3f4a2a" --line-numbers-minus-style="#ea6962" --line-numbers-plus-style="#a9b665" --line-numbers-zero-style="#928374" --line-numbers-left-format="{nm:>4} " --line-numbers-right-format="{np:>4}│"
