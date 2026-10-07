@@ -70,7 +70,7 @@ setthemacup/
     │   ├── .config/nvim/     # LazyVim-based config (alias: nvim)
     │   └── .config/nvim.12/  # lean vim.pack + mini.nvim config (alias: vm)
     ├── zsh/                  # .zshrc + .zshenv (no OMZ — direct brew plugins)
-    ├── starship/             # starship prompt (gruvbox material themed)
+    ├── starship/             # starship prompt (ANSI colors, follows terminal theme)
     ├── fastfetch/            # fastfetch system info (login shells only)
     ├── pi/                   # pi coding agent config
     └── stow/                 # .stow-global-ignore

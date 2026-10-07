@@ -129,7 +129,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 - Clipboard: native `pbcopy` via `copy-pipe-and-cancel`
 - `escape-time 10` — do NOT set to 0
 - `status-interval 5` — drives nowplaying refresh
-- Active theme: **Gruvbox Material** — color vars: `#{@thm_bg}` `#{@thm_fg}` `#{@thm_acc1}`–`4` `#{@thm_gray}` `#{@thm_darkgray}`
+- Theme: `theme.conf` symlink to `theme.d/<name>.conf` (see Themes) — color vars: `#{@thm_bg}` `#{@thm_fg}` `#{@thm_acc1}`–`4` `#{@thm_gray}` `#{@thm_darkgray}`
 - Reload: `C-a r`
 
 ---
@@ -150,12 +150,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 - Config: `~/.config/starship.toml`
 - **Explicit top-level `format`** — only listed modules are scanned. Do not remove it.
 - `scan_timeout = 10` — prevents slow prompts in large repos
-- Theme: **Gruvbox Material** matching tmux/nvim:
-  - `#d8a657` yellow → directory, python
-  - `#a9b665` green → git branch, nodejs, ❯ success
-  - `#e78a4e` orange → git status, rust
-  - `#7daea3` aqua → os icon, golang, docker
-  - `#928374` gray → cmd_duration, time
+- Colors: ANSI names only, so the prompt follows the Ghostty theme
 - `[username]`, `[hostname]`, `[localip]` — all disabled (personal machine)
 - Two-line prompt: info line + `❯` character line
 
@@ -167,7 +162,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 - Plugin manager: `lazy.nvim`
 - Oil: `lazy = false` — required for `nvim .` to open oil instead of netrw
-- Colorscheme: gruvbox-material (`better_performance = 1`, `transparent_background = 2`)
+- Colorscheme: from `~/.config/theme` (`gruvbox-material`, `kanagawa`, or `everforest`); same in nvim.12
 - Diagnostics: `virtual_text = false` — tiny-inline-diagnostic used instead
 
 ### nvim.12 (`vm` alias) — lean custom config
@@ -207,6 +202,16 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 ---
 
+## Themes
+
+- `theme` (`scripts/toggle-theme.sh`) cycles Gruvbox Material, Kanagawa Wave, and Everforest Dark Hard; `theme <gruvbox|kanagawa-wave|everforest>` sets one; `theme status` prints the current one.
+- State: `~/.config/theme`. Readers: both nvim configs, `tmux-git`, `claude-tmux.py`, and the pi-stats report.
+- Ghostty, tmux, and lazygit load a gitignored symlink (`theme`, `theme.conf`, `theme.yml`) that points to a tracked file in their `theme.d/`. pi uses a gitignored copy, `themes/current.json`, because a pi theme file name must equal its `name`.
+- Live reload covers tmux, running nvim instances (through their sockets), pi (hot reload), and Ghostty (an AppleScript keystroke of cmd+shift+,, which needs Accessibility permission).
+- `setup/04-dotfiles.sh` runs the script with `--no-reload` to create the links; the default theme is Kanagawa Wave.
+
+---
+
 ## git, lazygit, yazi
 
 ### git
@@ -215,7 +220,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 ### lazygit
 - Config: `~/.config/lazygit/config.yml` (stowed from dotfiles)
-- Theme: kanagawa-lotus
+- Theme: `theme.d/<name>.yml` overlay via `LG_CONFIG_FILE` (`.zshenv`), linked as `theme.yml`
 
 ### yazi
 - Configs: `~/.config/yazi/{yazi.toml,keymap.toml}` (stowed from dotfiles)
@@ -226,7 +231,7 @@ bash ~/.setup/setup/02-apps.sh   # standalone
 
 | Thing | Convention |
 |-------|-----------|
-| Colors | Always use `@thm_*` vars in tmux; hex matching gruvbox material elsewhere |
+| Colors | Always use `@thm_*` vars in tmux; every themed color must exist for every theme (see Themes) |
 | Paths | Use `~` or `$HOME` — never hardcode `/Users/mahi` |
 | Shell patterns | Use `case ":$PATH:"` guard for PATH additions |
 | Regex in stow | Perl regex — `.*\.ext$` not `*.ext` |
