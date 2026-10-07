@@ -1,5 +1,5 @@
 {
-  "theme": "gruvbox-material/gruvbox-material",
+  "theme": "current",
   "terminal": {
     "showTerminalProgress": false,
     "images": "kitty"

@@ -1,9 +1,37 @@
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 type Totals = { runs: number; sessions: number; cost: number; tokens: number; cache: number; errors: number };
 type Row = Record<string, string | number>;
 
 const DAY = 86_400_000;
+
+const PALETTES = {
+  gruvbox: {
+    bg: "#1d2021", fg: "#d4be98", title: "#d8a657", head: "#a9b665", muted: "#928374",
+    card: "#282828", accent: "#e78a4e", bar: "#7daea3", hover: "#d8a657", line: "#32302f",
+  },
+  "kanagawa-wave": {
+    bg: "#16161d", fg: "#dcd7ba", title: "#e6c384", head: "#98bb6c", muted: "#727169",
+    card: "#1f1f28", accent: "#ffa066", bar: "#7e9cd8", hover: "#e6c384", line: "#2a2a37",
+  },
+  everforest: {
+    bg: "#1e2326", fg: "#d3c6aa", title: "#dbbc7f", head: "#a7c080", muted: "#859289",
+    card: "#272e33", accent: "#e69875", bar: "#7fbbb3", hover: "#dbbc7f", line: "#2e383c",
+  },
+};
+
+// ~/.config/theme: written by scripts/toggle-theme.sh
+function palette() {
+  try {
+    const name = readFileSync(join(homedir(), ".config/theme"), "utf8").trim();
+    return PALETTES[name as keyof typeof PALETTES] ?? PALETTES["kanagawa-wave"];
+  } catch {
+    return PALETTES["kanagawa-wave"];
+  }
+}
 const TOTALS = `
   SELECT COUNT(*) AS runs, COUNT(DISTINCT session_id) AS sessions,
          COALESCE(SUM(cost), 0) AS cost,
@@ -90,21 +118,22 @@ export function buildHtml(db: DatabaseSync): string {
   const errors = db.prepare(`
     SELECT started_at, model, error FROM runs WHERE error IS NOT NULL ORDER BY started_at DESC LIMIT 8`).all() as Row[];
 
+  const c = palette();
   return `<!doctype html><meta charset="utf-8"><title>pi stats</title>
 <style>
-  body{font:14px/1.5 ui-monospace,Menlo,monospace;background:#1d2021;color:#d4be98;max-width:1100px;margin:2rem auto;padding:0 1rem}
-  h1{color:#d8a657}h2{color:#a9b665;font-size:1rem;margin-top:2rem}h3{margin:0;color:#928374;font-weight:normal}
+  body{font:14px/1.5 ui-monospace,Menlo,monospace;background:${c.bg};color:${c.fg};max-width:1100px;margin:2rem auto;padding:0 1rem}
+  h1{color:${c.title}}h2{color:${c.head};font-size:1rem;margin-top:2rem}h3{margin:0;color:${c.muted};font-weight:normal}
   .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
-  .card{background:#282828;padding:1rem;border-radius:8px;display:flex;flex-direction:column}
-  .card b{font-size:1.8rem;color:#e78a4e}.card span{color:#928374;font-size:12px}
-  .chart{display:flex;align-items:flex-end;gap:3px;height:140px;background:#282828;padding:1rem;border-radius:8px}
-  .bar{flex:1;background:#7daea3;min-height:2px;border-radius:2px 2px 0 0}.bar:hover{background:#d8a657}
+  .card{background:${c.card};padding:1rem;border-radius:8px;display:flex;flex-direction:column}
+  .card b{font-size:1.8rem;color:${c.accent}}.card span{color:${c.muted};font-size:12px}
+  .chart{display:flex;align-items:flex-end;gap:3px;height:140px;background:${c.card};padding:1rem;border-radius:8px}
+  .bar{flex:1;background:${c.bar};min-height:2px;border-radius:2px 2px 0 0}.bar:hover{background:${c.hover}}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 2rem}
-  table{width:100%;border-collapse:collapse}td,th{padding:4px 8px;text-align:left;border-bottom:1px solid #32302f}
-  th{color:#928374;font-weight:normal}
+  table{width:100%;border-collapse:collapse}td,th{padding:4px 8px;text-align:left;border-bottom:1px solid ${c.line}}
+  th{color:${c.muted};font-weight:normal}
 </style>
 <h1>π stats</h1>
-<p style="color:#928374">${new Date().toLocaleString()} · 🔥 ${streak(db)} day streak · ${comp.n} compactions (${money(Number(comp.cost))})</p>
+<p style="color:${c.muted}">${new Date().toLocaleString()} · 🔥 ${streak(db)} day streak · ${comp.n} compactions (${money(Number(comp.cost))})</p>
 <div class="cards">${cards}</div>
 <h2>Daily cost · 30 days</h2><div class="chart">${bars}</div>
 <div class="grid">

@@ -33,6 +33,8 @@ MUST NOT:
 - edit tests to make them pass; fix the code or report the failure
 - run tests or lint after each individual edit
 - change files via bash (`sed -i`, `cat >`, `tee`, `python -c`, `perl -pi`); use `edit` / `write`. Copy `oldText` verbatim from a `read` result, never from memory
+- launder types: no widening to `any`/`unknown` then asserting back; no cast or `!` to silence a type error. Keep the type validation produced
+- add checks or fallbacks for inputs that cannot occur. Validate once at the trust boundary; trust it downstream
 - keep working after the requirement is satisfied
 - print, log, or commit secrets, keys, credentials, or `.env` contents
 
@@ -63,6 +65,7 @@ Take the first sufficient option:
 - Reuse before create. Delete before add. Fewer files before more. Boring before clever.
 - No new dependency for what a few lines cover.
 - No abstraction with one current use.
+- New shared code must let you delete existing code. Nothing to delete: do not build it.
 - Two options, same size, different robustness: take the edge-case-correct one. Shorter is never a reason to be weaker.
 - The ladder runs after you understand the problem, never instead of it.
 
@@ -90,6 +93,8 @@ After all task changes are complete, run the smallest sufficient verification ch
 
 Check regression risk in the touched paths only. Do not expand scope to do it.
 
+Fixing a lint/type error: name the guarantee the code gained. Moving a cast, adding a comment, or rephrasing the check gains none.
+
 Physical or hardware work: real clocks drift, sensors read off, timers run fast. Keep the calibration knob. Never assume ideal hardware.
 
 ## 6. AMBIGUITY
@@ -109,6 +114,7 @@ Verification is task-level, not edit-level.
 - Inspect the final diff before verification.
 - Run verification once after the full task is implemented.
 - Verification means the smallest sufficient test/check for the complete change.
+- Test the failure the change guards against (bad input rejected, write blocked). Do not mock modules this repo owns.
 - Use existing tests and checks.
 - For non-trivial logic, run an existing focused test or the smallest relevant check after all changes are complete.
 - Trivial one-liners need no test unless the task affects behavior that requires verification.
