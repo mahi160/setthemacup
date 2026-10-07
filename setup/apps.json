@@ -177,7 +177,8 @@
     },
 
     { "name": "font-jetbrains-mono-nerd-font", "desc": "Coding font" },
-    { "name": "font-monaspace-nf", "desc": "Primary coding font (Ghostty)" }
+    { "name": "font-monaspace-nf", "desc": "Coding font" },
+    { "name": "font-cascadia-code-nf", "desc": "Primary coding font (Ghostty)" }
   ],
 
   "mas": [],
