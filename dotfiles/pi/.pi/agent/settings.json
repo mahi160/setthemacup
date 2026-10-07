@@ -1,5 +1,5 @@
 {
-  "theme": "gruvbox-material",
+  "theme": "gruvbox-material/gruvbox-material",
   "terminal": {
     "showTerminalProgress": false,
     "images": "kitty"
@@ -17,7 +17,7 @@
     "anthropicExtraUsage": false
   },
   "defaultProvider": "anthropic",
-  "defaultModel": "anthropic/claude-opus-5-5",
+  "defaultModel": "claude-opus-5-5",
   "enabledModels": [
     "anthropic/claude-haiku-4-5",
     "anthropic/claude-opus-5-5",
@@ -31,7 +31,6 @@
   "packages": [
     "npm:@signalridge/pi-plan-mode@1.4.1",
     "npm:pi-web-access@0.33.0",
-    "npm:pi-lens@4.3.0",
     "npm:@upstash/context7-pi@0.1.2"
   ],
   "extensions": [
@@ -40,9 +39,11 @@
     "extensions/pi-footer/index.ts",
     "extensions/pi-permissions/index.ts",
     "extensions/pi-notify/index.ts",
-    "extensions/pi-ask/index.ts"
+    "extensions/pi-ask/index.ts",
+    "extensions/pi-stats/index.ts",
+    "extensions/pi-title/index.ts"
   ],
-  "lastChangelogVersion": "0.99.1",
+  "lastChangelogVersion": "1.0.4",
   "modelThinkingLevels": {
     "anthropic/claude-sonnet-5-5": "high",
     "anthropic/claude-haiku-4-5": "high",

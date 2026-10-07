@@ -32,6 +32,7 @@ MUST NOT:
 - add anything the request does not require (§4)
 - edit tests to make them pass; fix the code or report the failure
 - run tests or lint after each individual edit
+- change files via bash (`sed -i`, `cat >`, `tee`, `python -c`, `perl -pi`); use `edit` / `write`. Copy `oldText` verbatim from a `read` result, never from memory
 - keep working after the requirement is satisfied
 - print, log, or commit secrets, keys, credentials, or `.env` contents
 

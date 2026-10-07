@@ -23,7 +23,7 @@ function loadModelNames(): Record<string, string> {
 
 const MODEL_NAMES = loadModelNames();
 
-// pi-lens LSP/warning noise excluded; only yolo mode shown above the editor.
+// only yolo mode shown above the editor.
 const ALLOWED_STATUS_KEYS = new Set(["pi-permission-system"]);
 
 const ANSI_RE = /\x1b\[[0-9;]*m/g;

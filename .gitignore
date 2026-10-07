@@ -31,15 +31,11 @@ dotfiles/pi/.pi/agent/run-history.jsonl
 dotfiles/git/.gitconfig
 dotfiles/pi/.pi/agent/trust.json
 
-# Local pi backups
-/pi-old-2/
-
 **/.pi/agent/mcp-auth.json
 
 # pi-managed caches
 **/.pi/agent/models-store.json
 **/.pi/agent/web-search-cache/
 
-# Old pi config snapshots (kept locally only)
-dotfiles/pi-old/
-dotfiles/pi-old-2/
+# pi-stats database
+**/.pi/agent/pi-stats.db*
