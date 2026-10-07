@@ -10,12 +10,30 @@
 #   ⎇ main ↑2  1.2M
 #   ⎇ main ~5 ?2  892K
 
-# Gruvbox Material colours
+# Colours follow ~/.config/theme (scripts/toggle-theme.sh)
+case "$(cat "$HOME/.config/theme" 2>/dev/null)" in
+gruvbox)
 B='#[fg=#7daea3]'  # aqua   — branch
 G='#[fg=#a9b665]'  # green  — ahead ↑
 Y='#[fg=#e78a4e]'  # orange — modified ~
 R='#[fg=#ea6962]'  # red    — untracked ?
 D='#[fg=#928374]'  # gray   — size
+;;
+everforest)
+B='#[fg=#83c092]'  # aqua   — branch
+G='#[fg=#a7c080]'  # green  — ahead ↑
+Y='#[fg=#e69875]'  # orange — modified ~
+R='#[fg=#e67e80]'  # red    — untracked ?
+D='#[fg=#859289]'  # grey1  — size
+;;
+*)
+B='#[fg=#7aa89f]'  # waveAqua2    — branch
+G='#[fg=#98bb6c]'  # springGreen  — ahead ↑
+Y='#[fg=#ffa066]'  # surimiOrange — modified ~
+R='#[fg=#e46876]'  # waveRed      — untracked ?
+D='#[fg=#727169]'  # fujiGray     — size
+;;
+esac
 X='#[fg=default]'  # reset
 
 path="${1:-.}"

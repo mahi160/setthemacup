@@ -52,7 +52,6 @@ alias a='command pi'
 alias of="onefetch"
 alias note="$SETTHEMACUP/scripts/note.sh"
 alias dev="$SETTHEMACUP/scripts/dev.sh"
-alias hd="$SETTHEMACUP/scripts/herdr.sh"
 alias pokemon-bg="$SETTHEMACUP/scripts/pokemon-bg.sh"
 alias theme="$SETTHEMACUP/scripts/toggle-theme.sh"
 alias wick='dev --dir "$HOME/Documents/Coding/Jobs/QuestionPro/wick-ui"'

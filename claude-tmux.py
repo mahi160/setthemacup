@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude usage widget for tmux status bar — Kanagawa Wave palette, 5-min cache.
+Claude usage widget for tmux status bar — palette follows ~/.config/theme, 5-min cache.
 Reads credentials from macOS Keychain (stored by setup.py).
 
 Usage in tmux.conf:
@@ -21,13 +21,33 @@ SERVICE    = "claude-usage-widget"
 CACHE_FILE = "/tmp/.claude-status-cache"
 CACHE_TTL  = 300  # seconds — actual API calls at most once per 5 min
 
-# ── Kanagawa Wave palette ─────────────────────────────────────────────────────
+# ── Palette (gruvbox | kanagawa-wave | everforest) ─────────────────────────────────────────────────────
 
-C_GREEN  = "#98BB6C"   # springGreen
-C_YELLOW = "#E6C384"   # carpYellow
-C_RED    = "#E82424"   # samuraiRed
-C_PURPLE = "#957fb8"   # oniViolet
-C_GRAY   = "#727169"   # fujiGray
+def _theme() -> str:
+    try:
+        with open(os.path.expanduser("~/.config/theme")) as f:
+            return f.read().strip()
+    except OSError:
+        return "kanagawa-wave"
+
+if _theme() == "gruvbox":
+    C_GREEN  = "#a9b665"   # green
+    C_YELLOW = "#d8a657"   # yellow
+    C_RED    = "#ea6962"   # red
+    C_PURPLE = "#d3869b"   # purple
+    C_GRAY   = "#928374"   # gray
+elif _theme() == "everforest":
+    C_GREEN  = "#a7c080"   # green
+    C_YELLOW = "#dbbc7f"   # yellow
+    C_RED    = "#e67e80"   # red
+    C_PURPLE = "#d699b6"   # purple
+    C_GRAY   = "#859289"   # grey1
+else:
+    C_GREEN  = "#98BB6C"   # springGreen
+    C_YELLOW = "#E6C384"   # carpYellow
+    C_RED    = "#E82424"   # samuraiRed
+    C_PURPLE = "#957fb8"   # oniViolet
+    C_GRAY   = "#727169"   # fujiGray
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

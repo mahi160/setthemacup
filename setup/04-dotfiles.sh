@@ -10,7 +10,7 @@ set_dotfiles() {
 
     # Stow dotfiles (all 11 packages — pi is included; entire ~/.pi/agent is symlinked)
     info "Stowing dotfiles from $DOTFILES_DIR..."
-    local packages=(fastfetch pi pi-new git ghostty herdr lazygit nvim starship stow tmux yazi zsh)
+    local packages=(fastfetch pi pi-new git ghostty lazygit nvim starship stow tmux yazi zsh)
     for pkg in "${packages[@]}"; do
       local conflicts
       conflicts=$(stow --dir="$DOTFILES_DIR" --target="$HOME" --simulate "$pkg" 2>&1 |
@@ -33,6 +33,10 @@ set_dotfiles() {
         }
       success "Stowed $pkg."
     done
+
+    # Theme: create state + per-app links (keeps current theme, default kanagawa-wave)
+    bash "$SETUP_DIR/scripts/toggle-theme.sh" --no-reload "$(cat "$HOME/.config/theme" 2>/dev/null || echo kanagawa-wave)" ||
+      warn "Theme setup failed — run scripts/toggle-theme.sh manually."
 
     # Fetch starter pokemon for Ghostty background (cached — only runs once)
     local pokemon_dir="$HOME/Pictures/pokemon_bg"

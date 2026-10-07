@@ -8,6 +8,10 @@ export SETTHEMACUP="$HOME/.setup"
 # popup, closer to Claude Code's native ask flow.
 export PI_ASK_USER_DISPLAY_MODE=inline
 
+# ─── lazygit ──────────────────────────────────────────────────────────────────
+# theme.yml: symlink to active theme overlay, managed by scripts/toggle-theme.sh
+export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme.yml"
+
 # ─── PATH additions ───────────────────────────────────────────────────────────
 # ~/.local/bin — compiled binaries (e.g. nowplaying-mediaremote for tmux)
 case ":$PATH:" in

@@ -3,7 +3,7 @@ command_timeout = 500
 add_newline     = true
 
 # Explicit format — only listed modules are scanned (fast).
-# Colors: inherited from terminal theme (Ghostty Gruvbox Material Dark)
+# Colors: ANSI names only, inherited from Ghostty theme (scripts/toggle-theme.sh)
 # yellow=3 green=2 red=1 cyan=6 bright-black=8
 format = """
 $username$localip$directory$git_branch$git_commit$git_status\
@@ -16,8 +16,8 @@ right_format = "$cmd_duration"
 
 # ─── Prompt character ─────────────────────────────────────────────────────────
 [character]
-success_symbol = "[❯](bold #a9b665)"
-error_symbol   = "[❯](bold #e46876)"
+success_symbol = "[❯](bold green)"
+error_symbol   = "[❯](bold red)"
 
 # ─── Identity ─────────────────────────────────────────────────────────────────
 [username]
