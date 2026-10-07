@@ -112,11 +112,36 @@ function renameToolChoice<T>(toolChoice: T): T {
 	return alias ? ({ ...toolChoice, name: alias } as T) : toolChoice;
 }
 
+/** Inline tool changes (1.0.1+): system messages carry tool_addition / tool_removal blocks. */
+function renameInlineTools(content: unknown[]): unknown[] {
+	let changed = false;
+	const next = content.map((block) => {
+		if (!isPlainObject(block) || !isPlainObject(block.tool)) return block;
+		if (block.type === "tool_addition") {
+			const def = block.tool.definition;
+			if (!isPlainObject(def) || typeof def.name !== "string" || typeof def.type === "string") return block;
+			const alias = wireName(def.name);
+			if (!alias) return block;
+			aliasToTool.set(lower(alias), def.name);
+			changed = true;
+			return { ...block, tool: { ...block.tool, definition: { ...def, name: alias } } };
+		}
+		if (block.type === "tool_removal" && typeof block.tool.name === "string") {
+			const alias = wireName(block.tool.name);
+			if (!alias) return block;
+			changed = true;
+			return { ...block, tool: { ...block.tool, name: alias } };
+		}
+		return block;
+	});
+	return changed ? next : content;
+}
+
 function renameHistory(messages: unknown[]): unknown[] {
 	let changed = false;
 	const next = messages.map((msg) => {
 		if (!isPlainObject(msg) || !Array.isArray(msg.content)) return msg;
-		const content = renameBlocks(msg.content, "tool_use", wireName);
+		const content = renameInlineTools(renameBlocks(msg.content, "tool_use", wireName));
 		if (content === msg.content) return msg;
 		changed = true;
 		return { ...msg, content };
