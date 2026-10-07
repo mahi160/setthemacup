@@ -1,3 +1,8 @@
+-- ~/.config/theme: written by scripts/toggle-theme.sh
+local f = io.open(vim.env.HOME .. "/.config/theme")
+local active = f and vim.trim(f:read("*a")) or "kanagawa-wave"
+if f then f:close() end
+
 return {
   {
     "mahi160/kanagawa.nvim",
@@ -62,9 +67,19 @@ return {
   },
 
   {
+    "sainnhe/everforest",
+    config = function()
+      vim.g.everforest_enable_italic = 1
+      vim.g.everforest_better_performance = 1
+      vim.g.everforest_background = "hard"
+      vim.g.everforest_transparent_background = 2
+    end,
+  },
+
+  {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "gruvbox-material",
+      colorscheme = ({ gruvbox = "gruvbox-material", everforest = "everforest" })[active] or "kanagawa",
     },
   },
 }
