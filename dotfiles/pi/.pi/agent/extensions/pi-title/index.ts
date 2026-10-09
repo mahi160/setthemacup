@@ -11,8 +11,8 @@ const LOGO = [
   "╚═╝     ╚═╝ ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝",
 ];
 
-// theme tokens, so logo follows active theme
-const ROW_COLORS: ThemeColor[] = ["warning", "warning", "success", "success", "accent", "accent"];
+// syntax tokens: distinct hues in all 3 themes (accent/success collide in everforest)
+const ROW_COLORS: ThemeColor[] = ["syntaxKeyword", "syntaxString", "syntaxFunction", "syntaxType", "mdLink", "syntaxNumber"];
 
 const QUOTES = [
   "tokens go brrr",
