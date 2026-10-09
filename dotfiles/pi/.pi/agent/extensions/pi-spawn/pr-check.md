@@ -1,5 +1,7 @@
 Audit a PR. Output one HTML file. No fillers, fewest words that stay clear.
 
+Delegate bulk reading and other non-thinking work (reading changed files, grepping usages, collecting context, installing deps, taking screenshots) to a cheap child: `pi -p --no-session --model anthropic/claude-haiku-5-5:high "<task>"`; add `--tools read,grep,find,ls` for read-only tasks. Keep judgment (finding and rating issues) in this session.
+
 Target from user input (additional context):
 - PR number or URL given → that PR.
 - nothing given → PR of current branch (`gh pr view --json number`). No PR → audit `git diff main...HEAD`.

@@ -5,7 +5,7 @@
  * live progress feedback and a real ask-bridge.
  *
  * /spawn <task>      - free-form read-only investigation (fixed cheap model, restricted tools)
- * /commit /pr /pr-check /standup /review /test
+ * /commit /pr /pr-check /review /css-audit
  *                    - fixed git-workflow commands driven by commands.json (per-command
  *                      model/thinking, full tool access — see docs/adr/0001, 0002, 0004)
  *
@@ -581,7 +581,7 @@ export default function (pi: ExtensionAPI) {
 			const opts = {
 				task: SPAWN_INSTRUCTIONS + task,
 				cwd: ctx.cwd,
-				model: "anthropic/claude-haiku-4-5",
+				model: "anthropic/claude-haiku-5-5",
 				thinking: "low",
 				tools: "read,grep,find,ls",
 			};
