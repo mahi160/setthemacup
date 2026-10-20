@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# toggle-theme — cycle gruvbox -> kanagawa-wave -> everforest across ghostty, tmux, nvim, pi, lazygit.
+# theme — cycle gruvbox -> kanagawa-wave -> everforest across ghostty, tmux, nvim, pi, lazygit.
 #
 # Usage: theme                     next theme in THEMES order
 #        theme <name>
 #        theme status              print current theme
-#        add --no-reload to skip live reload of running apps (used by setup)
+#        add --no-reload to skip live reload of running apps (used by the installer)
 #
-# State lives in ~/.config/theme. Readers: nvim (both configs), tmux-git,
-# claude-tmux.py, pi-stats report. Apps without a state reader get a
+# State lives in ~/.config/theme. Readers: nvim, tmux-git,
+# claude-tmux, pi-stats report. Apps without a state reader get a
 # gitignored pointer to a tracked per-theme file (see .gitignore).
 set -euo pipefail
 
 THEMES=(gruvbox kanagawa-wave everforest)
 DEFAULT=kanagawa-wave
 STATE="$HOME/.config/theme"
-DOTFILES="$(cd "$(dirname "$0")/.." && pwd)/dotfiles"
+DOTFILES="${SETTHEMACUP:-$HOME/.setup}/dotfiles"
 USAGE="usage: theme [$(IFS='|'; echo "${THEMES[*]}")|status] [--no-reload]"
 
 reload=1

@@ -4,5 +4,5 @@
 set -euo pipefail
 
 read -p "Note (text #tags): " note && {
-  "$SETTHEMACUP/scripts/note.sh" note "$note"
+  "$HOME/.local/bin/note" note "$note"
 }

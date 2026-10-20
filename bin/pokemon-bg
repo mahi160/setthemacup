@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
+# pokemon-bg [id] — swap the Ghostty background to a random (or given) Pokemon.
+# Downloads official artwork to ~/Pictures/pokemon_bg and repoints current.png.
+
+set -euo pipefail
 
 POKEMON_DIR="${HOME}/Pictures/pokemon_bg"
-GHOSTTY_CONFIG="${HOME}/.config/ghostty/config"
 MAX_POKEMON=1025
 
 mkdir -p "$POKEMON_DIR"
@@ -32,13 +35,12 @@ fi
 # Update current.png symlink — used by fastfetch logo and nvim dashboard
 ln -sf "$IMAGE_PATH" "${POKEMON_DIR}/current.png"
 
-# Update background-image in Ghostty config
-if grep -qE "^#?[[:space:]]*background-image[[:space:]]*=" "$GHOSTTY_CONFIG"; then
-  # Use ~ for portability in the config file
-  DISPLAY_PATH="${IMAGE_PATH/$HOME/\~}"
-  sed -i '' -E "s|^#?[[:space:]]*background-image[[:space:]]*=.*|background-image = ${DISPLAY_PATH}|" "$GHOSTTY_CONFIG"
-else
-  printf "\nbackground-image = %s\n" "$IMAGE_PATH" >> "$GHOSTTY_CONFIG"
+# Ghostty's background-image points at current.png; reload so it picks up the new target
+if pgrep -xq ghostty; then
+  osascript \
+    -e 'tell application "Ghostty" to activate' \
+    -e 'tell application "System Events" to keystroke "," using {command down, shift down}' \
+    >/dev/null 2>&1 || echo "ghostty: press cmd+shift+, to reload" >&2
 fi
 
 printf "Pokemon #%d\n" "$POKEMON_ID"

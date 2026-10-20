@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tmux-nowplaying — scrolling now-playing widget for tmux status bar.
-# Installed to ~/.local/bin/tmux-nowplaying by setup/14-nowplaying.sh.
+# Linked into ~/.local/bin/tmux-nowplaying by the installer (Extras).
 # Uses nowplaying-cli (brew install nowplaying-cli) to query macOS MediaRemote.
 #
 # Output when playing  : " ♪ scrolling text "  (scrolls when > MAX chars)

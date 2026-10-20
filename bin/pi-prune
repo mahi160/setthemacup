@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# pi-prune.sh — Delete pi session files older than 30 days and checkpoint WAL.
+# pi-prune — Delete pi session files older than 30 days and checkpoint WAL.
 #
 # Usage:
-#   ./scripts/pi-prune.sh [--dry-run]
+#   pi-prune [--dry-run]
 #
 # What it does:
 #   1. Finds *.jsonl session files in ~/.pi/agent/sessions/ older than 30 days
@@ -10,7 +10,7 @@
 #   3. Checkpoints the stats.db WAL file to keep disk usage low
 #
 # Safe to run while pi is not active. Do NOT run while a pi session is open.
-# Add to cron: 0 3 * * 0 ~/path/to/pi-prune.sh (weekly at 3am Sunday)
+# Scheduled weekly by the installer (launchd: com.setthemacup.pi-prune).
 
 set -euo pipefail
 

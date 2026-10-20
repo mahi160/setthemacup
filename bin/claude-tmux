@@ -4,7 +4,7 @@ Claude usage widget for tmux status bar — palette follows ~/.config/theme, 5-m
 Reads credentials from macOS Keychain (stored by setup.py).
 
 Usage in tmux.conf:
-  set -g status-right '#(python3 ~/.setup/claude-tmux.py)'
+  set -g status-right '#(~/.local/bin/claude-tmux)'
   # status-interval 5 is fine — output is cached to /tmp/.claude-status-cache
 """
 

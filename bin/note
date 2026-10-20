@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Base path for notes
-NOTES_PATH="$HOME/Documents/Notes/Mindflayer/QuickNotes"
+NOTES_PATH="${NOTES_JOURNAL_DIR:-$HOME/Documents/Notes/QuickNotes}"
 mkdir -p "$NOTES_PATH"
 
 # Get current date components
@@ -15,7 +15,7 @@ TIME=$(date +"%H:%M")
 JOURNAL_FILE="$NOTES_PATH/$YEAR.md"
 
 # Parse optional type prefix (note | learn) passed by tmux popup bindings
-# e.g. note.sh learn "text" — skips the type word, uses rest as text
+# e.g. note learn "text" — skips the type word, uses rest as text
 NOTE_TYPE="note"
 if [[ "${1:-}" == "note" || "${1:-}" == "learn" ]]; then
   NOTE_TYPE="$1"
@@ -28,12 +28,12 @@ if [ -z "$NOTE_TEXT" ]; then
   exit 0
 fi
 
-# LP:/WU: prefix -> route to the Busybox project-OS vault's Daily note Inbox
-# instead of the general Mindflayer journal. Everything else falls through
+# LP:/WU: prefix -> route to the project vault's Daily note Inbox
+# ($NOTES_PROJECT_DIR) instead of the general journal. Everything else falls through
 # to the existing behavior below, unchanged.
-if [[ "$NOTE_TEXT" =~ ^(LP|WU): ]]; then
-  BUSYBOX_DAILY="$HOME/Documents/Notes/Busybox/Daily"
-  BUSYBOX_TEMPLATE="$HOME/Documents/Notes/Busybox/Templates/Daily.md"
+if [[ -n "${NOTES_PROJECT_DIR:-}" && "$NOTE_TEXT" =~ ^(LP|WU): ]]; then
+  BUSYBOX_DAILY="$NOTES_PROJECT_DIR/Daily"
+  BUSYBOX_TEMPLATE="$NOTES_PROJECT_DIR/Templates/Daily.md"
   mkdir -p "$BUSYBOX_DAILY"
   DAILY_FILE="$BUSYBOX_DAILY/${YEAR}-$(date +%m)-${DAY}.md"
   if [ ! -f "$DAILY_FILE" ]; then

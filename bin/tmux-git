@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tmux-git — coloured git status + folder size widget for tmux status bar.
-# Installed to ~/.local/bin/tmux-git by setup/14-nowplaying.sh.
+# Linked into ~/.local/bin/tmux-git by the installer (Extras).
 # Usage: tmux-git <path>
 #
 # Uses tmux #[fg=hex] style codes (not ANSI) — processed by tmux format engine.
@@ -10,7 +10,7 @@
 #   ⎇ main ↑2  1.2M
 #   ⎇ main ~5 ?2  892K
 
-# Colours follow ~/.config/theme (scripts/toggle-theme.sh)
+# Colours follow ~/.config/theme (bin/theme)
 case "$(cat "$HOME/.config/theme" 2>/dev/null)" in
 gruvbox)
 B='#[fg=#7daea3]'  # aqua   — branch

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# vpn — connect to a FortiGate VPN with SAML/SSO via openfortivpn.
+#
+# Usage:
+#   vpn            pick a gateway with fzf
+#   vpn <name>     connect by name (e.g. vpn pune)
+#
+# Gateways: ~/.config/vpn/gateways, one "<name> <host:port>" per line.
+# Ctrl-C disconnects. DNS: openfortivpn writes /etc/resolv.conf, which GUI apps
+# ignore — check `scutil --dns` if browsers can't resolve internal hosts.
+
+set -euo pipefail
+
+GATEWAYS="${VPN_GATEWAYS:-$HOME/.config/vpn/gateways}"
+
+[[ -f "$GATEWAYS" ]] || { echo "No gateways file: $GATEWAYS" >&2; exit 1; }
+command -v openfortivpn >/dev/null || { echo "openfortivpn not installed (brew install openfortivpn)" >&2; exit 1; }
+
+entries="$(grep -vE '^\s*(#|$)' "$GATEWAYS")"
+if [[ -n "${1:-}" ]]; then
+  line="$(awk -v n="$1" 'tolower($1) == tolower(n)' <<<"$entries")"
+else
+  line="$(fzf --prompt='vpn> ' --height=~10 --reverse <<<"$entries")"
+fi
+[[ -n "$line" ]] || { echo "No gateway selected." >&2; exit 1; }
+
+name="$(awk '{print $1}' <<<"$line")"
+gateway="$(awk '{print $2}' <<<"$line")"
+
+# Ask for sudo first so the password prompt doesn't race the browser
+sudo -v
+
+# openfortivpn listens on 127.0.0.1:8020; the gateway redirects there after SSO
+(sleep 2 && open "https://${gateway}/remote/saml/start?redirect=1") &
+
+echo "Connecting to ${name} (${gateway}) — finish the login in your browser. Ctrl-C to disconnect."
+exec sudo openfortivpn "$gateway" --saml-login

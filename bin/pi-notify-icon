@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pi-notify-icon.sh — generate the π notification icon for the pi agent notifier.
+# pi-notify-icon — generate the π notification icon for the pi agent notifier.
 #
 # Does two things:
 #   1. Renders a 512×512 PNG  → ~/.local/share/pi/notify-icon.png
@@ -9,7 +9,7 @@
 #      sandboxes the app icon to the sending bundle; patching is the only fix).
 #
 # Re-run after: brew upgrade terminal-notifier
-# Called automatically by setup/04-dotfiles.sh on fresh installs.
+# Run by the installer (Extras) when the icon is missing.
 #
 # Requires: qlmanage (macOS built-in), sips (macOS built-in), iconutil (macOS built-in)
 

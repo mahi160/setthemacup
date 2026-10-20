@@ -1,4 +1,4 @@
--- ~/.config/theme: written by scripts/toggle-theme.sh
+-- ~/.config/theme: written by bin/theme
 local f = io.open(vim.env.HOME .. "/.config/theme")
 local active = f and vim.trim(f:read("*a")) or "kanagawa-wave"
 if f then f:close() end

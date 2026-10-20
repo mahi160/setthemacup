@@ -1,4 +1,4 @@
-# theme: symlink to theme.d/<name>, managed by scripts/toggle-theme.sh
+# theme: symlink to theme.d/<name>, managed by bin/theme
 config-file = ?theme
 
 # font-family = JetBrainsMono Nerd Font
@@ -30,7 +30,7 @@ window-padding-balance = true
 background-blur = 240
 background-opacity = 0.95
 
-background-image = ~/Pictures/pokemon_bg/666.png
+background-image = ~/Pictures/pokemon_bg/current.png
 background-image-opacity = 0.15
 background-image-fit = none
 background-image-position = bottom-right

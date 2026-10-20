@@ -23,7 +23,7 @@ const PALETTES = {
   },
 };
 
-// ~/.config/theme: written by scripts/toggle-theme.sh
+// ~/.config/theme: written by bin/theme
 function palette() {
   try {
     const name = readFileSync(join(homedir(), ".config/theme"), "utf8").trim();
