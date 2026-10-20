@@ -1,101 +1,75 @@
 # setthemacup
 
-Full macOS dev environment setup — one command from a fresh machine.
+One command from a fresh Mac to my full dev environment.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash
 ```
 
----
-
-## What it does
-
-`bootstrap.sh` clones this repo to `~/.setup` then hands off to `setup/main.sh`, which runs 15 steps in order:
-
-| # | Step | What |
-|---|---|---|
-| 1 | `set_homebrew` | Installs Homebrew, bootstraps PATH |
-| 2 | `set_apps` | All CLI tools, GUI apps, fonts — reads from `scripts/apps.json` |
-| 3 | `set_store_apps` | App Store apps via `mas` + Raycast + FortiClient DMG |
-| 4 | `set_dotfiles` | Stow all configs (ghostty, tmux, nvim, zsh, starship, fastfetch, pi) |
-| 5 | `set_git` | Global git identity (personal) |
-| 6 | `set_node` | fnm → Node LTS → pnpm |
-| 7 | `set_nvim` | Lazy sync (main nvim) + vim.pack bootstrap (nvim.12) |
-| 8 | `set_pi` | Pi coding agent + claude extension deps |
-| 9 | `set_ai` | AI skills via `npx skills add` |
-| 10 | `set_ssh` | Generate ed25519 keys (personal + work), print for GitHub |
-| 11 | `set_mac_cleanup` | Clear dock, disable Siri / Game Center / analytics |
-| 12 | `set_mac_defaults` | Keyboard, Finder, trackpad, spaces, screenshots |
-| 13 | `set_network_shares` | Auto-mount SMB shares on login via LaunchAgent |
-| 14 | `set_tmux_helpers` | Compile Swift nowplaying binary + install tmux-battery/cpu scripts |
-| 15 | `set_crontab` | Weekly maintenance jobs (pi-prune, fnm-clean) |
+**Everything it installs and changes: [mahi160.github.io/setthemacup](https://mahi160.github.io/setthemacup/)**
 
 ---
+
+## How it works
+
+1. **`bootstrap.sh`** explains what's coming, then installs only what the installer needs: Xcode Command Line Tools, this repo (→ `~/.setup`), fnm, Node.js LTS and pnpm.
+2. **The installer** (`installer/`, TypeScript run directly by Node) asks for your private values once, then shows a checklist — everything selected by default:
+
+| Step | What |
+|---|---|
+| Homebrew | Always runs |
+| CLI tools | git, gh, neovim, tmux, fzf, lazygit, delta, ripgrep, fd, … |
+| Dotfiles + theme | oh-my-zsh, then zsh, git, ghostty, tmux, nvim, lazygit, fastfetch and pi configs via GNU stow |
+| Git + SSH | Identity (personal + work via `includeIf`), SSH keys with Keychain passphrase, optional upload to GitHub |
+| Neovim | LazyVim plugins |
+| AI | pi coding agent + agent skills |
+| Extras | Helper commands, Swift tools, SMB auto-mount, weekly cleanup jobs |
+| flowd | Coding-time tracker + journal restore |
+| GUI apps | Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … |
+| macOS settings | 100+ defaults, Caps Lock → Control, ⌘Space for Tinycast, display scaling |
+
+3. **At the end** you get a summary and a "What's next" checklist of the few things that need a human (sign-ins, permissions, a restart). It's also saved to `~/.setup/logs/next-steps.md`.
+
+Every step checks what's already done, so re-running is safe. Real files in the way are moved to `~/.setup-backup/<date>/`, never overwritten.
 
 ## Re-running
 
-Every step is idempotent — safe to re-run at any time.
-
 ```bash
-bash ~/.setup/setup/main.sh          # full run
-bash ~/.setup/setup/main.sh apps     # single step by name
-bash ~/.setup/setup/02-apps.sh       # or run a step file directly
+setup                  # checklist
+setup --list           # what's done
+setup --only git,nvim  # just these (Homebrew always runs)
+setup --dry-run        # show the commands, change nothing
+setup --yes            # everything, no prompts
 ```
 
----
+## Private values
 
-## Structure
+This repo is public. Git identity, work folder, notes vaults, SMB shares and private repos live in `~/.config/setthemacup/private.env` — the installer asks for them on the first run ([template](private.env.example)). Machine-only shell aliases go in `~/.config/zsh/local.zsh`.
+
+## Layout
 
 ```
-setthemacup/
-├── bootstrap.sh              # entry point (curl | bash)
-├── setup/
-│   ├── main.sh               # entry point — sources lib + all steps
-│   ├── lib.sh                # shared helpers (colors, log, apps_* fns)
-│   ├── apps.json             # app manifest (formulae, casks, mas, dmg, smb)
-│   └── 01-homebrew.sh … 15-crontab.sh  # one file per step
-├── scripts/                  # helper scripts called by setup steps
-│   ├── compile-nowplaying.sh # compile Swift nowplaying binary for tmux
-│   ├── tmux-battery.sh       # battery icon+% for tmux status bar (→ ~/.local/bin)
-│   ├── tmux-cpu.sh           # cpu icon+% for tmux status bar (→ ~/.local/bin)
-│   ├── dev.sh                # smart tmux dev session launcher
-│   ├── note.sh               # quick note/learn capture to Obsidian
-│   ├── pokemon-bg.sh         # cycle Ghostty background pokemon
-│   ├── crontab-setup.sh      # install weekly cron jobs
-│   └── pi-prune.sh           # delete old pi sessions (run by cron)
-└── dotfiles/
-    ├── ghostty/              # Ghostty terminal config
-    ├── tmux/                 # tmux config (no TPM — all native)
-    ├── nvim/
-    │   ├── .config/nvim/     # LazyVim-based config (alias: nvim)
-    │   └── .config/nvim.12/  # lean vim.pack + mini.nvim config (alias: vm)
-    ├── zsh/                  # .zshrc + .zshenv (no OMZ — direct brew plugins)
-    ├── starship/             # starship prompt (ANSI colors, follows terminal theme)
-    ├── fastfetch/            # fastfetch system info (login shells only)
-    ├── pi/                   # pi coding agent config
-    └── stow/                 # .stow-global-ignore
+bootstrap.sh          entry point
+installer/            the installer: steps/, lib/, data/ (apps, macOS defaults, skills, keybinds)
+bin/                  helper commands, linked into ~/.local/bin
+src/swift/            Swift tools compiled on install
+dotfiles/             configs, stowed into $HOME
+docs/                 the generated details page, ADRs, tickets
 ```
 
----
+Change the package list in `installer/data/apps.ts` and macOS settings in `installer/data/defaults.ts`, then `pnpm run docs` to refresh the page.
 
-## After install
+## Commands it adds
 
-1. Paste SSH public keys into [github.com/settings/keys](https://github.com/settings/keys)
-2. Set `ANTHROPIC_API_KEY` in your shell environment
-3. Sign in to App Store (if skipped during install)
-4. Add SMB credentials to Keychain Access for auto-mount shares
-5. Run `pokemon-bg` to set your first Ghostty background
-
----
-
-## Key aliases
-
-| Alias | What |
-|-------|------|
-| `v` | nvim (LazyVim) |
-| `vm` | nvim.12 (lean vim.pack config) |
-| `dev` | smart tmux session launcher |
-| `y` | yazi (cd on exit) |
-| `zc` | open this repo in a tmux config session |
+| Command | What |
+|---|---|
+| `v` | Neovim (LazyVim) |
+| `lg` / `ld` | lazygit / lazydocker |
+| `dev` | tmux dev session for a project |
 | `a` | pi coding agent |
-| `note` / `of` | quick note capture / onefetch |
+| `vpn` | FortiGate VPN with SSO (`vpn <name>`, or pick with fzf) |
+| `theme` | cycle the terminal/editor theme |
+| `note` | quick note to your notes folder |
+| `pokemon-bg` / Alt+Q | new Ghostty background |
+| `z <dir>` | jump to a frequent directory |
+| `update` | pull this repo, relink dotfiles, reload the shell |
