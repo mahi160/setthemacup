@@ -1,0 +1,30 @@
+# ~/.gitconfig — stowed from setthemacup. Identity is NOT here:
+# ~/.gitconfig.local (generated from ~/.config/setthemacup/private.env) holds
+# [user] and the includeIf that switches to the work identity under $WORK_DIR.
+[include]
+	path = ~/.gitconfig.local
+[core]
+	editor = nvim
+	autocrlf = false
+	excludesfile = ~/.gitignore_global
+	pager = delta
+[init]
+	defaultBranch = main
+[pull]
+	rebase = false
+[push]
+	autoSetupRemote = true
+[fetch]
+	prune = true
+[rebase]
+	autoStash = true
+[merge]
+	conflictstyle = zdiff3
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	side-by-side = true
+	line-numbers = true
+	# ansi: uses the terminal palette, so diffs follow the Ghostty theme
+	syntax-theme = ansi
