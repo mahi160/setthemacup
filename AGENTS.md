@@ -172,6 +172,7 @@ pnpm test && pnpm typecheck
 
 - Config: `~/.pi/agent/` (whole directory stowed from `dotfiles/pi/`)
 - Packages are declared in `settings.json` under `"packages"` — pi auto-installs missing ones on startup (the installer only installs pi itself)
+- `"npmCommand": ["pnpm"]` makes pi install and look up those packages with pnpm (into `~/.pi/agent/npm/`)
 - **Pin npm packages to an exact version** (`npm:pkg@1.2.3`). Unpinned `npm:` floats, and provider-overriding extensions see your OAuth token
 - MCP servers live in `mcp.json` and use pi's built-in MCP support. Do not install `pi-mcp-adapter`: it replaces the built-in support
 - Anthropic Claude Pro/Max OAuth compat comes from pi itself (Claude Code headers and tool-name casing in pi-ai) plus the local `extensions/pi-claude`, which renames non-Claude-Code tools to `mcp__pi__<name>` on the wire and maps calls back. Set `PI_CLAUDE_CODE_USE_DISABLE_TOOL_RENAME=1` to send the original names

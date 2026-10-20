@@ -13,6 +13,7 @@
   "collapseChangelog": true,
   "quietStartup": true,
   "defaultProjectTrust": "ask",
+  "npmCommand": ["pnpm"],
   "warnings": {
     "anthropicExtraUsage": false
   },
