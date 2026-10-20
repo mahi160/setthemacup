@@ -18,12 +18,12 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 | Step | What |
 |---|---|
 | Homebrew | Always runs |
-| CLI tools | git, gh, neovim, tmux, fzf, lazygit, delta, ripgrep, fd, … |
+| CLI tools | git, gh, neovim, tmux, fzf, lazygit, delta, ripgrep, fd, … plus pnpm globals (pi) |
 | Dotfiles + theme | oh-my-zsh, then zsh, git, ghostty, tmux, nvim, lazygit, fastfetch and pi configs via GNU stow |
 | Git + SSH | Identity (personal + work via `includeIf`), SSH keys with Keychain passphrase, optional upload to GitHub |
 | Neovim | LazyVim plugins |
-| AI | pi coding agent + agent skills |
-| Extras | Helper commands, Swift tools, SMB auto-mount, weekly cleanup jobs |
+| AI skills | Agent skills for pi |
+| Extras | Helper commands, Swift tools, SMB auto-mount, daily list sync, weekly cleanup |
 | flowd | Coding-time tracker + journal restore |
 | GUI apps | Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … |
 | macOS settings | 100+ defaults, Caps Lock → Control, ⌘Space for Tinycast, display scaling |
@@ -40,7 +40,10 @@ setup --list           # what's done
 setup --only git,nvim  # just these (Homebrew always runs)
 setup --dry-run        # show the commands, change nothing
 setup --yes            # everything, no prompts
+setup --sync           # update the lists from what you installed/removed by hand
 ```
+
+A daily job runs `setup --sync`: install something by hand (`brew install`, `pnpm add -g`, `npx skills add`) and it lands in the lists under **Inbox**; uninstall something and it drops out. You get a notification and commit when ready.
 
 ## Private values
 
@@ -50,14 +53,14 @@ This repo is public. Git identity, work folder, notes vaults, SMB shares and pri
 
 ```
 bootstrap.sh          entry point
-installer/            the installer: steps/, lib/, data/ (apps, macOS defaults, skills, keybinds)
+installer/            the installer: steps/, lib/, data/ (apps.json, pnpm.json, skills.json, macOS defaults, keybinds)
 bin/                  helper commands, linked into ~/.local/bin
 src/swift/            Swift tools compiled on install
 dotfiles/             configs, stowed into $HOME
 docs/                 the generated details page, ADRs, tickets
 ```
 
-Change the package list in `installer/data/apps.ts` and macOS settings in `installer/data/defaults.ts`, then `pnpm run docs` to refresh the page.
+Change packages in `installer/data/apps.json` (or let the sync do it) and macOS settings in `installer/data/defaults.ts`, then `pnpm run docs` to refresh the page.
 
 ## Commands it adds
 

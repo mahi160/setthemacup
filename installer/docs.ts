@@ -4,7 +4,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { apps, type AppKind } from './data/apps.ts';
+import { apps, pnpmGlobals, type AppKind } from './data/apps.ts';
 import { defaults, manualSettings } from './data/defaults.ts';
 import { keybinds } from './data/keybinds.ts';
 import { FIELDS } from './lib/private.ts';
@@ -63,8 +63,11 @@ function packagesSection(): string {
       .join('')}</div>`;
   };
   return `<section id="packages"><h2>Packages</h2>
-    <p>From <code>installer/data/apps.ts</code>. One batched <code>brew install</code> per kind; third-party taps are tapped first.</p>
-    ${block('formula', 'CLI tools')}${block('cask', 'GUI apps')}</section>`;
+    <p>From <code>installer/data/apps.json</code> and <code>pnpm.json</code>. One batched <code>brew install</code> per kind; third-party taps are tapped first.</p>
+    ${block('formula', 'CLI tools')}${block('cask', 'GUI apps')}
+    <h3>pnpm globals <span class="muted">(${pnpmGlobals.length})</span></h3><div class="card"><dl>${pnpmGlobals.map((p) => `<dt><code>${esc(p.name)}</code></dt><dd>${md(p.desc)}</dd>`).join('')}</dl></div>
+    <h3>Keeping the lists in sync</h3>
+    <p>A daily job (<code>setup --sync</code>) compares what's installed with the previous run. Anything you <code>brew install</code>, <code>pnpm add -g</code> or <code>npx skills add</code> by hand is appended to the JSON lists under the <strong>Inbox</strong> category; anything you uninstall is dropped. You get a notification and commit when ready. Never-sync names live in <code>installer/data/sync-ignore.json</code>.</p></section>`;
 }
 
 function defaultsSection(): string {

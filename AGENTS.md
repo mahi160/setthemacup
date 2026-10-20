@@ -28,8 +28,8 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 │   ├── plan.ts               # arg parsing + step selection (pure, tested)
 │   ├── types.ts              # Step / Ctx contract
 │   ├── steps/                # one file per checklist item; steps/index.ts = run order
-│   ├── lib/                  # sh, log, brew, stow, launchd, defaults, swift, private, fs
-│   ├── data/                 # apps.ts, defaults.ts, skills.ts, keybinds.ts
+│   ├── lib/                  # sh, log, brew, stow, launchd, defaults, swift, private, fs, sync
+│   ├── data/                 # apps.json, pnpm.json, skills.json (+ typed views), sync-ignore.json, defaults.ts, keybinds.ts
 │   ├── docs.ts               # builds docs/index.html from the data above
 │   └── installer.test.ts     # node --test
 ├── bin/                      # helper commands, symlinked into ~/.local/bin (setup, dev, note, vpn, theme, pokemon-bg, tmux-*, claude-tmux, pi-*)
@@ -57,14 +57,14 @@ Run order is `installer/steps/index.ts`. Homebrew always runs; the rest are chec
 | id | Step | What |
 |---|---|---|
 | `homebrew` | Homebrew | install brew, `brew shellenv` in `.zprofile`, fix `share/` perms (required — failure aborts) |
-| `cli` | CLI tools | formulae from `data/apps.ts`, one batched install |
+| `cli` | CLI tools | formulae from `data/apps.json` (one batched install) + pnpm globals from `data/pnpm.json` (pi, always latest) |
 | `dotfiles` | Dotfiles + theme | oh-my-zsh + plugins, stow packages (conflicts → `~/.setup-backup/<date>/`), theme links |
 | `git` | Git + SSH | `~/.gitconfig.local` (identity + work `includeIf`), stow ssh, keys with passphrase, optional `gh` upload |
 | `nvim` | Neovim | LazyVim headless sync + clean |
-| `ai` | AI | `pnpm add -g` pi (unpinned) + skills from `data/skills.ts` (`--agent pi` → `~/.agents/skills`) |
-| `extras` | Extras | link `bin/*`, compile Swift, Pokemon bg, pi icon, SMB + weekly LaunchAgents (`com.setthemacup.*`) |
+| `ai` | AI skills | skills from `data/skills.json` (`--agent pi` → `~/.agents/skills`) |
+| `extras` | Extras | link `bin/*`, compile Swift, Pokemon bg, pi icon, SMB + scheduled LaunchAgents (`com.setthemacup.*`: daily sync, weekly cleanup) |
 | `flowd` | flowd | install `fw`, clone journal, restore db from `~/flowd-backup.zip`, generated config |
-| `apps` | GUI apps | casks from `data/apps.ts` (taps first) |
+| `apps` | GUI apps | casks from `data/apps.json` (taps first) |
 | `macos` | macOS settings | `data/defaults.ts` (only drifted values written), ⌘Space, Caps→Ctrl, chime, display |
 
 ```bash
@@ -73,6 +73,7 @@ setup --yes           # everything, no prompts
 setup --only git,nvim # Homebrew + these
 setup --dry-run       # print commands, change nothing
 setup --list          # status of every step
+setup --sync          # fold manual installs/removals into the JSON lists (-n previews)
 pnpm test && pnpm typecheck
 ```
 
@@ -82,14 +83,19 @@ pnpm test && pnpm typecheck
 
 ---
 
-## Packages — `installer/data/apps.ts`
+## Packages — `installer/data/*.json`
 
-```ts
-{ name: 'ripgrep', kind: 'formula', category: 'Editor', desc: '…' }
-{ name: 'owner/tap/name', kind: 'cask', category: 'Media', desc: '…' }  // tapped automatically
+```json
+// apps.json → "formulae" / "casks"; pnpm.json → "globals"
+{"name":"ripgrep","category":"Editor","desc":"…"}
+{"name":"owner/tap/name","category":"Media","desc":"…"}   // tapped automatically
+// skills.json → "sources"
+{"repo":"owner/repo","skills":["a","b"],"desc":"…"}
 ```
 
+- JSON, one entry per line, because the daily sync edits these files. `apps.ts` / `skills.ts` / `manifest.ts` are the typed views.
 - No duplicates (a test enforces it). Fonts are casks. Run `pnpm run docs` after editing.
+- **Daily sync** (`setup --sync`, LaunchAgent `com.setthemacup.sync` at 12:00): compares installed brew leaves, casks, pnpm globals and skills (`~/.agents/.skill-lock.json`) with the previous run (`~/.local/state/setthemacup/sync-state.json`). New installs not in a list are appended with category `Inbox` and the Homebrew/npm description; uninstalled list items are dropped; then a notification. It never commits. The first run only records a baseline, so leftovers you removed from a list aren't re-added. Never-sync names: `data/sync-ignore.json`.
 - fnm is **not** a brew package: bootstrap installs it to `~/.local/share/fnm`.
 
 ---
@@ -210,7 +216,7 @@ pnpm test && pnpm typecheck
 | Paths | Use `~` or `$HOME` — never hardcode `/Users/mahi` |
 | Shell patterns | Use `case ":$PATH:"` guard for PATH additions |
 | Regex in stow | Perl regex — `.*\.ext$` not `*.ext` |
-| Brew taps | Full path `owner/tap/name` in `apps.ts`; the installer taps it first |
+| Brew taps | Full path `owner/tap/name` in `apps.json`; the installer taps it first |
 | New commands | Add an executable to `bin/` (no extension); Extras links it into `~/.local/bin/` |
 | Paths in config | Use `~/.` not `/Users/mahi/` |
 | Scripts | `set -euo pipefail`; find the repo via `$SETTHEMACUP` (they run through symlinks, so not `$0`) |
