@@ -5,7 +5,7 @@
     "images": "kitty"
   },
   "steeringMode": "all",
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "markdown": {
     "mermaid": "final"
   },
@@ -17,7 +17,7 @@
     "anthropicExtraUsage": false
   },
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-5-5",
+  "defaultModel": "claude-opus-5-5",
   "enabledModels": [
     "anthropic/claude-haiku-5-5",
     "anthropic/claude-opus-5-5",
@@ -26,27 +26,34 @@
   "compaction": {
     "enabled": true,
     "reserveTokens": 40000,
-    "keepRecentTokens": 30000
+    "keepRecentTokens": 30000,
+    "modelOverrides": {
+      "anthropic/claude-opus-5-5": { "reserveTokens": 800000 }
+    }
   },
   "packages": [
-    "npm:@signalridge/pi-plan-mode@1.4.1",
     "npm:pi-web-access@0.33.0",
-    "npm:@upstash/context7-pi@0.1.2"
+    "npm:@upstash/context7-pi@0.1.2",
+    "npm:pi-fzf-files@0.2.0",
+    "npm:@gotgenes/pi-anthropic-auth@2.0.1"
   ],
   "extensions": [
     "extensions/pi-claude/index.ts",
     "extensions/pi-spawn/index.ts",
+    "extensions/pi-orca/index.ts",
+    "extensions/pi-recap/index.ts",
     "extensions/pi-footer/index.ts",
     "extensions/pi-permissions/index.ts",
     "extensions/pi-notify/index.ts",
     "extensions/pi-ask/index.ts",
     "extensions/pi-stats/index.ts",
-    "extensions/pi-title/index.ts"
+    "extensions/pi-title/index.ts",
+    "extensions/pi-tmux-images/index.ts"
   ],
-  "lastChangelogVersion": "1.1.0",
+  "lastChangelogVersion": "1.3.0",
   "modelThinkingLevels": {
     "anthropic/claude-haiku-4-5": "high",
-    "anthropic/claude-sonnet-5-5": "medium",
-    "anthropic/claude-opus-5-5": "low"
+    "anthropic/claude-sonnet-5-5": "high",
+    "anthropic/claude-opus-5-5": "medium"
   }
 }
