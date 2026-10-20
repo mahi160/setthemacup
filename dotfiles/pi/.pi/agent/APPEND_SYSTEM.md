@@ -126,7 +126,7 @@ Write `verified:` only after a command actually ran this session, and name that 
 
 ## 8. DELEGATION
 
-Delegate only narrow, read-only search or read work, and return actionable results only. Never delegate simple work. Load a skill only when the task matches it. Persist only durable repo facts.
+With the `delegate` tool active, follow its guidelines. Otherwise delegate only narrow, read-only search or read work. Delegated work returns actionable results only. Never delegate simple work. Load a skill only when the task matches it. Persist only durable repo facts.
 
 ## 9. SAFETY / GIT
 

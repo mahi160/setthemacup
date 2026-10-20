@@ -26,7 +26,6 @@
  * relayed synchronously via `tmux command-prompt`, same as before.
  */
 
-import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { appendFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -44,6 +43,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
 import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { type AskAnswer, type AskRequest, type RunOptions, runChildPi, showAskDialog } from "../lib/child-pi.ts";
 
 type ExecFn = (command: string, args: string[], options?: ExecOptions) => Promise<ExecResult>;
 
@@ -71,17 +71,6 @@ const LINE_WIDTH = 78;
 const RESULT_MESSAGE_TYPE = "pi-spawn-result";
 const SPINNER_FRAMES = ["⠳", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 const SPINNER_TICK_MS = 100;
-
-/** Readable one-liner for a tool call — bash command, file path, grep pattern, or bare name. */
-function formatTool(name: string | undefined, args: Record<string, unknown> | undefined): string {
-	if (!name) return "";
-	const n = name.toLowerCase();
-	if (!args) return n;
-	if (n === "bash" && typeof args.command === "string") return `bash: ${args.command.slice(0, 60)}`;
-	if ((n === "read" || n === "write" || n === "edit") && typeof args.path === "string") return `${n}: ${args.path}`;
-	if (n === "grep" && typeof args.pattern === "string") return `grep: ${args.pattern}`;
-	return n;
-}
 
 /** Bordered box, redrawn on every requestRender — ┌ title ┐ frame around wrapped body lines. */
 function drawBox(title: string, body: string[], theme: Theme, borderColor: ThemeColor): Component {
@@ -143,22 +132,6 @@ function truncate(s: string, n: number): string {
 	return flat.length > n ? `${flat.slice(0, n - 1)}…` : flat;
 }
 
-interface AskRequest {
-	id: string;
-	method: string;
-	title?: string;
-	message?: string;
-	options?: string[];
-	placeholder?: string;
-	prefill?: string;
-}
-
-interface AskAnswer {
-	value?: string;
-	confirmed?: boolean;
-	cancelled?: boolean;
-}
-
 /** One run in flight (box mode). Several can run at once, each with its own widget. */
 interface ActiveRun {
 	id: string;
@@ -191,162 +164,6 @@ async function pickRun(ui: ExtensionUIContext, title: string): Promise<ActiveRun
 	return choice === undefined ? undefined : list[labels.indexOf(choice)];
 }
 
-/** JSONL framing per docs: split on \n only, tolerate trailing \r. */
-function attachJsonlReader(stream: NodeJS.ReadableStream, onLine: (line: string) => void): void {
-	let buffer = "";
-	stream.on("data", (chunk: Buffer) => {
-		buffer += chunk.toString("utf8");
-		let idx = buffer.indexOf("\n");
-		while (idx !== -1) {
-			let line = buffer.slice(0, idx);
-			buffer = buffer.slice(idx + 1);
-			if (line.endsWith("\r")) line = line.slice(0, -1);
-			if (line) onLine(line);
-			idx = buffer.indexOf("\n");
-		}
-	});
-}
-
-interface RunOptions {
-	task: string;
-	cwd: string;
-	model: string;
-	thinking: string;
-	tools?: string; // omit for full default tool access
-	signal?: AbortSignal;
-	onLog: (line: string) => void;
-	onTool: (label: string) => void; // "" clears the current-tool display
-	onText: (recentLines: string[]) => void; // streamed model output, last N non-empty lines
-	onAsk: (req: AskRequest) => Promise<AskAnswer>;
-}
-
-/** Spawn a child `pi` in RPC mode, streaming progress and relaying prompts. */
-function runChildPi(opts: RunOptions): Promise<{ text: string; error?: string }> {
-	return new Promise((resolve) => {
-		// Extensions stay on (same global set as the interactive session) so OAuth/billing
-		// compat (pi-claude) and other global extensions apply to the child too — only
-		// session history is isolated. `/spawn` still restricts tools via `opts.tools`.
-		const args = [
-			"--mode",
-			"rpc",
-			"--no-session",
-			"--model",
-			`${opts.model}:${opts.thinking}`,
-			...(opts.tools ? ["--tools", opts.tools] : []),
-		];
-		const child = spawn("pi", args, { cwd: opts.cwd, stdio: ["pipe", "pipe", "pipe"] });
-
-		let stderr = "";
-		let settled = false;
-		const textAcc = { value: "" };
-
-		const send = (obj: Record<string, unknown>) => {
-			child.stdin.write(`${JSON.stringify(obj)}\n`);
-		};
-
-		const finish = (result: { text: string; error?: string }) => {
-			if (settled) return;
-			settled = true;
-			try {
-				child.stdin.end();
-			} catch {
-				// already closed
-			}
-			setTimeout(() => {
-				if (!child.killed) child.kill("SIGTERM");
-			}, 200);
-			resolve(result);
-		};
-
-		child.on("error", (err) => finish({ text: "", error: err.message }));
-		opts.signal?.addEventListener("abort", () => finish({ text: "", error: "killed by user" }), { once: true });
-		child.stderr.on("data", (d) => {
-			stderr += d.toString();
-		});
-		child.on("close", (code) => {
-			if (!settled) finish({ text: "", error: stderr.trim() || `child pi exited with code ${code}` });
-		});
-
-		attachJsonlReader(child.stdout, (line) => {
-			let data: Record<string, unknown>;
-			try {
-				data = JSON.parse(line);
-			} catch {
-				return;
-			}
-
-			switch (data.type) {
-				case "response": {
-					if (data.command === "prompt" && data.success === false) {
-						finish({ text: "", error: String(data.error ?? "prompt rejected") });
-					} else if (data.command === "get_last_assistant_text") {
-						const text = (data.data as { text: string | null } | undefined)?.text ?? "";
-						finish({ text });
-					}
-					break;
-				}
-				case "extension_ui_request": {
-					// SAFETY: RPC protocol (docs/rpc.md) guarantees extension_ui_request events carry
-					// id/method and the method-specific fields asserted below.
-					const req = data as unknown as AskRequest;
-					if (["select", "confirm", "input", "editor"].includes(req.method)) {
-						opts.onAsk(req).then((answer) => {
-							if (answer.cancelled) {
-								send({ type: "extension_ui_response", id: req.id, cancelled: true });
-							} else if (req.method === "confirm") {
-								send({ type: "extension_ui_response", id: req.id, confirmed: !!answer.confirmed });
-							} else {
-								send({ type: "extension_ui_response", id: req.id, value: answer.value ?? "" });
-							}
-						});
-					} else if (req.method === "notify") {
-						opts.onLog(`[child] ${(data as { message?: string }).message ?? ""}`);
-					}
-					break;
-				}
-				case "agent_start":
-					opts.onLog("investigating…");
-					break;
-				case "message_update": {
-					const ame = (data.assistantMessageEvent ?? {}) as { type?: string; delta?: string };
-					if (ame.type === "text_delta" && ame.delta) {
-						textAcc.value += ame.delta;
-						opts.onText(
-							textAcc.value
-								.split("\n")
-								.map((l) => l.trim())
-								.filter(Boolean)
-								.slice(-2),
-						);
-					}
-					break;
-				}
-				case "message_end": {
-					const msg = data.message as { role?: string; stopReason?: string; errorMessage?: string } | undefined;
-					if (msg?.role === "assistant" && msg.stopReason === "error") {
-						finish({ text: "", error: msg.errorMessage ?? "model call failed" });
-					}
-					break;
-				}
-				case "tool_execution_start":
-					opts.onTool(formatTool(data.toolName as string | undefined, data.args as Record<string, unknown> | undefined));
-					break;
-				case "tool_execution_end":
-					opts.onTool("");
-					break;
-				case "agent_settled":
-					send({ id: "final", type: "get_last_assistant_text" });
-					break;
-				case "extension_error":
-					opts.onLog(`[error] ${(data as { error?: string }).error ?? ""}`);
-					break;
-			}
-		});
-
-		send({ type: "prompt", message: opts.task });
-	});
-}
-
 /** Live component: body rebuilt from `run` on every render, so requestRender() shows fresh state. */
 function liveRunningBox(run: ActiveRun, theme: Theme): Component {
 	return {
@@ -368,20 +185,6 @@ function renderRunningBox(run: ActiveRun, theme: Theme): Component {
 		for (const line of rest.slice(-(BODY_LINES - body.length))) body.push(theme.fg("dim", line));
 	}
 	return drawBox(run.header, body, theme, run.pending ? "warning" : "borderAccent");
-}
-
-/** The real dialog for one ask request — used both by the answer keybinding. */
-async function showAskDialog(ui: ExtensionUIContext, req: AskRequest): Promise<AskAnswer> {
-	if (req.method === "select") {
-		const value = await ui.select(req.title ?? "Select", req.options ?? []);
-		return { value, cancelled: value === undefined };
-	}
-	if (req.method === "confirm") {
-		const confirmed = await ui.confirm(req.title ?? "Confirm", req.message ?? "");
-		return { confirmed };
-	}
-	const value = await ui.input(req.title ?? "Input", req.placeholder);
-	return { value, cancelled: value === undefined };
 }
 
 /** Primary path: caller has UI (interactive or `--mode rpc`) — live box, deferred ask. */
@@ -473,7 +276,13 @@ async function runWithTmux(
 	await writeFile(logFile, `${header}\n`);
 	const appendLog = (line: string) => appendFile(logFile, `${line}\n`).catch(() => {});
 
-	await exec("tmux", ["split-window", "-v", `tail -n +1 -f '${logFile}'`]);
+	const doneChannel = `pi-spawn-done-${randomUUID()}`;
+	// tail until run done, then pane waits for Enter; lets temp dir be removed
+	await exec("tmux", [
+		"split-window",
+		"-v",
+		`tail -n +1 -f '${logFile}' & t=$!; tmux wait-for ${doneChannel}; sleep 0.5; kill $t; printf '\\n[enter to close] '; read _`,
+	]);
 
 	const askViaTmux = async (req: AskRequest): Promise<AskAnswer> => {
 		const channel = `pi-spawn-${randomUUID()}`;
@@ -513,8 +322,9 @@ async function runWithTmux(
 
 	await appendLog("");
 	await appendLog(error ? `[error] ${error}` : text || "(no output)");
+	await exec("tmux", ["wait-for", "-S", doneChannel]);
+	await rm(dir, { recursive: true, force: true });
 	sendResult(pi, header, text, error);
-	// Pane is left open (tail -f) showing the final result; user closes it manually.
 }
 
 export default function (pi: ExtensionAPI) {
