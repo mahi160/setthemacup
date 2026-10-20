@@ -1,0 +1,5 @@
+{
+  "globals": [
+    {"name":"@earendil-works/pi-coding-agent","category":"AI","desc":"pi coding agent (always latest)"}
+  ]
+}
