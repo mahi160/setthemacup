@@ -11,6 +11,8 @@ export interface Agent {
   runAtLoad?: boolean;
   /** Weekly schedule; launchd runs missed jobs after the Mac wakes */
   weekly?: { weekday: number; hour: number; minute?: number };
+  /** Daily schedule */
+  daily?: { hour: number; minute?: number };
   log?: string;
 }
 
@@ -36,6 +38,10 @@ export function plist(agent: Agent): string {
       '  <key>StartCalendarInterval</key>',
       `  <dict><key>Weekday</key><integer>${weekday}</integer><key>Hour</key><integer>${hour}</integer><key>Minute</key><integer>${minute}</integer></dict>`,
     );
+  }
+  if (agent.daily) {
+    const { hour, minute = 0 } = agent.daily;
+    lines.push('  <key>StartCalendarInterval</key>', `  <dict><key>Hour</key><integer>${hour}</integer><key>Minute</key><integer>${minute}</integer></dict>`);
   }
   if (agent.log) {
     lines.push(`  <key>StandardOutPath</key><string>${esc(agent.log)}</string>`);

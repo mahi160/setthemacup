@@ -42,6 +42,13 @@ const jobs = (ctx: Ctx): launchd.Agent[] => [
     weekly: { weekday: 0, hour: 4 },
   },
   {
+    name: 'sync',
+    // Daily: fold manual installs/removals into the manifests, then notify
+    program: [join(ctx.home, '.local/share/fnm/aliases/default/bin/node'), join(ctx.repo, 'installer/index.ts'), '--sync'],
+    daily: { hour: 12 },
+    log: '/tmp/setthemacup-sync.log',
+  },
+  {
     name: 'maintenance',
     // Cleanup only: no unattended upgrades. launchd has no shell PATH, hence absolute paths.
     program: [
@@ -64,6 +71,7 @@ export const extras: Step = {
     'Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon',
     'One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)',
     'Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)',
+    'Daily `setup --sync`: anything you brew install, pnpm add -g or skills add by hand lands in the manifest (category Inbox); removals drop out; you get a notification and commit when ready',
   ],
 
   async check(ctx) {
@@ -118,7 +126,7 @@ export const extras: Step = {
       return list.length ? list.map((s) => s.name).join(', ') : 'none in private.env';
     });
 
-    await ctx.task('Weekly maintenance jobs', async () => {
+    await ctx.task('Scheduled jobs', async () => {
       for (const job of jobs(ctx)) await launchd.install(ctx, job);
       // Old crontab entries and LaunchAgents from the shell setup
       const cron = await ctx.sh.capture('crontab', ['-l']);

@@ -13,6 +13,7 @@ import { brewEnv, ensureFormulae, hasBrew } from './lib/brew.ts';
 import { Logger } from './lib/log.ts';
 import { FIELDS, PRIVATE_ENV, loadPrivateEnv, renderPrivateEnv } from './lib/private.ts';
 import { Shell } from './lib/sh.ts';
+import { sync } from './lib/sync.ts';
 import { HELP, parse, select, type Args } from './plan.ts';
 import { steps } from './steps/index.ts';
 import type { Ctx, State, Status, Step } from './types.ts';
@@ -84,6 +85,18 @@ async function ensurePrivateEnv(args: Args): Promise<Record<string, string>> {
   return values;
 }
 
+/** `setup --sync`: also the daily LaunchAgent, so no prompts and a notification instead of UI. */
+async function runSync(sh: Shell, dryRun: boolean): Promise<void> {
+  const { summary, baseline } = await sync(sh, { dryRun });
+  if (baseline) return console.log('sync: baseline recorded — changes are tracked from now on');
+  if (!summary) return console.log('sync: no changes');
+  console.log(`sync${dryRun ? ' (dry run)' : ''}: ${summary}`);
+  if (dryRun) return;
+  const message = `${summary}. Review and commit ~/.setup.`;
+  const notifier = await sh.capture('terminal-notifier', ['-title', 'setthemacup', '-message', message, '-group', 'setthemacup-sync']);
+  if (!notifier.ok) await sh.capture('osascript', ['-e', `display notification ${JSON.stringify(message)} with title "setthemacup"`]);
+}
+
 function keepSudoAlive(): void {
   p.log.info('Your password is needed once (Homebrew, system settings).');
   if (spawnSync('sudo', ['-v'], { stdio: 'inherit' }).status !== 0) bail('sudo is required.');
@@ -110,6 +123,8 @@ async function main(): Promise<void> {
   setupPath();
   const log = new Logger(join(REPO, 'logs'));
   const sh = new Shell(log, args.dryRun);
+
+  if (args.sync) return runSync(sh, args.dryRun);
 
   p.intro(`${bold(' setthemacup ')}${args.dryRun ? yellow(' dry run — nothing will change') : ''}`);
 

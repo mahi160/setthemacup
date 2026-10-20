@@ -66,3 +66,34 @@ test('launchd plist escapes arguments and adds a weekly schedule', () => {
   assert.match(xml, /<string>a &amp; b<\/string>/);
   assert.match(xml, /<key>Hour<\/key><integer>3<\/integer>/);
 });
+
+test('sync: first run is a baseline — nothing added or removed', async () => {
+  const { diff } = await import('./lib/sync.ts');
+  const m = { formulae: [{ name: 'git', category: 'Git', desc: '' }], casks: [], pnpm: [], skills: [] };
+  const inv = { formulae: ['git', 'starship'], casks: [], pnpm: [], skills: {} };
+  const ignore = { formulae: [], casks: [], skills: [], pnpm: [] };
+  const c = diff(m, inv, undefined, ignore);
+  assert.deepEqual(c.formulae, { added: [], removed: [] });
+});
+
+test('sync: new installs are added, uninstalled manifest items removed, old leftovers ignored', async () => {
+  const { diff, apply } = await import('./lib/sync.ts');
+  const m = {
+    formulae: [{ name: 'git', category: 'Git', desc: '' }, { name: 'tmux', category: 'Terminal', desc: '' }],
+    casks: [],
+    pnpm: [],
+    skills: [{ repo: 'a/b', skills: ['one'], desc: '' }],
+  };
+  const before = { formulae: ['git', 'tmux', 'starship'], casks: [], pnpm: [], skills: { one: 'a/b' } };
+  const now = { formulae: ['git', 'starship', 'jq', 'fnm'], casks: [], pnpm: [], skills: { one: 'a/b', two: 'a/b', three: 'c/d' } };
+  const ignore = { formulae: ['fnm'], casks: [], skills: [], pnpm: [] };
+  const c = diff(m, now, before, ignore);
+  assert.deepEqual(c.formulae, { added: ['jq'], removed: ['tmux'] });
+  assert.deepEqual(c.skills, { added: ['two', 'three'], removed: [] });
+  const next = await apply(m, c, now, async (_k, names) => Object.fromEntries(names.map((n) => [n, `desc of ${n}`])));
+  assert.deepEqual(next.formulae.map((p) => `${p.name}:${p.category}`), ['git:Git', 'jq:Inbox']);
+  assert.deepEqual(next.skills, [
+    { repo: 'a/b', skills: ['one', 'two'], desc: '' },
+    { repo: 'c/d', skills: ['three'], desc: 'Inbox' },
+  ]);
+});
