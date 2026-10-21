@@ -8,6 +8,11 @@ import { binPath, compile } from '../lib/swift.ts';
 import type { Ctx, Step } from '../types.ts';
 
 const PLISTBUDDY = '/usr/libexec/PlistBuddy';
+/** Applies keyboard-shortcut changes without a logout */
+const ACTIVATE_SETTINGS = '/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings';
+/** Spotlight's "Show Spotlight search" shortcut (id 64): ⌘Space, disabled */
+const SPOTLIGHT_OFF =
+  '<dict><key>enabled</key><false/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array><key>type</key><string>standard</string></dict></dict>';
 const HOTKEYS = (ctx: Ctx) => join(ctx.home, 'Library/Preferences/com.apple.symbolichotkeys.plist');
 /** Caps Lock (0x39) → Left Control (0xE0) */
 const CAPS_TO_CONTROL = '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}';
@@ -64,7 +69,9 @@ export const macos: Step = {
 
     await ctx.task('Free ⌘Space for Tinycast', async () => {
       if (await spotlightHotkeyOff(ctx)) return 'already free';
-      await ctx.sh.run(PLISTBUDDY, ['-c', 'Set :AppleSymbolicHotKeys:64:enabled false', HOTKEYS(ctx)]);
+      // A fresh Mac has no entry 64 yet, so write the whole entry (⌘Space, disabled) instead of editing it
+      await ctx.sh.run('defaults', ['write', 'com.apple.symbolichotkeys', 'AppleSymbolicHotKeys', '-dict-add', '64', SPOTLIGHT_OFF]);
+      await ctx.sh.run(ACTIVATE_SETTINGS, ['-u'], { allowFail: true });
     });
 
     await ctx.task('Caps Lock → Control', async () => {
