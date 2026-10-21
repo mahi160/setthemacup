@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# flowd-backup — snapshot the flowd database and upload it to the journal repo's
+# private `db-backup` release, replacing the previous copy (no git history growth).
+#
+# Run daily by the installer (LaunchAgent com.setthemacup.flowd-backup).
+# Restore: gh release download db-backup -R <owner/journal> -p 'flowd-<machine>.db.gz'
+set -euo pipefail
+
+JOURNAL="${FLOWD_JOURNAL:-$HOME/.local/share/flowd/journal}"
+GH=/opt/homebrew/bin/gh
+PRIVATE_ENV="$HOME/.config/setthemacup/private.env"
+# shellcheck source=/dev/null
+[[ -f "$PRIVATE_ENV" ]] && { set -a; source "$PRIVATE_ENV"; set +a; }
+
+machine="${FLOWD_MACHINE:-$(hostname -s | tr '[:upper:]' '[:lower:]')}"
+db="$JOURNAL/$machine/flowd.db"
+[[ -f "$db" ]] || { echo "flowd-backup: no database at $db"; exit 0; }
+
+repo="$(git -C "$JOURNAL" remote get-url origin | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')"
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+# .backup gives a consistent copy even while the flowd daemon is writing
+/usr/bin/sqlite3 "$db" ".backup '$tmp/flowd.db'"
+gzip -9 -c "$tmp/flowd.db" >"$tmp/flowd-$machine.db.gz"
+
+"$GH" release view db-backup -R "$repo" >/dev/null 2>&1 ||
+  "$GH" release create db-backup -R "$repo" --title "flowd database backup" \
+    --notes "Latest flowd.db snapshot per machine, replaced daily by setthemacup's flowd-backup." >/dev/null
+"$GH" release upload db-backup "$tmp/flowd-$machine.db.gz" -R "$repo" --clobber
+
+echo "flowd-backup: $machine → $repo ($(du -h "$tmp/flowd-$machine.db.gz" | cut -f1))"

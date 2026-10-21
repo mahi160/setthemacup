@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { exists, readText, writeFile } from '../lib/fs.ts';
+import * as launchd from '../lib/launchd.ts';
 import type { Ctx, Step } from '../types.ts';
 
 /** Latest Haiku with low thinking — bump when a newer Haiku ships */
@@ -12,6 +13,15 @@ const BACKUP = join(homedir(), 'flowd-backup.zip');
 const journal = (ctx: Ctx) => join(ctx.home, '.local/share/flowd/journal');
 const configPath = (ctx: Ctx) => join(ctx.home, '.config/flowd/config.yaml');
 const machine = (ctx: Ctx) => ctx.env.FLOWD_MACHINE || 'macbook';
+/** owner/repo of the journal remote, for its private db-backup release */
+const journalRepo = (ctx: Ctx) => (ctx.env.FLOWD_JOURNAL_REMOTE ?? '').replace(/^(git@github\.com:|https:\/\/github\.com\/)/, '').replace(/\.git$/, '');
+
+const backupJob = (ctx: Ctx): launchd.Agent => ({
+  name: 'flowd-backup',
+  program: [join(ctx.repo, 'bin/flowd-backup')],
+  daily: { hour: 13 },
+  log: '/tmp/setthemacup-flowd-backup.log',
+});
 
 const config = (ctx: Ctx) => `${MARKER} from private.env — edit that, not this.
 poll_interval_sec: 3
@@ -35,7 +45,8 @@ export const flowd: Step = {
   details: [
     'Installs `fw` from github.com/mahi160/flowd releases into ~/.local/bin (no sudo)',
     'Clones the journal repo (FLOWD_JOURNAL_REMOTE in private.env) to ~/.local/share/flowd/journal',
-    `Restores flowd.db from ~/flowd-backup.zip if the journal has none (never overwrites)`,
+    "Restores flowd.db from the journal repo's private `db-backup` release (fallback: ~/flowd-backup.zip); never overwrites",
+    'Backs the database up daily (`flowd-backup`: sqlite snapshot, gzip, replaces the release asset — no git history growth)',
     `Writes ~/.config/flowd/config.yaml with \`ai_command: ${FLOWD_AI_COMMAND}\``,
     'tmux.conf starts the daemon (`fw start`) whenever tmux starts',
   ],
@@ -46,8 +57,9 @@ export const flowd: Step = {
     if (!(await ctx.sh.has('fw'))) todo.push('fw');
     if (!exists(join(journal(ctx), '.git'))) todo.push('journal');
     if (!readText(configPath(ctx))?.includes(FLOWD_AI_COMMAND)) todo.push('config');
-    if (!todo.length) return { state: 'done', detail: 'installed' };
-    return { state: todo.length === 3 ? 'missing' : 'partial', detail: `to do: ${todo.join(', ')}` };
+    if (!launchd.isInstalled(ctx, 'flowd-backup')) todo.push('daily backup');
+    if (!todo.length) return { state: 'done', detail: 'installed, backed up daily' };
+    return { state: todo.length >= 4 ? 'missing' : 'partial', detail: `to do: ${todo.join(', ')}` };
   },
 
   async run(ctx) {
@@ -66,13 +78,27 @@ export const flowd: Step = {
       await ctx.sh.run('git', ['clone', '--quiet', remote, journal(ctx)]);
     });
 
-    await ctx.task('Restore database', async () => {
+    await ctx.task('Restore database', async (progress) => {
       const dir = join(journal(ctx), machine(ctx));
       if (exists(join(dir, 'flowd.db'))) return 'present';
-      if (!exists(BACKUP)) return 'no backup zip — starting fresh';
+      const asset = `flowd-${machine(ctx)}.db.gz`;
+      const repo = journalRepo(ctx);
+      if (repo && (await ctx.sh.ok('gh', ['release', 'view', 'db-backup', '-R', repo]))) {
+        const got = await ctx.sh.run('gh', ['release', 'download', 'db-backup', '-R', repo, '-p', asset, '-D', dir, '--clobber'], { allowFail: true, onLine: progress });
+        if (got.ok) {
+          await ctx.sh.bash(`gunzip -c "${join(dir, asset)}" > "${join(dir, 'flowd.db')}" && rm "${join(dir, asset)}"`);
+          return `restored from ${repo} (db-backup release)`;
+        }
+      }
+      if (!exists(BACKUP)) return 'no backup found — starting fresh';
       // Zip layout: flowd/<machine>/flowd.db*
       await ctx.sh.run('unzip', ['-o', '-j', BACKUP, `flowd/${machine(ctx)}/flowd.db*`, '-d', dir]);
       return `restored from ${BACKUP.replace(ctx.home, '~')}`;
+    });
+
+    await ctx.task('Daily database backup', async () => {
+      await launchd.install(ctx, backupJob(ctx));
+      return `13:00 daily → ${journalRepo(ctx) || 'journal repo'} (db-backup release)`;
     });
 
     await ctx.task('Config', async () => {
