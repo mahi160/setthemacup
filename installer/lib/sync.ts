@@ -132,6 +132,19 @@ export const summarize = (c: Changes): string => {
   return [part('Added', 'added'), part('Removed', 'removed')].filter(Boolean).join(' · ');
 };
 
+/** Commit and push the private settings repo (~/.config/setthemacup) if anything changed. */
+export async function pushPrivate(sh: Shell, opts: { dryRun?: boolean } = {}): Promise<string> {
+  const dir = join(homedir(), '.config/setthemacup');
+  if (!existsSync(join(dir, '.git'))) return '';
+  const status = await sh.capture('git', ['status', '--porcelain'], { cwd: dir });
+  const changed = lines(status.stdout).map((l) => l.slice(3));
+  if (!changed.length || opts.dryRun) return changed.length ? `private: ${changed.join(', ')}` : '';
+  await sh.run('git', ['add', '-A'], { cwd: dir });
+  await sh.run('git', ['commit', '-qm', `sync: ${changed.join(', ')}`], { cwd: dir });
+  await sh.run('git', ['push', '-q'], { cwd: dir, allowFail: true });
+  return `private: ${changed.join(', ')}`;
+}
+
 const readState = (): Inventory | undefined =>
   existsSync(STATE) ? (JSON.parse(readFileSync(STATE, 'utf8')) as Inventory) : undefined;
 

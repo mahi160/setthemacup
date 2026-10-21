@@ -5,13 +5,15 @@
 #   vpn            pick a gateway with fzf
 #   vpn <name>     connect by name (e.g. vpn pune)
 #
-# Gateways: ~/.config/vpn/gateways, one "<name> <host:port>" per line.
+# Gateways: ~/.config/setthemacup/vpn-gateways (private repo), one "<name> <host:port>" per line.
 # Ctrl-C disconnects. DNS: openfortivpn writes /etc/resolv.conf, which GUI apps
 # ignore — check `scutil --dns` if browsers can't resolve internal hosts.
 
 set -euo pipefail
 
-GATEWAYS="${VPN_GATEWAYS:-$HOME/.config/vpn/gateways}"
+# Lives in the private settings repo (~/.config/setthemacup); old location as fallback
+GATEWAYS="${VPN_GATEWAYS:-$HOME/.config/setthemacup/vpn-gateways}"
+[[ -f "$GATEWAYS" ]] || GATEWAYS="$HOME/.config/vpn/gateways"
 
 [[ -f "$GATEWAYS" ]] || { echo "No gateways file: $GATEWAYS" >&2; exit 1; }
 command -v openfortivpn >/dev/null || { echo "openfortivpn not installed (brew install openfortivpn)" >&2; exit 1; }

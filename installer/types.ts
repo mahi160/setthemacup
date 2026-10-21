@@ -15,8 +15,8 @@ export interface Ctx {
   dryRun: boolean;
   /** --yes: no prompts; confirms take their default */
   yes: boolean;
-  /** Values from ~/.config/setthemacup/private.env */
-  env: Readonly<Record<string, string>>;
+  /** Values from ~/.config/setthemacup/private.env (reloaded once the Private settings step restores it) */
+  env: Record<string, string>;
   sh: Shell;
   log: Logger;
   /**

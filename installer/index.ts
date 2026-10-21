@@ -5,15 +5,15 @@
  */
 import * as p from '@clack/prompts';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { styleText } from 'node:util';
 import { brewEnv, ensureFormulae, hasBrew } from './lib/brew.ts';
 import { Logger } from './lib/log.ts';
-import { FIELDS, PRIVATE_ENV, loadPrivateEnv, renderPrivateEnv } from './lib/private.ts';
+import { PRIVATE_ENV, loadPrivateEnv } from './lib/private.ts';
 import { Shell } from './lib/sh.ts';
-import { sync } from './lib/sync.ts';
+import { pushPrivate, sync } from './lib/sync.ts';
 import { HELP, parse, select, type Args } from './plan.ts';
 import { steps } from './steps/index.ts';
 import type { Ctx, State, Status, Step } from './types.ts';
@@ -58,44 +58,23 @@ async function ask<T>(prompt: Promise<T>): Promise<Exclude<T, symbol>> {
   return value as Exclude<T, symbol>;
 }
 
-/** First run on a new Mac: collect the private values that must never live in the repo. */
-async function ensurePrivateEnv(args: Args): Promise<Record<string, string>> {
+/** Private values, if already on this Mac. A new Mac gets them in the Private settings step. */
+function privateEnv(args: Args): Record<string, string> {
   if (existsSync(PRIVATE_ENV)) return loadPrivateEnv();
-  if (args.yes || args.list) {
-    p.log.warn(`No ${PRIVATE_ENV.replace(HOME, '~')} — git identity, work setup, SMB and flowd are skipped.`);
-    return {};
-  }
-  p.note(
-    `Personal values (git identity, work folder, private repos) are kept out of this public repo.\nThey're saved to ${PRIVATE_ENV.replace(HOME, '~')} — edit it any time.`,
-    'Private settings',
-  );
-  const values: Record<string, string> = {};
-  for (const f of FIELDS) {
-    const answer = await ask(
-      p.text({
-        message: f.message,
-        initialValue: f.initial?.replace('$HOME', HOME) ?? '',
-        validate: (v) => (f.required && !v?.trim() ? 'Required' : undefined),
-      }),
-    );
-    values[f.key] = answer.trim();
-  }
-  if (!args.dryRun) {
-    mkdirSync(dirname(PRIVATE_ENV), { recursive: true });
-    writeFileSync(PRIVATE_ENV, renderPrivateEnv(values), { mode: 0o600 });
-    return loadPrivateEnv();
-  }
-  return values;
+  if (!args.list) p.log.info('No private settings on this Mac yet — the Private settings step restores them from GitHub (or asks once).');
+  return {};
 }
 
 /** `setup --sync`: also the daily LaunchAgent, so no prompts and a notification instead of UI. */
 async function runSync(sh: Shell, dryRun: boolean): Promise<void> {
-  const { summary, baseline } = await sync(sh, { dryRun });
-  if (baseline) return console.log('sync: baseline recorded — changes are tracked from now on');
-  if (!summary) return console.log('sync: no changes');
+  const { summary: lists, baseline } = await sync(sh, { dryRun });
+  const priv = await pushPrivate(sh, { dryRun });
+  if (baseline) console.log('sync: baseline recorded — changes are tracked from now on');
+  const summary = [lists, priv].filter(Boolean).join(' · ');
+  if (!summary) return console.log(baseline ? '' : 'sync: no changes');
   console.log(`sync${dryRun ? ' (dry run)' : ''}: ${summary}`);
   if (dryRun) return;
-  const message = `${summary}. Review and commit ~/.setup.`;
+  const message = lists ? `${summary}. Review and commit ~/.setup.` : `${summary} (pushed to your private repo).`;
   const notifier = await sh.capture('terminal-notifier', ['-title', 'setthemacup', '-message', message, '-group', 'setthemacup-sync']);
   if (!notifier.ok) await sh.capture('osascript', ['-e', `display notification ${JSON.stringify(message)} with title "setthemacup"`]);
 }
@@ -137,7 +116,7 @@ async function main(): Promise<void> {
 
   p.intro(`${bold(' setthemacup ')}${args.dryRun ? yellow(' dry run — nothing will change') : ''}`);
 
-  const env = await ensurePrivateEnv(args);
+  const env = privateEnv(args);
   let failures: string[] = [];
   const ctx: Ctx = {
     repo: REPO,

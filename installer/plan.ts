@@ -59,5 +59,5 @@ Usage: setup [options]
       --skip a,b     run everything except these
   -h, --help         this help
 
-Steps: homebrew, cli, dotfiles, git, nvim, ai, extras, flowd, apps, macos
+Steps: homebrew, cli, private, dotfiles, git, nvim, ai, extras, flowd, apps, macos
 Details: https://mahi160.github.io/setthemacup/`;
