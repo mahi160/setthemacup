@@ -52,11 +52,24 @@ async function uploaded(ctx: Ctx, key: Key): Promise<boolean> {
   return Boolean(pub && listed.ok && listed.stdout.includes(pub.split(' ')[1]!));
 }
 
+/** Adding SSH keys needs the admin:public_key scope, which a default gh login lacks */
+const SCOPE = 'admin:public_key';
+const hasScope = async (ctx: Ctx) => {
+  const r = await ctx.sh.capture('gh', ['auth', 'status', '--active', '--hostname', 'github.com']);
+  return r.ok && `${r.stdout}${r.stderr}`.includes(SCOPE);
+};
+
 /** Log in when needed (always for the work account), add the key, then switch back to `restoreUser`. */
 async function upload(ctx: Ctx, key: Key, opts: { login: boolean; restoreUser?: string }): Promise<void> {
   if (opts.login) {
     await ctx.interactive(`Log in to GitHub (${key.label} account) in your browser`, () =>
-      ctx.sh.run('gh', ['auth', 'login', '--hostname', 'github.com', '--git-protocol', 'ssh', '--skip-ssh-key', '--web'], { interactive: true }),
+      ctx.sh.run('gh', ['auth', 'login', '--hostname', 'github.com', '--git-protocol', 'ssh', '--skip-ssh-key', '--web', '--scopes', SCOPE], {
+        interactive: true,
+      }),
+    );
+  } else if (!(await hasScope(ctx))) {
+    await ctx.interactive(`Allow gh to add SSH keys (${key.label} account) — approve in your browser`, () =>
+      ctx.sh.run('gh', ['auth', 'refresh', '--hostname', 'github.com', '--scopes', SCOPE], { interactive: true }),
     );
   }
   await ctx.task(`Upload ${key.label} SSH key`, async () => {
