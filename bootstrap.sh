@@ -32,13 +32,12 @@ cat <<EOF
 
 $(bold "  setthemacup — Mac dev environment")
 
-  First, the basics the installer needs:
-    1. Xcode Command Line Tools   (git, compilers — a dialog may appear)
-    2. This repo                  → ~/.setup
-    3. fnm + Node.js LTS + pnpm   (runs the installer)
-
-  Then a checklist of everything else: Homebrew, CLI tools, dotfiles,
-  git + SSH, Neovim, AI tools, apps, macOS settings. All selected by default.
+  You answer a few questions in the first minutes, then it runs on its own:
+    1. Your Mac password, once (kept only for this run)
+    2. A checklist of what to set up (everything is selected)
+    3. GitHub login in the browser, SSH key passphrases
+  Then: Xcode tools, Homebrew, CLI tools, dotfiles, git + SSH, Neovim,
+  AI skills, apps and macOS settings, with no more input.
 
   Every detail: $DOCS_URL
 
@@ -48,17 +47,49 @@ if has_tty; then
   echo
 fi
 
-# ─── 2. Xcode Command Line Tools ─────────────────────────────────────────────
+# ─── 2. Password, once ───────────────────────────────────────────────────────
+# Kept in a 0600 file in a private temp folder for this run only; the installer reuses
+# it for every sudo prompt (via installer/lib/askpass) and deletes it when it ends.
+if has_tty; then
+  secret_dir="$(mktemp -d)"; chmod 700 "$secret_dir"
+  trap 'rm -rf "$secret_dir"' EXIT
+  for _ in 1 2 3; do
+    read -r -s -p "  Your Mac password: " pw <"$TTY"; echo
+    sudo -k
+    if printf '%s\n' "$pw" | sudo -S -v 2>/dev/null; then
+      (umask 077; printf '%s\n' "$pw" >"$secret_dir/sudo")
+      export SETTHEMACUP_SECRET_FILE="$secret_dir/sudo"
+      break
+    fi
+    printf '  That password did not work.\n'
+  done
+  unset pw
+  [[ -n "${SETTHEMACUP_SECRET_FILE:-}" ]] || die "Could not verify your password."
+fi
+
+# ─── 3. Xcode Command Line Tools (no dialog) ─────────────────────────────────
 if xcode-select -p >/dev/null 2>&1; then
   ok "Xcode Command Line Tools"
 else
-  step "Installing Xcode Command Line Tools — click Install in the dialog"
-  xcode-select --install >/dev/null 2>&1 || true
-  until xcode-select -p >/dev/null 2>&1; do sleep 5; done
+  step "Installing Xcode Command Line Tools (a few minutes)"
+  # Same trick Homebrew's installer uses: make softwareupdate list the CLT package
+  marker=/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+  touch "$marker"
+  label="$(softwareupdate -l 2>/dev/null | grep -E '^[[:space:]]*\* Label: Command Line Tools' | sed 's/^.*Label: //' | sort -V | tail -1)"
+  if [[ -n "$label" ]]; then
+    sudo softwareupdate -i "$label" >/dev/null
+  fi
+  rm -f "$marker"
+  if ! xcode-select -p >/dev/null 2>&1; then
+    # Fallback: Apple's dialog
+    step "Click Install in the dialog that appears"
+    xcode-select --install >/dev/null 2>&1 || true
+    until xcode-select -p >/dev/null 2>&1; do sleep 5; done
+  fi
   ok "Xcode Command Line Tools"
 fi
 
-# ─── 3. Repo ─────────────────────────────────────────────────────────────────
+# ─── 4. Repo ─────────────────────────────────────────────────────────────────
 if [[ -d "$REPO_DIR/.git" ]]; then
   git -C "$REPO_DIR" pull --ff-only --quiet && ok "Repo updated ($REPO_DIR)" ||
     printf ' ! git pull failed — using the local copy\n'
@@ -69,7 +100,7 @@ else
 fi
 export SETTHEMACUP="$REPO_DIR"
 
-# ─── 4. fnm → Node LTS → pnpm ────────────────────────────────────────────────
+# ─── 5. fnm → Node LTS → pnpm ────────────────────────────────────────────────
 export PATH="$FNM_DIR:$PATH"
 if ! command -v fnm >/dev/null 2>&1; then
   step "Installing fnm"
@@ -97,11 +128,14 @@ if [[ "$(pnpm -v 2>/dev/null)" != "$PNPM_VERSION" ]]; then
 fi
 ok "pnpm $(pnpm -v)"
 
-# ─── 5. Hand off to the installer ────────────────────────────────────────────
+# ─── 6. Hand off to the installer ────────────────────────────────────────────
 (cd "$REPO_DIR" && pnpm install --frozen-lockfile --prod --silent)
 ok "Installer ready"
 echo
 
+# exec replaces this shell, so the EXIT trap won't run: the installer takes over the
+# password folder and deletes it when it finishes
+trap - EXIT
 if has_tty; then
   exec node "$REPO_DIR/installer/index.ts" "$@" <"$TTY"
 else
