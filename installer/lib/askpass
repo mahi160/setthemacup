@@ -1,0 +1,7 @@
+#!/bin/bash
+# SUDO_ASKPASS helper for the installer: sudo prompts from child processes (e.g. a
+# cask's .pkg installer) show a native password dialog instead of a terminal
+# prompt hidden behind the progress UI. The password goes to sudo only.
+osascript \
+  -e 'text returned of (display dialog "An installer step needs your password (for example a .pkg app install)." with title "setthemacup" default answer "" with hidden answer with icon caution buttons {"Cancel", "OK"} default button "OK")' \
+  2>/dev/null

@@ -37,6 +37,9 @@ const BADGE: Record<State, (detail?: string) => string> = {
 /** Tools installed by bootstrap.sh / earlier steps, visible to every child process. */
 function setupPath(): void {
   process.env.SETTHEMACUP = REPO;
+  // sudo prompts from child processes (cask .pkg installers) become a native dialog
+  // instead of a terminal prompt hidden behind the spinner
+  process.env.SUDO_ASKPASS = join(REPO, 'installer/lib/askpass');
   process.env.PNPM_HOME ??= join(HOME, 'Library/pnpm');
   const dirs = [join(HOME, '.local/bin'), join(process.env.PNPM_HOME, 'bin'), join(HOME, '.local/share/fnm/aliases/default/bin'), join(HOME, '.local/share/fnm'), dirname(process.execPath)];
   const path = (process.env.PATH ?? '/usr/bin:/bin').split(':');
@@ -100,7 +103,13 @@ async function runSync(sh: Shell, dryRun: boolean): Promise<void> {
 function keepSudoAlive(): void {
   p.log.info('Your password is needed once (Homebrew, system settings).');
   if (spawnSync('sudo', ['-v'], { stdio: 'inherit' }).status !== 0) bail('sudo is required.');
-  setInterval(() => spawn('sudo', ['-n', '-v'], { stdio: 'ignore' }), 50_000).unref();
+  // One refresh at a time: sudo -n blocks while another sudo holds the prompt lock
+  let refreshing = false;
+  setInterval(() => {
+    if (refreshing) return;
+    refreshing = true;
+    spawn('sudo', ['-n', '-v'], { stdio: 'ignore' }).on('close', () => (refreshing = false));
+  }, 50_000).unref();
 }
 
 interface Outcome {
@@ -143,8 +152,14 @@ async function main(): Promise<void> {
       const s = p.spinner();
       s.start(title);
       log.write(`-- ${title}`);
+      const progress = (message: string) => {
+        const clean = message.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\s+/g, ' ').trim();
+        if (!clean) return;
+        const room = Math.max(20, (process.stdout.columns || 100) - title.length - 12);
+        s.message(`${title} ${dim(`· ${clean.length > room ? `${clean.slice(0, room - 1)}…` : clean}`)}`);
+      };
       try {
-        const detail = await fn();
+        const detail = await fn(progress);
         s.stop(`${title}${detail ? dim(` — ${detail}`) : ''}`);
         return true;
       } catch (err) {
