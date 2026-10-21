@@ -196,7 +196,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
   <main>
 <section id="run" aria-labelledby="run-h">
     <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">Eleven steps, in this order</h2>
-    <p class="lede">Homebrew always runs. Everything else is a checkbox, all on by default. Each step first checks what's already done, so running it again only fills the gaps.</p></header>
+    <p class="lede">You answer everything in the first few minutes: your Mac password, the checklist, a GitHub login and SSH passphrases. Then it runs on its own. Homebrew always runs; everything else is a checkbox, all on by default. Each step checks what's already done, so running it again only fills the gaps.</p></header>
     <ol class="steps">
       <li class="step" id="step-homebrew">
         <div class="step-n" aria-hidden="true">01</div>
@@ -239,7 +239,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <div class="step-body">
           <h3>Git + SSH <code class="step-id">--only git</code></h3>
           <p class="step-sum">Git identity (personal + work via includeIf), SSH keys, optional upload to GitHub</p>
-          <ul><li>~/.gitconfig is stowed from dotfiles/git (delta pager, sane defaults, no identity)</li><li>~/.gitconfig.local gets [user] from private.env plus an includeIf that switches to the work identity under $WORK_DIR</li><li>~/.ssh/config is stowed; work host alias goes in ~/.ssh/config.local</li><li>Generates ed25519 keys (asks for a passphrase, stored in the macOS Keychain)</li><li>Optionally logs in with gh and uploads each key to its GitHub account</li></ul>
+          <ul><li>~/.gitconfig is stowed from dotfiles/git (delta pager, sane defaults, no identity)</li><li>~/.gitconfig.local gets [user] from private.env plus an includeIf that switches to the work identity under $WORK_DIR</li><li>~/.ssh/config is stowed; work host alias goes in ~/.ssh/config.local</li><li>Up front: asks a passphrase for each new ed25519 key (stored in the macOS Keychain), then logs in with gh and uploads each key to its GitHub account</li></ul>
           <p class="needs">Pulls in <span><code>gh</code> <code>stow</code></span></p>
         </div>
       </li>

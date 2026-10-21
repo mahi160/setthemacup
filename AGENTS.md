@@ -78,7 +78,9 @@ setup --sync          # fold manual installs/removals into the JSON lists (-n pr
 pnpm test && pnpm typecheck
 ```
 
-**Step contract** (`types.ts`): `check()` returns done/partial/missing and must be read-only; `run()` must be safe to repeat. Wrap each sub-action in `ctx.task(title, fn)` (spinner, failures recorded, never thrown); use `ctx.interactive` for anything that needs the terminal. System changes go through `ctx.sh.run` (logged, skipped under `--dry-run`); read-only queries use `ctx.sh.capture`. Generated files go through `lib/fs.ts` `writeFile`/`link`.
+**Run phases** (`index.ts`): checklist → "restart when done?" → Mac password (validated with `sudo -S`, kept in a 0600 temp file by `lib/secrets.ts`, answered via `SUDO_ASKPASS=lib/askpass`, deleted on exit; bootstrap.sh hands its copy over in `SETTHEMACUP_SECRET_FILE`) → required steps (Homebrew) → `gh`/`git` → every selected step's `prepare()` (all questions) → the rest unattended.
+
+**Step contract** (`types.ts`): `check()` returns done/partial/missing and must be read-only; `prepare()` (optional) asks everything that needs a person; `run()` must be safe to repeat and must not prompt. Wrap each sub-action in `ctx.task(title, fn)` (spinner, failures recorded, never thrown); use `ctx.interactive` for anything that needs the terminal. System changes go through `ctx.sh.run` (logged, skipped under `--dry-run`); read-only queries use `ctx.sh.capture`. Generated files go through `lib/fs.ts` `writeFile`/`link`.
 
 **Adding a step:** create `installer/steps/<name>.ts` exporting a `Step`, add it to `steps/index.ts` in run order, add its id to `HELP` in `plan.ts`, run `pnpm run docs`.
 

@@ -77,7 +77,7 @@ function stepsSection(): string {
     .join('');
   return `<section id="run" aria-labelledby="run-h">
     <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">${WORDS[steps.length] ?? steps.length} steps, in this order</h2>
-    <p class="lede">Homebrew always runs. Everything else is a checkbox, all on by default. Each step first checks what's already done, so running it again only fills the gaps.</p></header>
+    <p class="lede">You answer everything in the first few minutes: your Mac password, the checklist, a GitHub login and SSH passphrases. Then it runs on its own. Homebrew always runs; everything else is a checkbox, all on by default. Each step checks what's already done, so running it again only fills the gaps.</p></header>
     <ol class="steps">${items}</ol></section>`;
 }
 
