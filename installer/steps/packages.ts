@@ -61,9 +61,9 @@ export const cliTools: Step = {
 
   async run(ctx) {
     await formulae.run(ctx);
-    await ctx.task('pnpm globals', async () => {
+    await ctx.task('pnpm globals', async (progress) => {
       // Always `add`: unpinned globals (pi) should move to the latest on every run
-      await ctx.sh.run('pnpm', ['add', '--global', ...pnpmGlobals.map((p) => p.name)]);
+      await ctx.sh.run('pnpm', ['add', '--global', ...pnpmGlobals.map((p) => p.name)], { onLine: progress });
       return pnpmGlobals.map((p) => p.name).join(', ');
     });
   },

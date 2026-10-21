@@ -51,10 +51,11 @@ export const flowd: Step = {
   },
 
   async run(ctx) {
-    await ctx.task('Install fw', async () => {
+    await ctx.task('Install fw', async (progress) => {
       if (await ctx.sh.has('fw')) return 'installed';
       await ctx.sh.bash('curl -fsSL https://raw.githubusercontent.com/mahi160/flowd/main/install.sh | sh', {
         env: { FLOWD_INSTALL_DIR: join(ctx.home, '.local/bin') },
+        onLine: progress,
       });
     });
 

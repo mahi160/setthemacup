@@ -97,3 +97,25 @@ test('sync: new installs are added, uninstalled manifest items removed, old left
     { repo: 'c/d', skills: ['three'], desc: 'Inbox' },
   ]);
 });
+
+test('brew progress: counts finished packages and shortens URLs', async () => {
+  const { brewProgress } = await import('./lib/brew.ts');
+  const seen: string[] = [];
+  const onLine = brewProgress(2, (m) => seen.push(m));
+  onLine('==> Downloading https://example.com/files/Transmission-4.1.3.dmg');
+  onLine('==> Installing Cask transmission');
+  onLine('🍺  transmission was successfully installed!');
+  onLine('==> Installing Cask tbis');
+  assert.deepEqual(seen, ['[0/2] Downloading Transmission-4.1.3.dmg', '[0/2] Installing Cask transmission', '[1/2] Installing Cask tbis']);
+});
+
+test('shell streams output lines, including \\r-redrawn ones', async () => {
+  const { Shell } = await import('./lib/sh.ts');
+  const { Logger } = await import('./lib/log.ts');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const sh = new Shell(new Logger(mkdtempSync(`${tmpdir()}/sh-`)), false);
+  const lines: string[] = [];
+  await sh.run('/bin/bash', ['-c', "printf 'a\\nb\\rc\\n'; echo err >&2"], { onLine: (l) => lines.push(l) });
+  assert.deepEqual(lines.sort(), ['a', 'b', 'c', 'err']);
+});

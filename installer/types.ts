@@ -19,8 +19,11 @@ export interface Ctx {
   env: Readonly<Record<string, string>>;
   sh: Shell;
   log: Logger;
-  /** Run one sub-action behind a spinner. Failures are recorded, never thrown. */
-  task(title: string, fn: () => Promise<string | void>): Promise<boolean>;
+  /**
+   * Run one sub-action behind a spinner. Failures are recorded, never thrown.
+   * `progress` updates the spinner line; pass it as `onLine` to stream a command's output.
+   */
+  task(title: string, fn: (progress: (message: string) => void) => Promise<string | void>): Promise<boolean>;
   /** Run something that needs the terminal (passwords, browser logins). Throws on failure. */
   interactive<T>(title: string, fn: () => Promise<T>): Promise<T>;
   confirm(message: string, initial?: boolean): Promise<boolean>;

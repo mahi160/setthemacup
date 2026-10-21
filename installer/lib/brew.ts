@@ -39,8 +39,8 @@ let updated = false;
 /** `brew update` once per run; later calls skip auto-update. */
 export async function update(ctx: Ctx): Promise<void> {
   if (updated) return;
-  await ctx.task('Update Homebrew', async () => {
-    await ctx.sh.run(BREW, ['update', '--quiet']);
+  await ctx.task('Update Homebrew', async (progress) => {
+    await ctx.sh.run(BREW, ['update'], { onLine: progress });
   });
   updated = true;
   process.env.HOMEBREW_NO_AUTO_UPDATE = '1';
@@ -67,17 +67,32 @@ export async function install(ctx: Ctx, kind: Kind, names: string[], title: stri
     await ctx.task(title, async () => `all ${names.length} installed`);
     return;
   }
-  await ctx.task(`${title}: ${plural(todo.length, 'package')}`, async () => {
+  await ctx.task(`${title}: ${plural(todo.length, 'package')}`, async (progress) => {
     const flag = kind === 'cask' ? ['--cask'] : ['--formula'];
-    const batch = await ctx.sh.run(BREW, ['install', ...flag, ...todo], { allowFail: true });
+    const onLine = brewProgress(todo.length, progress);
+    const batch = await ctx.sh.run(BREW, ['install', ...flag, ...todo], { allowFail: true, onLine });
     if (batch.ok) return todo.join(', ');
     const failed: string[] = [];
     for (const name of await missing(ctx.sh, kind, todo)) {
-      const r = await ctx.sh.run(BREW, ['install', ...flag, name], { allowFail: true });
+      const r = await ctx.sh.run(BREW, ['install', ...flag, name], { allowFail: true, onLine: brewProgress(1, progress) });
       if (!r.ok) failed.push(name);
     }
     if (failed.length) throw new Error(`failed: ${failed.join(', ')} (see log)`);
   });
+}
+
+/**
+ * Turn `brew install` output into a spinner line: "[2/4] Downloading tailscale-app".
+ * A package counts as done at its "🍺 … installed" line.
+ */
+export function brewProgress(total: number, progress: (message: string) => void): (line: string) => void {
+  let done = 0;
+  return (line) => {
+    if (line.includes('🍺') || / was successfully installed/.test(line)) done = Math.min(total, done + 1);
+    const step = line.match(/^==> (.+)/)?.[1];
+    if (step) progress(`[${done}/${total}] ${step.replace(/https?:\/\/\S+/g, (u) => u.split('/').pop() ?? u)}`);
+    else if (/^#+\s*\d+(\.\d+)?%/.test(line.trim())) progress(`[${done}/${total}] downloading ${line.trim().split(/\s+/).pop()}`);
+  };
 }
 
 /** Formulae a step depends on, installed before it runs. */

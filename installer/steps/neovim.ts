@@ -16,8 +16,8 @@ export const neovim: Step = {
   },
 
   async run(ctx) {
-    await ctx.task('Sync plugins (first run takes a few minutes)', async () => {
-      await ctx.sh.run('nvim', ['--headless', '+Lazy! sync', '+qa']);
+    await ctx.task('Sync plugins (first run takes a few minutes)', async (progress) => {
+      await ctx.sh.run('nvim', ['--headless', '+Lazy! sync', '+qa'], { onLine: progress });
     });
     await ctx.task('Clean removed plugins', async () => {
       await ctx.sh.run('nvim', ['--headless', '+Lazy! clean', '+qa']);

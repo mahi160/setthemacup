@@ -21,8 +21,8 @@ const DEFAULT_THEME = 'kanagawa-wave';
 
 const omzDir = (ctx: Ctx) => join(ctx.home, '.oh-my-zsh');
 const pluginDir = (ctx: Ctx, repo: string) => join(ctx.home, '.config/zsh/plugins', repo.split('/')[1]!);
-const clone = (ctx: Ctx, repo: string, dir: string) =>
-  ctx.sh.run('git', ['clone', '--quiet', '--depth=1', `https://github.com/${repo}.git`, dir]);
+const clone = (ctx: Ctx, repo: string, dir: string, progress?: (m: string) => void) =>
+  ctx.sh.run('git', ['clone', '--progress', '--depth=1', `https://github.com/${repo}.git`, dir], { onLine: progress });
 
 export const dotfiles: Step = {
   id: 'dotfiles',
@@ -51,9 +51,9 @@ export const dotfiles: Step = {
   },
 
   async run(ctx) {
-    await ctx.task('oh-my-zsh', async () => {
+    await ctx.task('oh-my-zsh', async (progress) => {
       if (exists(omzDir(ctx))) return 'already installed (updates itself every 14 days)';
-      await clone(ctx, 'ohmyzsh/ohmyzsh', omzDir(ctx));
+      await clone(ctx, 'ohmyzsh/ohmyzsh', omzDir(ctx), progress);
     });
 
     await ctx.task('oh-my-zsh plugins', async () => {

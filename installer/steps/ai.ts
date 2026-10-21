@@ -24,9 +24,11 @@ export const ai: Step = {
   async run(ctx) {
     for (const source of skills) {
       const todo = source.skills.filter((n) => !exists(skillDir(ctx, n)));
-      await ctx.task(`Skills: ${source.repo}`, async () => {
+      await ctx.task(`Skills: ${source.repo}`, async (progress) => {
         if (!todo.length) return 'installed';
-        await ctx.sh.run('npx', ['--yes', SKILLS_CLI, 'add', source.repo, ...todo.flatMap((n) => ['--skill', n]), '--global', '--agent', 'pi', '--yes']);
+        await ctx.sh.run('npx', ['--yes', SKILLS_CLI, 'add', source.repo, ...todo.flatMap((n) => ['--skill', n]), '--global', '--agent', 'pi', '--yes'], {
+          onLine: progress,
+        });
         return todo.join(', ');
       });
     }

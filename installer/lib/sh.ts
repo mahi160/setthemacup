@@ -10,6 +10,8 @@ export interface RunOptions {
   interactive?: boolean;
   /** Resolve instead of throwing on a non-zero exit */
   allowFail?: boolean;
+  /** Called with each output line (stdout and stderr) as it arrives — for progress */
+  onLine?: (line: string) => void;
 }
 
 export interface Result {
@@ -85,8 +87,22 @@ export class Shell {
       });
       let stdout = '';
       let stderr = '';
-      child.stdout?.on('data', (d: Buffer) => (stdout += d));
-      child.stderr?.on('data', (d: Buffer) => (stderr += d));
+      let partial = '';
+      // Lines end in \n or \r (progress bars redraw with \r)
+      const feed = (d: Buffer) => {
+        if (!opts.onLine) return;
+        const parts = (partial + d.toString()).split(/\r?\n|\r/);
+        partial = parts.pop() ?? '';
+        for (const line of parts) if (line.trim()) opts.onLine(line);
+      };
+      child.stdout?.on('data', (d: Buffer) => {
+        stdout += d;
+        feed(d);
+      });
+      child.stderr?.on('data', (d: Buffer) => {
+        stderr += d;
+        feed(d);
+      });
       if (!opts.interactive) child.stdin?.end(opts.input ?? '');
       child.on('error', (err) => {
         const result = { code: 127, stdout, stderr: String(err.message), ok: false };
