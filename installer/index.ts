@@ -5,13 +5,14 @@
  */
 import * as p from '@clack/prompts';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { styleText } from 'node:util';
 import { brewEnv, ensureFormulae, hasBrew } from './lib/brew.ts';
 import { Logger } from './lib/log.ts';
 import { PRIVATE_ENV, loadPrivateEnv } from './lib/private.ts';
+import { adoptSecretFile, checkSudoPassword, storeSecret } from './lib/secrets.ts';
 import { Shell } from './lib/sh.ts';
 import { pushPrivate, sync } from './lib/sync.ts';
 import { HELP, parse, select, type Args } from './plan.ts';
@@ -79,15 +80,30 @@ async function runSync(sh: Shell, dryRun: boolean): Promise<void> {
   if (!notifier.ok) await sh.capture('osascript', ['-e', `display notification ${JSON.stringify(message)} with title "setthemacup"`]);
 }
 
-function keepSudoAlive(): void {
-  p.log.info('Your password is needed once (Homebrew, system settings).');
-  if (spawnSync('sudo', ['-v'], { stdio: 'inherit' }).status !== 0) bail('sudo is required.');
-  // One refresh at a time: sudo -n blocks while another sudo holds the prompt lock
+/**
+ * Ask for the Mac password once and keep it for this run (lib/secrets.ts), so sudo prompts
+ * later on (Homebrew, .pkg installs, nvram) are answered by lib/askpass without you.
+ */
+async function acquireSudo(): Promise<void> {
+  let file = adoptSecretFile(process.env.SETTHEMACUP_SECRET_FILE);
+  if (file && !checkSudoPassword(readFileSync(file, 'utf8').trimEnd())) file = undefined;
+  for (let tries = 0; !file && tries < 3; tries++) {
+    const password = await ask(
+      p.password({
+        message: tries ? 'That password did not work. Your Mac password:' : 'Your Mac password (used for installs and system settings, kept only for this run)',
+        validate: (v) => (v ? undefined : 'Required'),
+      }),
+    );
+    if (checkSudoPassword(password)) file = storeSecret('sudo', password);
+  }
+  if (!file) bail('Could not verify your password.');
+  process.env.SETTHEMACUP_SECRET_FILE = file;
+  // Keep the sudo ticket fresh; -A answers through askpass, so this never waits on a prompt
   let refreshing = false;
   setInterval(() => {
     if (refreshing) return;
     refreshing = true;
-    spawn('sudo', ['-n', '-v'], { stdio: 'ignore' }).on('close', () => (refreshing = false));
+    spawn('sudo', ['-A', '-v'], { stdio: 'ignore' }).on('close', () => (refreshing = false));
   }, 50_000).unref();
 }
 
@@ -210,11 +226,14 @@ async function main(): Promise<void> {
     plan = plan.filter((st) => st.required || picked.includes(st.id));
   }
 
-  if (!args.dryRun) keepSudoAlive();
+  // ── Questions first: everything that needs a person, then the rest runs on its own ──
+  const restartWhenDone =
+    !args.yes && !args.dryRun && plan.some((st) => st.id === 'macos') && (await ctx.confirm('Restart automatically when everything is done?', false));
+  if (!args.dryRun) await acquireSudo();
 
   const outcomes: Outcome[] = [];
-  for (const [i, step] of plan.entries()) {
-    p.log.step(bold(`${i + 1}/${plan.length}  ${step.title}`));
+  const runStep = async (step: Step, n: number) => {
+    p.log.step(bold(`${n}/${plan.length}  ${step.title}`));
     log.section(step.title);
     failures = [];
     let error: string | undefined;
@@ -228,7 +247,34 @@ async function main(): Promise<void> {
     }
     outcomes.push({ step, failed: [...failures], error });
     if (step.required && (error || failures.length)) bail(`${step.title} failed — nothing else can run. Log: ${log.path}`);
+  };
+
+  // Required steps (Homebrew) first: the questions below need gh from Homebrew
+  const required = plan.filter((st) => st.required);
+  for (const step of required) await runStep(step, plan.indexOf(step) + 1);
+
+  const asking = plan.filter((st) => st.prepare);
+  const skipRun = new Set<string>();
+  if (asking.length) {
+    if (hasBrew()) await ensureFormulae(ctx, ['gh', 'git']);
+    p.log.step(bold('Questions'));
+    log.section('Questions');
+    for (const step of asking) {
+      try {
+        await step.prepare!(ctx);
+      } catch (err) {
+        const error = (err as Error).message.split('\n')[0];
+        p.log.error(`${step.title}: ${error}`);
+        log.write(`  ! prepare ${step.title}: ${(err as Error).stack}`);
+        outcomes.push({ step, failed: [], error });
+        skipRun.add(step.id);
+      }
+    }
   }
+  const rest = plan.filter((st) => !st.required && !skipRun.has(st.id));
+  if (!args.yes && rest.length) p.log.success(bold("That's every question. The rest runs on its own — you can walk away."));
+
+  for (const step of rest) await runStep(step, plan.indexOf(step) + 1);
 
   const lines = outcomes.map(({ step, failed, error }) =>
     failed.length || error ? red(`✗ ${step.title}`) + dim(` — ${[...failed, error].filter(Boolean).join('; ')}`) : green(`✓ ${step.title}`),
@@ -250,10 +296,12 @@ async function main(): Promise<void> {
   p.note(next.map((n) => `☐ ${n}`).join('\n'), "What's next");
 
   const failedAny = outcomes.some((o) => o.failed.length || o.error);
-  if (!failedAny && outcomes.some((o) => o.step.id === 'macos') && !args.yes) {
-    if (await ctx.confirm('Restart now so every setting applies?', false)) {
-      spawnSync('osascript', ['-e', 'tell application "System Events" to restart']);
-    }
+  if (restartWhenDone && !failedAny) {
+    p.log.info('Restarting in 10 seconds (Ctrl-C to cancel)…');
+    await new Promise((r) => setTimeout(r, 10_000));
+    spawnSync('osascript', ['-e', 'tell application "System Events" to restart']);
+  } else if (restartWhenDone) {
+    p.log.warn('Not restarting: some steps failed. Check the summary above, then restart when ready.');
   }
   p.outro(`${failedAny ? yellow('Finished with errors.') : green('All set.')} Checklist: logs/next-steps.md · Log: ${log.path.replace(HOME, '~')}`);
 }

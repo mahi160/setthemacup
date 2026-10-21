@@ -1,8 +1,10 @@
+import * as p from '@clack/prompts';
 import { mkdirSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { exists, readText, writeFile } from '../lib/fs.ts';
 import { PRIVATE_ENV } from '../lib/private.ts';
+import { storeSecret } from '../lib/secrets.ts';
 import { plan, stow } from '../lib/stow.ts';
 import type { Ctx, Step } from '../types.ts';
 
@@ -81,6 +83,36 @@ async function upload(ctx: Ctx, key: Key, opts: { login: boolean; restoreUser?: 
   }
 }
 
+/** Ask for a passphrase (twice), create the key, and store the passphrase in the Keychain. */
+async function createKey(ctx: Ctx, key: Key): Promise<void> {
+  let passphrase = '';
+  for (;;) {
+    const first = await p.password({ message: `Passphrase for your new ${key.label} SSH key (saved in Keychain)`, validate: (v) => (v && v.length >= 8 ? undefined : 'At least 8 characters') });
+    if (p.isCancel(first)) throw new Error('cancelled');
+    const again = await p.password({ message: 'Same passphrase again' });
+    if (p.isCancel(again)) throw new Error('cancelled');
+    if (first === again) {
+      passphrase = first;
+      break;
+    }
+    p.log.warn("Those didn't match — try again.");
+  }
+  await ctx.task(`Create ${key.label} SSH key`, async () => {
+    if (!ctx.dryRun) mkdirSync(join(ctx.home, '.ssh'), { recursive: true, mode: 0o700 });
+    // -N puts the passphrase in argv for the few ms ssh-keygen runs; acceptable on a personal Mac
+    await ctx.sh.run('ssh-keygen', ['-q', '-t', 'ed25519', '-C', key.email, '-f', key.file, '-N', passphrase]);
+    // ssh-add reads the passphrase through lib/askpass instead of a terminal prompt
+    await ctx.sh.run('ssh-add', ['--apple-use-keychain', key.file], {
+      env: {
+        SSH_ASKPASS: join(ctx.repo, 'installer/lib/askpass'),
+        SSH_ASKPASS_REQUIRE: 'force',
+        SETTHEMACUP_SECRET_FILE: storeSecret(`ssh-${key.label}`, passphrase),
+      },
+    });
+    return key.file.replace(ctx.home, '~');
+  });
+}
+
 export const gitSsh: Step = {
   id: 'git',
   title: 'Git + SSH',
@@ -89,8 +121,7 @@ export const gitSsh: Step = {
     '~/.gitconfig is stowed from dotfiles/git (delta pager, sane defaults, no identity)',
     '~/.gitconfig.local gets [user] from private.env plus an includeIf that switches to the work identity under $WORK_DIR',
     '~/.ssh/config is stowed; work host alias goes in ~/.ssh/config.local',
-    'Generates ed25519 keys (asks for a passphrase, stored in the macOS Keychain)',
-    'Optionally logs in with gh and uploads each key to its GitHub account',
+    'Up front: asks a passphrase for each new ed25519 key (stored in the macOS Keychain), then logs in with gh and uploads each key to its GitHub account',
   ],
   requires: ['gh', 'stow'],
 
@@ -121,20 +152,24 @@ export const gitSsh: Step = {
       return stow(ctx, 'ssh', { noFolding: true });
     });
 
-    for (const key of keys(ctx)) {
-      if (exists(key.file)) {
-        await ctx.task(`SSH key: ${key.label}`, async () => 'exists');
-        continue;
-      }
-      await ctx.interactive(`Generate ${key.label} SSH key — choose a passphrase (saved in Keychain)`, async () => {
-        await ctx.sh.run('ssh-keygen', ['-t', 'ed25519', '-C', key.email, '-f', key.file], { interactive: true });
-        await ctx.sh.run('ssh-add', ['--apple-use-keychain', key.file], { interactive: true });
-      });
-    }
+    await ctx.task('SSH keys', async () => {
+      const list = keys(ctx);
+      const missing = list.filter((k) => !exists(k.file)).map((k) => k.label);
+      if (missing.length) throw new Error(`missing ${missing.join(', ')} key — run \`setup --only git\` to create it`);
+      return list.length ? list.map((k) => k.label).join(' + ') : 'none (no email in private.env)';
+    });
+  },
 
+  /** Question phase: passphrases for new keys, then GitHub logins and key uploads. */
+  async prepare(ctx) {
     const list = keys(ctx);
-    if (ctx.yes || !list.length || !(await ctx.confirm('Upload SSH keys to GitHub now (browser login)?', true))) return;
-    const [personal, work] = list;
+    const missing = list.filter((k) => !exists(k.file));
+    if (missing.length && ctx.yes) ctx.warn('New SSH keys need a passphrase; skipped under --yes. Run `setup --only git`.');
+    else for (const key of missing) await createKey(ctx, key);
+
+    const have = list.filter((k) => exists(k.file) || ctx.dryRun);
+    if (ctx.yes || !have.length || !(await ctx.confirm('Upload SSH keys to GitHub (browser login)?', true))) return;
+    const [personal, work] = have;
     if (personal) await upload(ctx, personal, { login: !(await ghLoggedIn(ctx)) });
     if (work && (await ctx.confirm('Upload the work key too (logs in to your work GitHub account)?', true))) {
       await upload(ctx, work, { login: true, restoreUser: ctx.env.GIT_NAME });

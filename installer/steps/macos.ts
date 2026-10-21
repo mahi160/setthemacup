@@ -82,7 +82,7 @@ export const macos: Step = {
     await ctx.task('No startup chime', async () => {
       const r = await ctx.sh.capture('nvram', ['StartupMute']);
       if (r.stdout.includes('%01')) return 'already muted';
-      await ctx.sh.run('sudo', ['-n', 'nvram', 'StartupMute=%01']);
+      await ctx.sh.run('sudo', ['-A', 'nvram', 'StartupMute=%01']);
     });
 
     await ctx.task('Remove empty ~/Public and ~/Sites', async () => {

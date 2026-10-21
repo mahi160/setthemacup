@@ -44,6 +44,11 @@ export interface Step {
   /** Homebrew formulae this step needs, installed even if CLI tools is unchecked */
   requires?: string[];
   check(ctx: Ctx): Promise<Status>;
+  /**
+   * Everything this step needs from a person (logins, passphrases, choices), asked in the
+   * question phase before the unattended run. `run` must then need no input.
+   */
+  prepare?(ctx: Ctx): Promise<void>;
   run(ctx: Ctx): Promise<void>;
   /** Manual follow-ups shown after the run */
   nextSteps?(ctx: Ctx): string[] | Promise<string[]>;

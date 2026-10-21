@@ -1,7 +1,14 @@
 #!/bin/bash
-# SUDO_ASKPASS helper for the installer: sudo prompts from child processes (e.g. a
-# cask's .pkg installer) show a native password dialog instead of a terminal
-# prompt hidden behind the progress UI. The password goes to sudo only.
+# askpass helper for the installer, used as SUDO_ASKPASS (and SSH_ASKPASS for ssh-add).
+#
+# The installer asks for secrets once, up front, and keeps each in a 0600 file inside a
+# private temp folder for the length of the run (deleted when it ends). This prints the
+# one named by $SETTHEMACUP_SECRET_FILE, so mid-run prompts (a cask's .pkg installer)
+# need no input. Without that file it falls back to a native password dialog.
+if [[ -n "${SETTHEMACUP_SECRET_FILE:-}" && -r "$SETTHEMACUP_SECRET_FILE" ]]; then
+  cat "$SETTHEMACUP_SECRET_FILE"
+  exit 0
+fi
 osascript \
   -e 'text returned of (display dialog "An installer step needs your password (for example a .pkg app install)." with title "setthemacup" default answer "" with hidden answer with icon caution buttons {"Cancel", "OK"} default button "OK")' \
   2>/dev/null

@@ -68,39 +68,43 @@ export const privateSettings: Step = {
     return { state: 'done', detail: 'cloned' };
   },
 
+  /** Question phase: GitHub login, then clone the private repo (or ask once and create it). */
+  async prepare(ctx) {
+    if (exists(join(PRIVATE_DIR, '.git'))) return;
+    if (ctx.yes) return ctx.warn('Private settings need a GitHub login; skipped under --yes. Run `setup --only private`.');
+    const login = await ghLogin(ctx);
+    const repo = `${login}/${PRIVATE_REPO_NAME}`;
+    if (await ctx.sh.ok('gh', ['repo', 'view', repo, '--json', 'name'])) {
+      await ctx.task(`Clone ${repo}`, async (progress) => {
+        if (exists(PRIVATE_DIR)) {
+          // A local private.env without a repo: adopt the repo, the repo wins
+          await ctx.sh.run('git', ['init', '-q', '-b', 'main'], { cwd: PRIVATE_DIR });
+          await ctx.sh.run('git', ['remote', 'add', 'origin', `https://github.com/${repo}.git`], { cwd: PRIVATE_DIR, allowFail: true });
+          await git(ctx, ['-C', PRIVATE_DIR, 'fetch', '--quiet', 'origin'], progress);
+          await ctx.sh.run('git', ['checkout', '-f', '-B', 'main', 'origin/main'], { cwd: PRIVATE_DIR });
+        } else {
+          await git(ctx, ['clone', '--progress', `https://github.com/${repo}.git`, PRIVATE_DIR], progress);
+        }
+      });
+    } else {
+      await createFromPrompts(ctx, repo);
+    }
+    // Later pushes (daily sync) authenticate through gh as well
+    await ctx.sh.run('git', ['config', 'credential.helper', '!gh auth git-credential'], { cwd: PRIVATE_DIR, allowFail: true });
+    if (!ctx.dryRun) ctx.env = loadPrivateEnv();
+  },
+
   async run(ctx) {
     if (exists(join(PRIVATE_DIR, '.git'))) {
       await ctx.task('Pull private settings', async (progress) => {
         await git(ctx, ['-C', PRIVATE_DIR, 'pull', '--ff-only', '--quiet'], progress);
         return 'up to date';
       });
-    } else {
-      const login = await ghLogin(ctx);
-      const repo = `${login}/${PRIVATE_REPO_NAME}`;
-      if (await ctx.sh.ok('gh', ['repo', 'view', repo, '--json', 'name'])) {
-        await ctx.task(`Clone ${repo}`, async (progress) => {
-          if (exists(PRIVATE_DIR)) {
-            // A local private.env without a repo: adopt the repo, the repo wins
-            await ctx.sh.run('git', ['init', '-q', '-b', 'main'], { cwd: PRIVATE_DIR });
-            await ctx.sh.run('git', ['remote', 'add', 'origin', `https://github.com/${repo}.git`], { cwd: PRIVATE_DIR, allowFail: true });
-            await git(ctx, ['-C', PRIVATE_DIR, 'fetch', '--quiet', 'origin'], progress);
-            await ctx.sh.run('git', ['checkout', '-f', '-B', 'main', 'origin/main'], { cwd: PRIVATE_DIR });
-          } else {
-            await git(ctx, ['clone', '--progress', `https://github.com/${repo}.git`, PRIVATE_DIR], progress);
-          }
-        });
-      } else {
-        await createFromPrompts(ctx, repo);
-      }
-      // Later pushes (daily sync) authenticate through gh as well
-      await ctx.sh.run('git', ['config', 'credential.helper', '!gh auth git-credential'], { cwd: PRIVATE_DIR, allowFail: true });
     }
-
     await ctx.task('Link private files', async () => {
       const linked = LINKS.filter(([file]) => exists(join(PRIVATE_DIR, file))).filter(([file, to]) => link(ctx, join(PRIVATE_DIR, file), join(ctx.home, to)));
       return linked.length ? linked.map(([f]) => f).join(', ') : 'all linked';
     });
-
     if (!ctx.dryRun) ctx.env = loadPrivateEnv();
   },
 };
