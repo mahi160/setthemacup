@@ -2,451 +2,338 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>setthemacup</title>
-<meta name="description" content="One command from a fresh Mac to a full dev environment: what it installs and changes.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>">
+<meta name="description" content="One command from a fresh Mac to a full dev environment. Everything it installs and changes.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231f1f28'/><path d='M8 11l6 5-6 5' stroke='%237e9cd8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/><path d='M16 22h8' stroke='%23e6c384' stroke-width='3' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
-:root{--bg:#f7f5f0;--surface:#fffdf8;--text:#24221d;--muted:#6d685d;--line:#e2ddd2;--accent:#2f6f5e;--accent-soft:#e3efe9;--code:#efeadf;
---mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace;--sans:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181a;--surface:#1e2124;--text:#e7e4dc;--muted:#9a968d;--line:#2e3236;--accent:#7cc4ad;--accent-soft:#1f302b;--code:#262a2e}}
-:root[data-theme="dark"]{--bg:#16181a;--surface:#1e2124;--text:#e7e4dc;--muted:#9a968d;--line:#2e3236;--accent:#7cc4ad;--accent-soft:#1f302b;--code:#262a2e}
-*{box-sizing:border-box}p,li,dd,td{overflow-wrap:anywhere}body{overflow-x:hidden;margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans)}
-main,header .wrap,nav .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
-header{padding:56px 0 32px;border-bottom:1px solid var(--line)}h1{font-size:clamp(2rem,5vw,3rem);margin:0 0 8px;letter-spacing:-.02em}
-.tag{color:var(--muted);font-size:1.15rem;margin:0 0 24px;max-width:640px}
-.cmd{display:flex;gap:8px;align-items:stretch;max-width:100%}.cmd pre{flex:1;min-width:0;margin:0;overflow-x:auto}
-button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:0 14px;cursor:pointer}button:hover{border-color:var(--accent)}
-nav{position:sticky;top:0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:1}
-nav .wrap{display:flex;gap:20px;overflow-x:auto;padding-top:10px;padding-bottom:10px}nav a{color:var(--muted);text-decoration:none;white-space:nowrap;font-size:.95rem}nav a:hover{color:var(--accent)}
-section{padding:40px 0 8px}h2{font-size:1.6rem;margin:0 0 8px;letter-spacing:-.01em}h3{margin:28px 0 12px}h4{margin:0 0 10px;font-size:.95rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.muted{color:var(--muted);font-weight:400}code,kbd,pre{font-family:var(--mono);font-size:.88em}code{background:var(--code);padding:1px 5px;border-radius:4px}
-pre{background:var(--code);padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5}
-kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--surface);white-space:nowrap}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
-.steps{list-style:none;padding:0;display:grid;gap:14px}.step ul{margin:8px 0 0;padding-left:20px}.step li{margin:3px 0}
-.step-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.step-head h3{margin:0;font-size:1.15rem}
-.num{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:600;font-size:.9rem;flex:none}
-.id{color:var(--muted)}.pill{font-size:.75rem;background:var(--accent);color:var(--bg);border-radius:99px;padding:1px 9px}.lead{margin:8px 0 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:14px}
-dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:6px 14px}dd{margin:0}.keys dt{text-align:right}
-.defs{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
-input[type=search]{width:100%;font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);margin:8px 0 12px}
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}table{border-collapse:collapse;width:100%;font-size:.92rem}
-th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-weight:600}tr:last-child td{border-bottom:0}
-footer{color:var(--muted);text-align:center;padding:48px 16px;font-size:.9rem}
-@media (max-width:600px){dl{grid-template-columns:1fr}.keys dt{text-align:left}dd{margin-bottom:6px}header{padding-top:36px}}</style>
+/* Layout: a sticky contents rail beside one reading column; the hero pairs the pitch with the real installer checklist.
+   Palette: the repo's own default theme, Kanagawa (Wave dark first, Lotus light). */
+:root{
+  --bg:#1f1f28;--surface:#2a2a37;--sunk:#16161d;--line:#363646;
+  --fg:#dcd7ba;--muted:#a3a08f;--faint:#727169;
+  --accent:#7e9cd8;--accent-ink:#16161d;--warm:#e6c384;--green:#98bb6c;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Instrument Sans",-apple-system,"Helvetica Neue",sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,monospace;
+  --step:clamp(1rem,.95rem + .25vw,1.0625rem);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f5f1d6;--surface:#faf7e6;--sunk:#ece5c0;--line:#dcd5ae;--fg:#43436c;--muted:#5f5f78;--faint:#8a8980;--accent:#4d699b;--accent-ink:#f7f2cf;--warm:#836f2a;--green:#6f894e;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f5f1d6;--surface:#faf7e6;--sunk:#ece5c0;--line:#dcd5ae;--fg:#43436c;--muted:#5f5f78;--faint:#8a8980;--accent:#4d699b;--accent-ink:#f7f2cf;--warm:#836f2a;--green:#6f894e;color-scheme:light}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 var(--step)/1.6 var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+a{color:var(--accent);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+code,kbd,pre{font-family:var(--mono);font-size:.86em}
+p code,li code,dd code,td code,.lede code{background:var(--sunk);padding:.1em .38em;border-radius:5px;overflow-wrap:anywhere}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;font-weight:600}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Hero */
+.hero{padding-block:clamp(40px,7vw,88px) clamp(32px,5vw,56px);border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(28px,5vw,64px);align-items:center}
+.brand{font:500 .8rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;display:flex;gap:10px;align-items:center}
+.brand i{width:9px;height:9px;border-radius:2px;background:var(--accent);display:inline-block}
+h1{font-size:clamp(2.6rem,1.6rem + 4.2vw,4.6rem);line-height:.98;letter-spacing:-.035em;font-weight:700}
+h1 em{font-style:normal;color:var(--warm)}
+.pitch{font-size:1.15rem;color:var(--muted);max-width:34rem;margin:20px 0 28px}
+.oneliner{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;background:var(--sunk);max-width:100%}
+.oneliner code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;padding:14px 16px;font-size:.84rem;background:none}
+.oneliner code::before{content:"$ ";color:var(--faint)}
+.copy{font:600 .82rem var(--body);border:0;border-left:1px solid var(--line);background:var(--surface);color:var(--fg);padding:0 18px;border-radius:0 10px 10px 0;cursor:pointer}
+.copy:hover{color:var(--accent)}
+.hero-links{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:18px;font-size:.92rem}
+.hero-links a{color:var(--muted)}.hero-links a:hover{color:var(--accent)}
+
+.term{margin:0;border:1px solid var(--line);border-radius:12px;background:var(--sunk);overflow:hidden;min-width:0;box-shadow:0 24px 60px -30px rgb(0 0 0 / .55)}
+.term figcaption{display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);font:500 .75rem var(--mono);color:var(--faint)}
+.term pre{margin:0;padding:18px 18px 20px;overflow-x:auto;font-size:.8rem;line-height:1.7;color:var(--fg)}
+.t-bar,.t-dim{color:var(--faint)}.t-ok,.t-on{color:var(--green)}.t-act{color:var(--accent)}
+.t-title{background:var(--fg);color:var(--sunk);font-weight:700}
+.term pre{line-height:1.55}
+
+/* Body grid with a contents rail */
+.layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:56px;padding-block:40px 80px}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 32px);align-self:start;font-size:.9rem}
+.toc p{font:500 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px;border-left:1px solid var(--line)}
+.toc a{display:block;padding:5px 0 5px 14px;margin-left:-1px;border-left:2px solid transparent;color:var(--muted);text-decoration:none}
+.toc a:hover,.toc a[aria-current="true"]{color:var(--fg);border-left-color:var(--accent)}
+main{min-width:0;display:grid;gap:clamp(56px,8vw,96px)}
+section{min-width:0}
+.sec-head{max-width:44rem;margin-bottom:28px}
+.eyebrow{font:500 .74rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--warm);margin:0 0 10px}
+h2{font-size:clamp(1.75rem,1.3rem + 1.6vw,2.4rem);letter-spacing:-.02em;line-height:1.1}
+.lede{color:var(--muted);margin:14px 0 0}
+h3{font-size:1.15rem;letter-spacing:-.01em}
+h3.sub{margin:44px 0 18px}
+.count{font:500 .72rem var(--mono);color:var(--faint);vertical-align:.2em;margin-left:4px}
+.note{color:var(--faint);font-size:.9rem;margin:4px 0 0}
+.tag{font:600 .68rem var(--mono);letter-spacing:.04em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:4px;padding:2px 7px;vertical-align:.25em;white-space:nowrap}
+.tag-soft{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+
+/* Steps: a real sequence, so numbered */
+.steps{list-style:none;margin:0;padding:0;display:grid}
+.step{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px 20px;padding:24px 0;border-top:1px solid var(--line)}
+.step:last-child{border-bottom:1px solid var(--line)}
+.step-n{font:700 1.6rem/1 var(--display);color:var(--faint);letter-spacing:-.02em;padding-top:2px}
+.step:hover .step-n{color:var(--accent)}
+.step-body h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.step-id{font-size:.74rem;color:var(--faint);font-weight:400}
+.step-sum{margin:6px 0 10px}
+.step ul{margin:0;padding-left:1.1rem;color:var(--muted);display:grid;gap:4px;max-width:46rem}
+.step li::marker{color:var(--faint)}
+.needs{margin:12px 0 0;font-size:.85rem;color:var(--faint)}
+.needs span{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:6px}
+
+/* Packages */
+.pkg{margin-top:36px}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:28px 40px;margin-top:18px}
+.cat h4,.keys h4{font:500 .74rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+dl{margin:0}
+.cat dl>div,.flat>div{display:grid;grid-template-columns:minmax(0,9.5rem) minmax(0,1fr);gap:12px;padding:6px 0;font-size:.92rem}
+.cat dt,.flat dt{font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere}
+.cat dd,.flat dd{margin:0;color:var(--muted)}
+.tap{display:block;font-size:.7rem;color:var(--faint)}
+.pkg-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:28px 48px}
+.flat{margin-top:12px}.flat>div{grid-template-columns:minmax(0,14rem) minmax(0,1fr);border-top:1px solid var(--line)}
+.flat dd code{margin:0 4px 4px 0;display:inline-block}
+.callout{margin-top:40px;padding:22px 24px;border-radius:12px;background:var(--surface);border:1px solid var(--line);max-width:52rem}
+.callout h3{margin-bottom:8px}.callout p{margin:0;color:var(--muted)}
+
+/* Settings */
+.filters{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.search input{width:100%;max-width:28rem;font:inherit;font-size:.95rem;padding:10px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.search input::placeholder{color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .8rem var(--body);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.chip:hover{color:var(--fg);border-color:var(--faint)}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;vertical-align:top;padding:10px 16px;border-top:1px solid var(--line)}
+thead th{border-top:0;font:500 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.settings td:first-child{min-width:14rem}
+.grp th{background:var(--sunk);font:600 .9rem var(--display)}
+.cmd{background:none!important;padding:0!important;font-size:.8rem;white-space:nowrap}
+.cmd .dim{color:var(--faint)}
+.empty{padding:20px 16px;margin:0;color:var(--muted)}
+.also{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:28px 48px;margin-top:32px}
+.also ul{margin:10px 0 0;padding-left:1.1rem;color:var(--muted);display:grid;gap:6px}
+
+/* Dotfiles + keys */
+.dots th[scope="row"] code,.vars th code{background:none;padding:0;color:var(--warm);font-size:.85rem}
+.dots td,.vars td{color:var(--muted)}
+.path{background:none!important;padding:0!important;color:var(--fg);white-space:nowrap}
+.vars th{width:15rem;font-weight:400}
+.keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:28px 40px}
+.keys dl>div{display:grid;grid-template-columns:minmax(0,8.5rem) minmax(0,1fr);gap:12px;padding:6px 0;font-size:.9rem;align-items:baseline}
+.keys dt{display:flex;flex-wrap:wrap;gap:4px;align-items:baseline}
+.keys dd{margin:0;color:var(--muted)}
+kbd{display:inline-block;font-size:.76rem;padding:2px 7px;border-radius:5px;border:1px solid var(--line);border-bottom-width:2px;background:var(--surface);white-space:nowrap}
+.sep{color:var(--faint);font-size:.8rem}
+
+pre.code{margin:0;padding:18px 20px;border-radius:12px;background:var(--sunk);border:1px solid var(--line);overflow-x:auto;line-height:1.65;font-size:.84rem}
+
+footer{border-top:1px solid var(--line);padding-block:28px 40px;color:var(--faint);font-size:.88rem}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media (max-width:980px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr)}
+  .layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:0}
+  .toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .toc p{display:none}
+  .toc ol{display:flex;gap:4px;border:0;overflow-x:auto;scrollbar-width:none}
+  .toc a{padding:12px 10px;border-left:0;margin-left:0;border-bottom:2px solid transparent;white-space:nowrap}
+  .toc a:hover,.toc a[aria-current="true"]{border-bottom-color:var(--accent)}
+}
+@media (max-width:560px){
+  .step{grid-template-columns:minmax(0,1fr)}
+  .step-n{font-size:1.1rem}
+  .cat dl>div,.flat>div,.keys dl>div{grid-template-columns:minmax(0,1fr);gap:2px}
+  .vars th{width:auto}
+}</style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1>setthemacup</h1>
-  <p class="tag">One command from a fresh Mac to my full dev environment. Everything it installs and changes is on this page.</p>
-  <div class="cmd"><pre>curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash</pre><button id="copy" data-cmd="curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash">Copy</button></div>
+<header class="hero"><div class="wrap">
+  <div>
+    <p class="brand"><i></i>setthemacup</p>
+    <h1>A fresh Mac, <em>set up</em> in one command.</h1>
+    <p class="pitch">My whole dev environment: tools, apps, dotfiles, keys and 106 macOS settings. You pick what runs from a checklist, and every change it makes is listed below.</p>
+    <div class="oneliner"><code id="cmd">curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash</code><button type="button" class="copy" id="copy" data-cmd="curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash">Copy</button></div>
+    <p class="hero-links"><a href="#run">See every step</a><a href="#macos">Browse the settings</a><a href="https://github.com/mahi160/setthemacup">Source on GitHub</a></p>
+  </div>
+  <figure class="term" aria-label="The installer's checklist">
+<figcaption><span>~/.setup</span><span>setup</span></figcaption>
+<pre><span class="t-bar">┌</span>  <span class="t-title"> setthemacup </span>
+<span class="t-bar">│</span>
+<span class="t-ok">◇</span>  Checked this Mac
+<span class="t-bar">│</span>
+<span class="t-act">◆</span>  Choose what to set up <span class="t-dim">(Homebrew always runs)</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> CLI tools         <span class="t-dim">git, neovim, tmux, fzf, lazygit, gh, …</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> Dotfiles + theme  <span class="t-dim">oh-my-zsh, then link zsh, git, ghostty,…</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> Git + SSH         <span class="t-dim">Git identity</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> Neovim            <span class="t-dim">LazyVim plugins synced headlessly</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> AI skills         <span class="t-dim">Agent skills for pi</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> Extras            <span class="t-dim">Helper commands, Swift tools, Pokemon b…</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> flowd             <span class="t-dim">Coding-time tracker: install fw, restor…</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> GUI apps          <span class="t-dim">Ghostty, Brave, Tinycast, Slack, OrbSta…</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> macOS settings    <span class="t-dim">106 system defaults</span>
+<span class="t-bar">└</span></pre>
+</figure>
 </div></header>
-<nav><div class="wrap"><a href="#steps">Steps</a><a href="#packages">Packages</a><a href="#macos">macOS settings</a><a href="#dotfiles">Dotfiles</a><a href="#keybinds">Keybinds</a><a href="#private">Private values</a><a href="#usage">Re-running</a></div></nav>
-<main>
-<section id="steps"><h2>What it does</h2>
-    <p>Homebrew always runs; everything else is a checkbox, all on by default. Each step checks what's already done, so re-running is safe.</p>
+<div class="wrap layout">
+  <nav class="toc" aria-label="Contents"><p>On this page</p><ol><li><a href="#run">The run</a></li><li><a href="#packages">Packages</a></li><li><a href="#macos">macOS settings</a></li><li><a href="#dotfiles">Dotfiles & keys</a></li><li><a href="#private">Private values</a></li><li><a href="#usage">Running it again</a></li></ol></nav>
+  <main>
+<section id="run" aria-labelledby="run-h">
+    <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">Ten steps, in this order</h2>
+    <p class="lede">Homebrew always runs. Everything else is a checkbox, all on by default. Each step first checks what's already done, so running it again only fills the gaps.</p></header>
     <ol class="steps">
-      <li class="card step">
-        <div class="step-head"><span class="num">1</span><h3>Homebrew</h3><code class="id">homebrew</code><span class="pill">always runs</span></div>
-        <p class="lead">Package manager everything else installs with</p>
-        <ul><li>Installs Homebrew to /opt/homebrew (non-interactive, uses the sudo session)</li><li>Adds <code>brew shellenv</code> to ~/.zprofile</li><li>Removes group write on /opt/homebrew/share so oh-my-zsh's compaudit stays quiet</li></ul>
-        
+      <li class="step" id="step-homebrew">
+        <div class="step-n" aria-hidden="true">01</div>
+        <div class="step-body">
+          <h3>Homebrew <code class="step-id">--only homebrew</code> <span class="tag">always runs</span></h3>
+          <p class="step-sum">Package manager everything else installs with</p>
+          <ul><li>Installs Homebrew to /opt/homebrew (non-interactive, uses the sudo session)</li><li>Adds <code>brew shellenv</code> to ~/.zprofile</li><li>Removes group write on /opt/homebrew/share so oh-my-zsh's compaudit stays quiet</li></ul>
+          
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">2</span><h3>CLI tools</h3><code class="id">cli</code></div>
-        <p class="lead">git, neovim, tmux, fzf, lazygit, gh, … (Homebrew formulae) + pnpm globals (pi)</p>
-        <ul><li>Installs 19 formulae from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Git: git, gh, git-delta, lazygit</li><li>Editor: neovim, tree-sitter-cli, ripgrep, fd</li><li>Terminal: tmux, fzf, stow, fastfetch, onefetch, nowplaying-cli</li><li>Dev: lazydocker, lazysql</li><li>System: terminal-notifier, mole, openfortivpn</li><li>pnpm globals (latest, <code>pnpm add -g</code>): @earendil-works/pi-coding-agent</li></ul>
-        
+      <li class="step" id="step-cli">
+        <div class="step-n" aria-hidden="true">02</div>
+        <div class="step-body">
+          <h3>CLI tools <code class="step-id">--only cli</code></h3>
+          <p class="step-sum">git, neovim, tmux, fzf, lazygit, gh, … (Homebrew formulae) + pnpm globals (pi)</p>
+          <ul><li>Installs 19 formulae from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Git: git, gh, git-delta, lazygit</li><li>Editor: neovim, tree-sitter-cli, ripgrep, fd</li><li>Terminal: tmux, fzf, stow, fastfetch, onefetch, nowplaying-cli</li><li>Dev: lazydocker, lazysql</li><li>System: terminal-notifier, mole, openfortivpn</li><li>pnpm globals (latest, <code>pnpm add -g</code>): @earendil-works/pi-coding-agent</li></ul>
+          
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">3</span><h3>Dotfiles + theme</h3><code class="id">dotfiles</code></div>
-        <p class="lead">oh-my-zsh, then link zsh, git, ghostty, tmux, nvim, lazygit, fastfetch, pi configs</p>
-        <ul><li>Clones oh-my-zsh to ~/.oh-my-zsh and zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions into ~/.config/zsh/plugins</li><li>Links dotfiles/{zsh,git,ghostty,tmux,nvim,lazygit,fastfetch,pi,stow} into $HOME with GNU stow</li><li>Real files in the way are moved to ~/.setup-backup/&lt;date&gt;/ (paths kept), never overwritten</li><li>Creates the theme links (<code>theme</code> state in ~/.config/theme, default kanagawa-wave)</li></ul>
-        <p class="muted">Needs: <code>stow</code> <code>git</code></p>
+      <li class="step" id="step-dotfiles">
+        <div class="step-n" aria-hidden="true">03</div>
+        <div class="step-body">
+          <h3>Dotfiles + theme <code class="step-id">--only dotfiles</code></h3>
+          <p class="step-sum">oh-my-zsh, then link zsh, git, ghostty, tmux, nvim, lazygit, fastfetch, pi configs</p>
+          <ul><li>Clones oh-my-zsh to ~/.oh-my-zsh and zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions into ~/.config/zsh/plugins</li><li>Links dotfiles/{zsh,git,ghostty,tmux,nvim,lazygit,fastfetch,pi,stow} into $HOME with GNU stow</li><li>Real files in the way are moved to ~/.setup-backup/&lt;date&gt;/ (paths kept), never overwritten</li><li>Creates the theme links (<code>theme</code> state in ~/.config/theme, default kanagawa-wave)</li></ul>
+          <p class="needs">Pulls in <span><code>stow</code> <code>git</code></span></p>
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">4</span><h3>Git + SSH</h3><code class="id">git</code></div>
-        <p class="lead">Git identity (personal + work via includeIf), SSH keys, optional upload to GitHub</p>
-        <ul><li>~/.gitconfig is stowed from dotfiles/git (delta pager, sane defaults, no identity)</li><li>~/.gitconfig.local gets [user] from private.env plus an includeIf that switches to the work identity under $WORK_DIR</li><li>~/.ssh/config is stowed; work host alias goes in ~/.ssh/config.local</li><li>Generates ed25519 keys (asks for a passphrase, stored in the macOS Keychain)</li><li>Optionally logs in with gh and uploads each key to its GitHub account</li></ul>
-        <p class="muted">Needs: <code>gh</code> <code>stow</code></p>
+      <li class="step" id="step-git">
+        <div class="step-n" aria-hidden="true">04</div>
+        <div class="step-body">
+          <h3>Git + SSH <code class="step-id">--only git</code></h3>
+          <p class="step-sum">Git identity (personal + work via includeIf), SSH keys, optional upload to GitHub</p>
+          <ul><li>~/.gitconfig is stowed from dotfiles/git (delta pager, sane defaults, no identity)</li><li>~/.gitconfig.local gets [user] from private.env plus an includeIf that switches to the work identity under $WORK_DIR</li><li>~/.ssh/config is stowed; work host alias goes in ~/.ssh/config.local</li><li>Generates ed25519 keys (asks for a passphrase, stored in the macOS Keychain)</li><li>Optionally logs in with gh and uploads each key to its GitHub account</li></ul>
+          <p class="needs">Pulls in <span><code>gh</code> <code>stow</code></span></p>
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">5</span><h3>Neovim</h3><code class="id">nvim</code></div>
-        <p class="lead">LazyVim plugins synced headlessly</p>
-        <ul><li>Runs <code>nvim --headless &quot;+Lazy! sync&quot;</code> then <code>&quot;+Lazy! clean&quot;</code> against the stowed LazyVim config</li><li>Mason installs language servers on first interactive start</li></ul>
-        <p class="muted">Needs: <code>neovim</code> <code>git</code> <code>ripgrep</code> <code>fd</code> <code>tree-sitter-cli</code></p>
+      <li class="step" id="step-nvim">
+        <div class="step-n" aria-hidden="true">05</div>
+        <div class="step-body">
+          <h3>Neovim <code class="step-id">--only nvim</code></h3>
+          <p class="step-sum">LazyVim plugins synced headlessly</p>
+          <ul><li>Runs <code>nvim --headless &quot;+Lazy! sync&quot;</code> then <code>&quot;+Lazy! clean&quot;</code> against the stowed LazyVim config</li><li>Mason installs language servers on first interactive start</li></ul>
+          <p class="needs">Pulls in <span><code>neovim</code> <code>git</code> <code>ripgrep</code> <code>fd</code> <code>tree-sitter-cli</code></span></p>
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">6</span><h3>AI skills</h3><code class="id">ai</code></div>
-        <p class="lead">Agent skills for pi (pi itself is a pnpm global under CLI tools)</p>
-        <ul><li>Skills via <code>npx skills@1.7.4 add &lt;repo&gt; --skill … -g --agent pi</code> into ~/.agents/skills:</li><li>vercel-labs/skills: find-skills</li><li>Leonxlnx/taste-skill: design-taste-frontend</li><li>GoogleChrome/modern-web-guidance: modern-web-guidance</li><li>mattpocock/skills: grill-me, to-spec, to-tickets, tdd, diagnosing-bugs, triage, implement, code-review, improve-codebase-architecture, setup-matt-pocock-skills</li></ul>
-        
+      <li class="step" id="step-ai">
+        <div class="step-n" aria-hidden="true">06</div>
+        <div class="step-body">
+          <h3>AI skills <code class="step-id">--only ai</code></h3>
+          <p class="step-sum">Agent skills for pi (pi itself is a pnpm global under CLI tools)</p>
+          <ul><li>Skills via <code>npx skills@1.7.4 add &lt;repo&gt; --skill … -g --agent pi</code> into ~/.agents/skills:</li><li>vercel-labs/skills: find-skills</li><li>Leonxlnx/taste-skill: design-taste-frontend</li><li>GoogleChrome/modern-web-guidance: modern-web-guidance</li><li>mattpocock/skills: grill-me, to-spec, to-tickets, tdd, diagnosing-bugs, triage, implement, code-review, improve-codebase-architecture, setup-matt-pocock-skills</li></ul>
+          
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">7</span><h3>Extras</h3><code class="id">extras</code></div>
-        <p class="lead">Helper commands, Swift tools, Pokemon background, SMB auto-mount, weekly cleanup jobs</p>
-        <ul><li>Links every file in bin/ into ~/.local/bin (dev, note, vpn, theme, pokemon-bg, setup, tmux widgets, …)</li><li>Compiles src/swift/*.swift into ~/.local/bin when the source changed</li><li>Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon</li><li>One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)</li><li>Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)</li><li>Daily <code>setup --sync</code>: anything you brew install, pnpm add -g or skills add by hand lands in the manifest (category Inbox); removals drop out; you get a notification and commit when ready</li></ul>
-        
+      <li class="step" id="step-extras">
+        <div class="step-n" aria-hidden="true">07</div>
+        <div class="step-body">
+          <h3>Extras <code class="step-id">--only extras</code></h3>
+          <p class="step-sum">Helper commands, Swift tools, Pokemon background, SMB auto-mount, weekly cleanup jobs</p>
+          <ul><li>Links every file in bin/ into ~/.local/bin (dev, note, vpn, theme, pokemon-bg, setup, tmux widgets, …)</li><li>Compiles src/swift/*.swift into ~/.local/bin when the source changed</li><li>Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon</li><li>One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)</li><li>Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)</li><li>Daily <code>setup --sync</code>: anything you brew install, pnpm add -g or skills add by hand lands in the manifest (category Inbox); removals drop out; you get a notification and commit when ready</li></ul>
+          
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">8</span><h3>flowd</h3><code class="id">flowd</code></div>
-        <p class="lead">Coding-time tracker: install fw, restore the journal, AI summaries with Haiku</p>
-        <ul><li>Installs <code>fw</code> from github.com/mahi160/flowd releases into ~/.local/bin (no sudo)</li><li>Clones the journal repo (FLOWD_JOURNAL_REMOTE in private.env) to ~/.local/share/flowd/journal</li><li>Restores flowd.db from ~/flowd-backup.zip if the journal has none (never overwrites)</li><li>Writes ~/.config/flowd/config.yaml with <code>ai_command: pi -p --model anthropic/claude-haiku-5-5:low</code></li><li>tmux.conf starts the daemon (<code>fw start</code>) whenever tmux starts</li></ul>
-        <p class="muted">Needs: <code>tmux</code> <code>git</code></p>
+      <li class="step" id="step-flowd">
+        <div class="step-n" aria-hidden="true">08</div>
+        <div class="step-body">
+          <h3>flowd <code class="step-id">--only flowd</code></h3>
+          <p class="step-sum">Coding-time tracker: install fw, restore the journal, AI summaries with Haiku</p>
+          <ul><li>Installs <code>fw</code> from github.com/mahi160/flowd releases into ~/.local/bin (no sudo)</li><li>Clones the journal repo (FLOWD_JOURNAL_REMOTE in private.env) to ~/.local/share/flowd/journal</li><li>Restores flowd.db from ~/flowd-backup.zip if the journal has none (never overwrites)</li><li>Writes ~/.config/flowd/config.yaml with <code>ai_command: pi -p --model anthropic/claude-haiku-5-5:low</code></li><li>tmux.conf starts the daemon (<code>fw start</code>) whenever tmux starts</li></ul>
+          <p class="needs">Pulls in <span><code>tmux</code> <code>git</code></span></p>
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">9</span><h3>GUI apps</h3><code class="id">apps</code></div>
-        <p class="lead">Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … (Homebrew casks)</p>
-        <ul><li>Installs 20 casks from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Terminal: ghostty</li><li>Browser: brave-browser</li><li>Productivity: tinycast, obsidian, alt-tab, shottr</li><li>Chat: slack, whatsapp, telegram</li><li>Utilities: localsend, mos, doll, stats</li><li>Network: tailscale-app</li><li>Dev: orbstack</li><li>Media: iina, transmission, tbis</li><li>Fonts: font-cascadia-code-nf, font-jetbrains-mono-nerd-font</li></ul>
-        
+      <li class="step" id="step-apps">
+        <div class="step-n" aria-hidden="true">09</div>
+        <div class="step-body">
+          <h3>GUI apps <code class="step-id">--only apps</code></h3>
+          <p class="step-sum">Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … (Homebrew casks)</p>
+          <ul><li>Installs 20 casks from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Terminal: ghostty</li><li>Browser: brave-browser</li><li>Productivity: tinycast, obsidian, alt-tab, shottr</li><li>Chat: slack, whatsapp, telegram</li><li>Utilities: localsend, mos, doll, stats</li><li>Network: tailscale-app</li><li>Dev: orbstack</li><li>Media: iina, transmission, tbis</li><li>Fonts: font-cascadia-code-nf, font-jetbrains-mono-nerd-font</li></ul>
+          
+        </div>
       </li>
-      <li class="card step">
-        <div class="step-head"><span class="num">10</span><h3>macOS settings</h3><code class="id">macos</code></div>
-        <p class="lead">106 system defaults (Dock, Finder, keyboard, trackpad, …), Caps Lock → Control, display scaling</p>
-        <ul><li>Applies the defaults table in installer/data/defaults.ts (Dock, Hot corners, Spaces &amp; windows, Finder, Dialogs, Keyboard, Trackpad, Screenshots, Menu bar, Speed &amp; appearance, Privacy &amp; noise); only drifted values are written</li><li>Restarts only the affected apps (Dock, Finder, SystemUIServer)</li><li>Frees ⌘Space from Spotlight for Tinycast</li><li>Caps Lock → Control via a hidutil LaunchAgent (no Karabiner)</li><li>No startup chime (nvram, needs sudo)</li><li>Display scaling &quot;More Space&quot;: the largest HiDPI mode of the built-in display</li></ul>
-        
+      <li class="step" id="step-macos">
+        <div class="step-n" aria-hidden="true">10</div>
+        <div class="step-body">
+          <h3>macOS settings <code class="step-id">--only macos</code></h3>
+          <p class="step-sum">106 system defaults (Dock, Finder, keyboard, trackpad, …), Caps Lock → Control, display scaling</p>
+          <ul><li>Applies the defaults table in installer/data/defaults.ts (Dock, Hot corners, Spaces &amp; windows, Finder, Dialogs, Keyboard, Trackpad, Screenshots, Menu bar, Speed &amp; appearance, Privacy &amp; noise); only drifted values are written</li><li>Restarts only the affected apps (Dock, Finder, SystemUIServer)</li><li>Frees ⌘Space from Spotlight for Tinycast</li><li>Caps Lock → Control via a hidutil LaunchAgent (no Karabiner)</li><li>No startup chime (nvram, needs sudo)</li><li>Display scaling &quot;More Space&quot;: the largest HiDPI mode of the built-in display</li></ul>
+          
+        </div>
       </li></ol></section>
-<section id="packages"><h2>Packages</h2>
-    <p>From <code>installer/data/apps.json</code> and <code>pnpm.json</code>. One batched <code>brew install</code> per kind; third-party taps are tapped first.</p>
-    <h3>CLI tools <span class="muted">(19)</span></h3><div class="grid"><div class="card"><h4>Git</h4><dl><dt><code>git</code></dt><dd>Newer git than the one in Xcode CLT</dd><dt><code>gh</code></dt><dd>GitHub CLI — auth, PRs, SSH key upload</dd><dt><code>git-delta</code></dt><dd>Syntax-highlighted diffs (git pager)</dd><dt><code>lazygit</code></dt><dd>Git TUI (<code>lg</code>)</dd></dl></div><div class="card"><h4>Editor</h4><dl><dt><code>neovim</code></dt><dd>Editor, LazyVim config (<code>v</code>)</dd><dt><code>tree-sitter-cli</code></dt><dd>Parser builds for nvim-treesitter</dd><dt><code>ripgrep</code></dt><dd>Fast grep, used by LazyVim pickers</dd><dt><code>fd</code></dt><dd>Fast find, used by LazyVim pickers</dd></dl></div><div class="card"><h4>Terminal</h4><dl><dt><code>tmux</code></dt><dd>Terminal multiplexer (no plugins)</dd><dt><code>fzf</code></dt><dd>Fuzzy finder — Ctrl-R history, Ctrl-T files</dd><dt><code>stow</code></dt><dd>Links dotfiles into $HOME</dd><dt><code>fastfetch</code></dt><dd>System info</dd><dt><code>onefetch</code></dt><dd>Repo info (<code>of</code>)</dd><dt><code>nowplaying-cli</code></dt><dd>Now-playing widget in the tmux status bar</dd></dl></div><div class="card"><h4>Dev</h4><dl><dt><code>lazydocker</code></dt><dd>Docker TUI (<code>ld</code>)</dd><dt><code>lazysql</code></dt><dd>SQL TUI — MySQL, PostgreSQL, SQLite, MSSQL</dd></dl></div><div class="card"><h4>System</h4><dl><dt><code>terminal-notifier</code></dt><dd>Notifications from pi</dd><dt><code>mole</code></dt><dd>Disk analyzer + app uninstaller (<code>mo analyze</code>, <code>mo uninstall</code>) — run by hand</dd><dt><code>openfortivpn</code></dt><dd>FortiGate VPN with SAML/SSO (<code>vpn</code>)</dd></dl></div></div><h3>GUI apps <span class="muted">(20)</span></h3><div class="grid"><div class="card"><h4>Terminal</h4><dl><dt><code>ghostty</code></dt><dd>Terminal</dd></dl></div><div class="card"><h4>Browser</h4><dl><dt><code>brave-browser</code></dt><dd>Browser</dd></dl></div><div class="card"><h4>Productivity</h4><dl><dt><code>tinycast</code></dt><dd>Launcher — clipboard history, window management, snippets</dd><dt><code>obsidian</code></dt><dd>Notes</dd><dt><code>alt-tab</code></dt><dd>Windows-style app switcher with previews</dd><dt><code>shottr</code></dt><dd>Screenshots with annotation and OCR</dd></dl></div><div class="card"><h4>Chat</h4><dl><dt><code>slack</code></dt><dd>Work chat</dd><dt><code>whatsapp</code></dt><dd>Messaging</dd><dt><code>telegram</code></dt><dd>Messaging</dd></dl></div><div class="card"><h4>Utilities</h4><dl><dt><code>localsend</code></dt><dd>AirDrop-style file sharing with any device</dd><dt><code>mos</code></dt><dd>Smooth scrolling for mice</dd><dt><code>doll</code></dt><dd>Menu bar notification badges</dd><dt><code>stats</code></dt><dd>CPU / memory / network in the menu bar</dd></dl></div><div class="card"><h4>Network</h4><dl><dt><code>tailscale-app</code></dt><dd>Tailscale VPN (menu bar app)</dd></dl></div><div class="card"><h4>Dev</h4><dl><dt><code>orbstack</code></dt><dd>Docker and Linux VMs</dd></dl></div><div class="card"><h4>Media</h4><dl><dt><code>iina</code></dt><dd>Video player</dd><dt><code>transmission</code></dt><dd>Torrent client</dd><dt><code>tbis</code></dt><dd>tbis — my app</dd></dl></div><div class="card"><h4>Fonts</h4><dl><dt><code>font-cascadia-code-nf</code></dt><dd>Cascadia Code Nerd Font (Ghostty)</dd><dt><code>font-jetbrains-mono-nerd-font</code></dt><dd>JetBrains Mono Nerd Font</dd></dl></div></div>
-    <h3>pnpm globals <span class="muted">(1)</span></h3><div class="card"><dl><dt><code>@earendil-works/pi-coding-agent</code></dt><dd>pi coding agent (always latest)</dd></dl></div>
-    <h3>Keeping the lists in sync</h3>
-    <p>A daily job (<code>setup --sync</code>) compares what's installed with the previous run. Anything you <code>brew install</code>, <code>pnpm add -g</code> or <code>npx skills add</code> by hand is appended to the JSON lists under the <strong>Inbox</strong> category; anything you uninstall is dropped. You get a notification and commit when ready. Never-sync names live in <code>installer/data/sync-ignore.json</code>.</p></section>
-<section id="macos"><h2>macOS settings <span class="muted">(106)</span></h2>
-    <p>Only values that differ are written; only affected apps restart. Protected ones need Full Disk Access for the terminal.</p>
-    <input id="filter" type="search" placeholder="Filter settings — e.g. dock, trackpad, finder" aria-label="Filter settings">
-    <div class="table-wrap"><table id="defaults"><thead><tr><th>Group</th><th>What</th><th>Domain / key</th><th>Value</th></tr></thead><tbody><tr data-search="dock auto-hide the dock com.apple.dock autohide">
-        <td>Dock</td><td>Auto-hide the Dock</td>
-        <td><code>com.apple.dock</code><br><code>autohide</code></td>
-        <td><code>true</code></td></tr><tr data-search="dock show the dock instantly com.apple.dock autohide-delay">
-        <td>Dock</td><td>Show the Dock instantly</td>
-        <td><code>com.apple.dock</code><br><code>autohide-delay</code></td>
-        <td><code>0</code></td></tr><tr data-search="dock no dock slide animation com.apple.dock autohide-time-modifier">
-        <td>Dock</td><td>No Dock slide animation</td>
-        <td><code>com.apple.dock</code><br><code>autohide-time-modifier</code></td>
-        <td><code>0</code></td></tr><tr data-search="dock no recent apps in the dock com.apple.dock show-recents">
-        <td>Dock</td><td>No recent apps in the Dock</td>
-        <td><code>com.apple.dock</code><br><code>show-recents</code></td>
-        <td><code>false</code></td></tr><tr data-search="dock dock shows only open apps com.apple.dock static-only">
-        <td>Dock</td><td>Dock shows only open apps</td>
-        <td><code>com.apple.dock</code><br><code>static-only</code></td>
-        <td><code>true</code></td></tr><tr data-search="dock small icons com.apple.dock tilesize">
-        <td>Dock</td><td>Small icons</td>
-        <td><code>com.apple.dock</code><br><code>tilesize</code></td>
-        <td><code>42</code></td></tr><tr data-search="dock magnify on hover com.apple.dock magnification">
-        <td>Dock</td><td>Magnify on hover</td>
-        <td><code>com.apple.dock</code><br><code>magnification</code></td>
-        <td><code>true</code></td></tr><tr data-search="dock magnified size com.apple.dock largesize">
-        <td>Dock</td><td>Magnified size</td>
-        <td><code>com.apple.dock</code><br><code>largesize</code></td>
-        <td><code>54</code></td></tr><tr data-search="dock no dots under running apps com.apple.dock show-process-indicators">
-        <td>Dock</td><td>No dots under running apps</td>
-        <td><code>com.apple.dock</code><br><code>show-process-indicators</code></td>
-        <td><code>false</code></td></tr><tr data-search="dock don't dim hidden apps com.apple.dock showhidden">
-        <td>Dock</td><td>Don't dim hidden apps</td>
-        <td><code>com.apple.dock</code><br><code>showhidden</code></td>
-        <td><code>false</code></td></tr><tr data-search="dock minimize into the app icon com.apple.dock minimize-to-application">
-        <td>Dock</td><td>Minimize into the app icon</td>
-        <td><code>com.apple.dock</code><br><code>minimize-to-application</code></td>
-        <td><code>true</code></td></tr><tr data-search="dock scale effect (faster than genie) com.apple.dock mineffect">
-        <td>Dock</td><td>Scale effect (faster than genie)</td>
-        <td><code>com.apple.dock</code><br><code>mineffect</code></td>
-        <td><code>scale</code></td></tr><tr data-search="dock no bouncing on launch com.apple.dock launchanim">
-        <td>Dock</td><td>No bouncing on launch</td>
-        <td><code>com.apple.dock</code><br><code>launchanim</code></td>
-        <td><code>false</code></td></tr><tr data-search="hot corners top-left corner: no action com.apple.dock wvous-tl-corner">
-        <td>Hot corners</td><td>Top-left corner: no action</td>
-        <td><code>com.apple.dock</code><br><code>wvous-tl-corner</code></td>
-        <td><code>1</code></td></tr><tr data-search="hot corners top-left corner: no modifier com.apple.dock wvous-tl-modifier">
-        <td>Hot corners</td><td>Top-left corner: no modifier</td>
-        <td><code>com.apple.dock</code><br><code>wvous-tl-modifier</code></td>
-        <td><code>0</code></td></tr><tr data-search="hot corners top-right corner: no action com.apple.dock wvous-tr-corner">
-        <td>Hot corners</td><td>Top-right corner: no action</td>
-        <td><code>com.apple.dock</code><br><code>wvous-tr-corner</code></td>
-        <td><code>1</code></td></tr><tr data-search="hot corners top-right corner: no modifier com.apple.dock wvous-tr-modifier">
-        <td>Hot corners</td><td>Top-right corner: no modifier</td>
-        <td><code>com.apple.dock</code><br><code>wvous-tr-modifier</code></td>
-        <td><code>0</code></td></tr><tr data-search="hot corners bottom-left corner: no action com.apple.dock wvous-bl-corner">
-        <td>Hot corners</td><td>Bottom-left corner: no action</td>
-        <td><code>com.apple.dock</code><br><code>wvous-bl-corner</code></td>
-        <td><code>1</code></td></tr><tr data-search="hot corners bottom-left corner: no modifier com.apple.dock wvous-bl-modifier">
-        <td>Hot corners</td><td>Bottom-left corner: no modifier</td>
-        <td><code>com.apple.dock</code><br><code>wvous-bl-modifier</code></td>
-        <td><code>0</code></td></tr><tr data-search="hot corners bottom-right corner: no action com.apple.dock wvous-br-corner">
-        <td>Hot corners</td><td>Bottom-right corner: no action</td>
-        <td><code>com.apple.dock</code><br><code>wvous-br-corner</code></td>
-        <td><code>1</code></td></tr><tr data-search="hot corners bottom-right corner: no modifier com.apple.dock wvous-br-modifier">
-        <td>Hot corners</td><td>Bottom-right corner: no modifier</td>
-        <td><code>com.apple.dock</code><br><code>wvous-br-modifier</code></td>
-        <td><code>0</code></td></tr><tr data-search="spaces &amp; windows don't reorder spaces by recent use com.apple.dock mru-spaces">
-        <td>Spaces &amp; windows</td><td>Don't reorder Spaces by recent use</td>
-        <td><code>com.apple.dock</code><br><code>mru-spaces</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows group windows by app in mission control com.apple.dock expose-group-apps">
-        <td>Spaces &amp; windows</td><td>Group windows by app in Mission Control</td>
-        <td><code>com.apple.dock</code><br><code>expose-group-apps</code></td>
-        <td><code>true</code></td></tr><tr data-search="spaces &amp; windows switching apps doesn't jump to another space com.apple.dock workspaces-auto-swoosh">
-        <td>Spaces &amp; windows</td><td>Switching apps doesn't jump to another Space</td>
-        <td><code>com.apple.dock</code><br><code>workspaces-auto-swoosh</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows dragging a window to the top tiles it instead of opening mission control com.apple.dock entermissioncontrolbytopwindowdrag">
-        <td>Spaces &amp; windows</td><td>Dragging a window to the top tiles it instead of opening Mission Control</td>
-        <td><code>com.apple.dock</code><br><code>enterMissionControlByTopWindowDrag</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows each display has its own spaces (after logout) com.apple.spaces spans-displays">
-        <td>Spaces &amp; windows</td><td>Each display has its own Spaces (after logout)</td>
-        <td><code>com.apple.spaces</code><br><code>spans-displays</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows clicking the wallpaper doesn't push windows aside com.apple.windowmanager enablestandardclicktoshowdesktop">
-        <td>Spaces &amp; windows</td><td>Clicking the wallpaper doesn't push windows aside</td>
-        <td><code>com.apple.WindowManager</code><br><code>EnableStandardClickToShowDesktop</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows stage manager off com.apple.windowmanager globallyenabled">
-        <td>Spaces &amp; windows</td><td>Stage Manager off</td>
-        <td><code>com.apple.WindowManager</code><br><code>GloballyEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows no widgets on the desktop com.apple.windowmanager standardhidewidgets">
-        <td>Spaces &amp; windows</td><td>No widgets on the desktop</td>
-        <td><code>com.apple.WindowManager</code><br><code>StandardHideWidgets</code></td>
-        <td><code>true</code></td></tr><tr data-search="spaces &amp; windows no widgets in stage manager com.apple.windowmanager stagemanagerhidewidgets">
-        <td>Spaces &amp; windows</td><td>No widgets in Stage Manager</td>
-        <td><code>com.apple.WindowManager</code><br><code>StageManagerHideWidgets</code></td>
-        <td><code>true</code></td></tr><tr data-search="spaces &amp; windows gapless window tiling com.apple.windowmanager enabletiledwindowmargins">
-        <td>Spaces &amp; windows</td><td>Gapless window tiling</td>
-        <td><code>com.apple.WindowManager</code><br><code>EnableTiledWindowMargins</code></td>
-        <td><code>false</code></td></tr><tr data-search="spaces &amp; windows ask to keep changes when closing documents nsglobaldomain nsclosealwaysconfirmschanges">
-        <td>Spaces &amp; windows</td><td>Ask to keep changes when closing documents</td>
-        <td><code>NSGlobalDomain</code><br><code>NSCloseAlwaysConfirmsChanges</code></td>
-        <td><code>true</code></td></tr><tr data-search="spaces &amp; windows don't reopen windows when apps relaunch com.apple.systempreferences nsquitalwayskeepswindows">
-        <td>Spaces &amp; windows</td><td>Don't reopen windows when apps relaunch</td>
-        <td><code>com.apple.systempreferences</code><br><code>NSQuitAlwaysKeepsWindows</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder icon view by default com.apple.finder fxpreferredviewstyle">
-        <td>Finder</td><td>Icon view by default</td>
-        <td><code>com.apple.finder</code><br><code>FXPreferredViewStyle</code></td>
-        <td><code>icnv</code></td></tr><tr data-search="finder path bar com.apple.finder showpathbar">
-        <td>Finder</td><td>Path bar</td>
-        <td><code>com.apple.finder</code><br><code>ShowPathbar</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder status bar com.apple.finder showstatusbar">
-        <td>Finder</td><td>Status bar</td>
-        <td><code>com.apple.finder</code><br><code>ShowStatusBar</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder show hidden files com.apple.finder appleshowallfiles">
-        <td>Finder</td><td>Show hidden files</td>
-        <td><code>com.apple.finder</code><br><code>AppleShowAllFiles</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder new windows open home com.apple.finder newwindowtarget">
-        <td>Finder</td><td>New windows open Home</td>
-        <td><code>com.apple.finder</code><br><code>NewWindowTarget</code></td>
-        <td><code>PfHm</code></td></tr><tr data-search="finder search the current folder com.apple.finder fxdefaultsearchscope">
-        <td>Finder</td><td>Search the current folder</td>
-        <td><code>com.apple.finder</code><br><code>FXDefaultSearchScope</code></td>
-        <td><code>SCcf</code></td></tr><tr data-search="finder no warning when changing extensions com.apple.finder fxenableextensionchangewarning">
-        <td>Finder</td><td>No warning when changing extensions</td>
-        <td><code>com.apple.finder</code><br><code>FXEnableExtensionChangeWarning</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder folders on top in windows com.apple.finder _fxsortfoldersfirst">
-        <td>Finder</td><td>Folders on top in windows</td>
-        <td><code>com.apple.finder</code><br><code>_FXSortFoldersFirst</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder folders on top on the desktop com.apple.finder _fxsortfoldersfirstondesktop">
-        <td>Finder</td><td>Folders on top on the desktop</td>
-        <td><code>com.apple.finder</code><br><code>_FXSortFoldersFirstOnDesktop</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder empty trash items after 30 days com.apple.finder fxremoveoldtrashitems">
-        <td>Finder</td><td>Empty Trash items after 30 days</td>
-        <td><code>com.apple.finder</code><br><code>FXRemoveOldTrashItems</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder no confirm when emptying trash com.apple.finder warnonemptytrash">
-        <td>Finder</td><td>No confirm when emptying Trash</td>
-        <td><code>com.apple.finder</code><br><code>WarnOnEmptyTrash</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder no external drives on the desktop com.apple.finder showexternalharddrivesondesktop">
-        <td>Finder</td><td>No external drives on the desktop</td>
-        <td><code>com.apple.finder</code><br><code>ShowExternalHardDrivesOnDesktop</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder no removable media on the desktop com.apple.finder showremovablemediaondesktop">
-        <td>Finder</td><td>No removable media on the desktop</td>
-        <td><code>com.apple.finder</code><br><code>ShowRemovableMediaOnDesktop</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder no servers on the desktop com.apple.finder showmountedserversondesktop">
-        <td>Finder</td><td>No servers on the desktop</td>
-        <td><code>com.apple.finder</code><br><code>ShowMountedServersOnDesktop</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder no tags in the sidebar com.apple.finder showrecenttags">
-        <td>Finder</td><td>No tags in the sidebar</td>
-        <td><code>com.apple.finder</code><br><code>ShowRecentTags</code></td>
-        <td><code>false</code></td></tr><tr data-search="finder no finder animations com.apple.finder disableallanimations">
-        <td>Finder</td><td>No Finder animations</td>
-        <td><code>com.apple.finder</code><br><code>DisableAllAnimations</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder show all file extensions nsglobaldomain appleshowallextensions">
-        <td>Finder</td><td>Show all file extensions</td>
-        <td><code>NSGlobalDomain</code><br><code>AppleShowAllExtensions</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder no .ds_store on network shares com.apple.desktopservices dsdontwritenetworkstores">
-        <td>Finder</td><td>No .DS_Store on network shares</td>
-        <td><code>com.apple.desktopservices</code><br><code>DSDontWriteNetworkStores</code></td>
-        <td><code>true</code></td></tr><tr data-search="finder no .ds_store on usb drives com.apple.desktopservices dsdontwriteusbstores">
-        <td>Finder</td><td>No .DS_Store on USB drives</td>
-        <td><code>com.apple.desktopservices</code><br><code>DSDontWriteUSBStores</code></td>
-        <td><code>true</code></td></tr><tr data-search="dialogs expanded save dialog nsglobaldomain nsnavpanelexpandedstateforsavemode">
-        <td>Dialogs</td><td>Expanded save dialog</td>
-        <td><code>NSGlobalDomain</code><br><code>NSNavPanelExpandedStateForSaveMode</code></td>
-        <td><code>true</code></td></tr><tr data-search="dialogs expanded save dialog nsglobaldomain nsnavpanelexpandedstateforsavemode2">
-        <td>Dialogs</td><td>Expanded save dialog</td>
-        <td><code>NSGlobalDomain</code><br><code>NSNavPanelExpandedStateForSaveMode2</code></td>
-        <td><code>true</code></td></tr><tr data-search="dialogs expanded print dialog nsglobaldomain pmprintingexpandedstateforprint">
-        <td>Dialogs</td><td>Expanded print dialog</td>
-        <td><code>NSGlobalDomain</code><br><code>PMPrintingExpandedStateForPrint</code></td>
-        <td><code>true</code></td></tr><tr data-search="dialogs expanded print dialog nsglobaldomain pmprintingexpandedstateforprint2">
-        <td>Dialogs</td><td>Expanded print dialog</td>
-        <td><code>NSGlobalDomain</code><br><code>PMPrintingExpandedStateForPrint2</code></td>
-        <td><code>true</code></td></tr><tr data-search="dialogs save to disk, not icloud nsglobaldomain nsdocumentsavenewdocumentstocloud">
-        <td>Dialogs</td><td>Save to disk, not iCloud</td>
-        <td><code>NSGlobalDomain</code><br><code>NSDocumentSaveNewDocumentsToCloud</code></td>
-        <td><code>false</code></td></tr><tr data-search="dialogs close the printer app when done com.apple.print.printingprefs quit when finished">
-        <td>Dialogs</td><td>Close the printer app when done</td>
-        <td><code>com.apple.print.PrintingPrefs</code><br><code>Quit When Finished</code></td>
-        <td><code>true</code></td></tr><tr data-search="keyboard key repeat instead of the accent popup nsglobaldomain applepressandholdenabled">
-        <td>Keyboard</td><td>Key repeat instead of the accent popup</td>
-        <td><code>NSGlobalDomain</code><br><code>ApplePressAndHoldEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="keyboard short delay before repeat nsglobaldomain initialkeyrepeat">
-        <td>Keyboard</td><td>Short delay before repeat</td>
-        <td><code>NSGlobalDomain</code><br><code>InitialKeyRepeat</code></td>
-        <td><code>25</code></td></tr><tr data-search="keyboard fast key repeat nsglobaldomain keyrepeat">
-        <td>Keyboard</td><td>Fast key repeat</td>
-        <td><code>NSGlobalDomain</code><br><code>KeyRepeat</code></td>
-        <td><code>2</code></td></tr><tr data-search="keyboard tab moves between all controls nsglobaldomain applekeyboarduimode">
-        <td>Keyboard</td><td>Tab moves between all controls</td>
-        <td><code>NSGlobalDomain</code><br><code>AppleKeyboardUIMode</code></td>
-        <td><code>2</code></td></tr><tr data-search="keyboard no autocorrect nsglobaldomain nsautomaticspellingcorrectionenabled">
-        <td>Keyboard</td><td>No autocorrect</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticSpellingCorrectionEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="keyboard no auto-capitalization nsglobaldomain nsautomaticcapitalizationenabled">
-        <td>Keyboard</td><td>No auto-capitalization</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticCapitalizationEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="keyboard no smart dashes nsglobaldomain nsautomaticdashsubstitutionenabled">
-        <td>Keyboard</td><td>No smart dashes</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticDashSubstitutionEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="keyboard no double-space period nsglobaldomain nsautomaticperiodsubstitutionenabled">
-        <td>Keyboard</td><td>No double-space period</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticPeriodSubstitutionEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="keyboard no smart quotes nsglobaldomain nsautomaticquotesubstitutionenabled">
-        <td>Keyboard</td><td>No smart quotes</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticQuoteSubstitutionEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad tap to click com.apple.applemultitouchtrackpad clicking">
-        <td>Trackpad</td><td>Tap to click</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>Clicking</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad tap to click (bluetooth trackpad) com.apple.driver.applebluetoothmultitouch.trackpad clicking">
-        <td>Trackpad</td><td>Tap to click (Bluetooth trackpad)</td>
-        <td><code>com.apple.driver.AppleBluetoothMultitouch.trackpad</code><br><code>Clicking</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad tap to click (login screen) nsglobaldomain com.apple.mouse.tapbehavior">
-        <td>Trackpad</td><td>Tap to click (login screen)</td>
-        <td><code>NSGlobalDomain</code><br><code>com.apple.mouse.tapBehavior</code></td>
-        <td><code>1</code></td></tr><tr data-search="trackpad tap to click (this mac) nsglobaldomain com.apple.mouse.tapbehavior">
-        <td>Trackpad</td><td>Tap to click (this Mac)</td>
-        <td><code>-currentHost NSGlobalDomain</code><br><code>com.apple.mouse.tapBehavior</code></td>
-        <td><code>1</code></td></tr><tr data-search="trackpad no three-finger drag com.apple.applemultitouchtrackpad trackpadthreefingerdrag">
-        <td>Trackpad</td><td>No three-finger drag</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>TrackpadThreeFingerDrag</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad no three-finger drag (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad trackpadthreefingerdrag">
-        <td>Trackpad</td><td>No three-finger drag (Bluetooth)</td>
-        <td><code>com.apple.driver.AppleBluetoothMultitouch.trackpad</code><br><code>TrackpadThreeFingerDrag</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad double-tap to drag com.apple.applemultitouchtrackpad dragging">
-        <td>Trackpad</td><td>Double-tap to drag</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>Dragging</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad drag ends when you lift com.apple.applemultitouchtrackpad draglock">
-        <td>Trackpad</td><td>Drag ends when you lift</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>DragLock</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad double-tap to drag (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad dragging">
-        <td>Trackpad</td><td>Double-tap to drag (Bluetooth)</td>
-        <td><code>com.apple.driver.AppleBluetoothMultitouch.trackpad</code><br><code>Dragging</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad drag ends when you lift (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad draglock">
-        <td>Trackpad</td><td>Drag ends when you lift (Bluetooth)</td>
-        <td><code>com.apple.driver.AppleBluetoothMultitouch.trackpad</code><br><code>DragLock</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad two-finger right click com.apple.applemultitouchtrackpad trackpadrightclick">
-        <td>Trackpad</td><td>Two-finger right click</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>TrackpadRightClick</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad smart zoom com.apple.applemultitouchtrackpad trackpadtwofingerdoubletapgesture">
-        <td>Trackpad</td><td>Smart zoom</td>
-        <td><code>com.apple.AppleMultitouchTrackpad</code><br><code>TrackpadTwoFingerDoubleTapGesture</code></td>
-        <td><code>1</code></td></tr><tr data-search="trackpad faster tracking nsglobaldomain com.apple.trackpad.scaling">
-        <td>Trackpad</td><td>Faster tracking</td>
-        <td><code>NSGlobalDomain</code><br><code>com.apple.trackpad.scaling</code></td>
-        <td><code>2</code></td></tr><tr data-search="trackpad force click nsglobaldomain com.apple.trackpad.forceclick">
-        <td>Trackpad</td><td>Force click</td>
-        <td><code>NSGlobalDomain</code><br><code>com.apple.trackpad.forceClick</code></td>
-        <td><code>true</code></td></tr><tr data-search="trackpad classic scroll direction nsglobaldomain com.apple.swipescrolldirection">
-        <td>Trackpad</td><td>Classic scroll direction</td>
-        <td><code>NSGlobalDomain</code><br><code>com.apple.swipescrolldirection</code></td>
-        <td><code>false</code></td></tr><tr data-search="trackpad no swipe back/forward in browsers nsglobaldomain appleenableswipenavigatewithscrolls">
-        <td>Trackpad</td><td>No swipe back/forward in browsers</td>
-        <td><code>NSGlobalDomain</code><br><code>AppleEnableSwipeNavigateWithScrolls</code></td>
-        <td><code>false</code></td></tr><tr data-search="screenshots save to downloads com.apple.screencapture location">
-        <td>Screenshots</td><td>Save to Downloads</td>
-        <td><code>com.apple.screencapture</code><br><code>location</code></td>
-        <td><code>$HOME/Downloads</code></td></tr><tr data-search="screenshots png com.apple.screencapture type">
-        <td>Screenshots</td><td>PNG</td>
-        <td><code>com.apple.screencapture</code><br><code>type</code></td>
-        <td><code>png</code></td></tr><tr data-search="screenshots no window shadow com.apple.screencapture disable-shadow">
-        <td>Screenshots</td><td>No window shadow</td>
-        <td><code>com.apple.screencapture</code><br><code>disable-shadow</code></td>
-        <td><code>true</code></td></tr><tr data-search="screenshots save instantly (no floating preview) com.apple.screencapture show-thumbnail">
-        <td>Screenshots</td><td>Save instantly (no floating preview)</td>
-        <td><code>com.apple.screencapture</code><br><code>show-thumbnail</code></td>
-        <td><code>false</code></td></tr><tr data-search="menu bar always show the menu bar nsglobaldomain _hihidemenubar">
-        <td>Menu bar</td><td>Always show the menu bar</td>
-        <td><code>NSGlobalDomain</code><br><code>_HIHideMenuBar</code></td>
-        <td><code>false</code></td></tr><tr data-search="menu bar clock: &quot;tue 20 oct  15:30&quot; com.apple.menuextra.clock dateformat">
-        <td>Menu bar</td><td>Clock: &quot;Tue 20 Oct  15:30&quot;</td>
-        <td><code>com.apple.menuextra.clock</code><br><code>DateFormat</code></td>
-        <td><code>EEE d MMM  HH:mm</code></td></tr><tr data-search="menu bar tighter menu bar icons (after logout) nsglobaldomain nsstatusitemspacing">
-        <td>Menu bar</td><td>Tighter menu bar icons (after logout)</td>
-        <td><code>-currentHost NSGlobalDomain</code><br><code>NSStatusItemSpacing</code></td>
-        <td><code>6</code></td></tr><tr data-search="menu bar tighter menu bar highlight (after logout) nsglobaldomain nsstatusitemselectionpadding">
-        <td>Menu bar</td><td>Tighter menu bar highlight (after logout)</td>
-        <td><code>-currentHost NSGlobalDomain</code><br><code>NSStatusItemSelectionPadding</code></td>
-        <td><code>6</code></td></tr><tr data-search="speed &amp; appearance no window open animations nsglobaldomain nsautomaticwindowanimationsenabled">
-        <td>Speed &amp; appearance</td><td>No window open animations</td>
-        <td><code>NSGlobalDomain</code><br><code>NSAutomaticWindowAnimationsEnabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="speed &amp; appearance instant sheet resize nsglobaldomain nswindowresizetime">
-        <td>Speed &amp; appearance</td><td>Instant sheet resize</td>
-        <td><code>NSGlobalDomain</code><br><code>NSWindowResizeTime</code></td>
-        <td><code>0.001</code></td></tr><tr data-search="speed &amp; appearance instant quick look nsglobaldomain qlpanelanimationduration">
-        <td>Speed &amp; appearance</td><td>Instant Quick Look</td>
-        <td><code>NSGlobalDomain</code><br><code>QLPanelAnimationDuration</code></td>
-        <td><code>0</code></td></tr><tr data-search="speed &amp; appearance windows don't tint to the wallpaper nsglobaldomain applereducedesktoptinting">
-        <td>Speed &amp; appearance</td><td>Windows don't tint to the wallpaper</td>
-        <td><code>NSGlobalDomain</code><br><code>AppleReduceDesktopTinting</code></td>
-        <td><code>true</code></td></tr><tr data-search="speed &amp; appearance reduce motion com.apple.universalaccess reducemotion">
-        <td>Speed &amp; appearance</td><td>Reduce motion</td>
-        <td><code>com.apple.universalaccess</code><br><code>reduceMotion</code></td>
-        <td><code>true</code></td></tr><tr data-search="speed &amp; appearance reduce transparency (opaque liquid glass) com.apple.universalaccess reducetransparency">
-        <td>Speed &amp; appearance</td><td>Reduce transparency (opaque Liquid Glass)</td>
-        <td><code>com.apple.universalaccess</code><br><code>reduceTransparency</code></td>
-        <td><code>true</code></td></tr><tr data-search="privacy &amp; noise siri off com.apple.assistant.support assistant enabled">
-        <td>Privacy &amp; noise</td><td>Siri off</td>
-        <td><code>com.apple.assistant.support</code><br><code>Assistant Enabled</code></td>
-        <td><code>false</code></td></tr><tr data-search="privacy &amp; noise no siri in the menu bar com.apple.siri statusmenuvisible">
-        <td>Privacy &amp; noise</td><td>No Siri in the menu bar</td>
-        <td><code>com.apple.Siri</code><br><code>StatusMenuVisible</code></td>
-        <td><code>false</code></td></tr><tr data-search="privacy &amp; noise don't offer siri com.apple.siri userhasdeclinedenable">
-        <td>Privacy &amp; noise</td><td>Don't offer Siri</td>
-        <td><code>com.apple.Siri</code><br><code>UserHasDeclinedEnable</code></td>
-        <td><code>true</code></td></tr><tr data-search="privacy &amp; noise game center off com.apple.gamed disabled">
-        <td>Privacy &amp; noise</td><td>Game Center off</td>
-        <td><code>com.apple.gamed</code><br><code>Disabled</code></td>
-        <td><code>true</code></td></tr><tr data-search="privacy &amp; noise no crash report dialogs com.apple.crashreporter dialogtype">
-        <td>Privacy &amp; noise</td><td>No crash report dialogs</td>
-        <td><code>com.apple.CrashReporter</code><br><code>DialogType</code></td>
-        <td><code>none</code></td></tr><tr data-search="privacy &amp; noise handoff off (send) com.apple.coreservices.useractivityd activityadvertisingallowed">
-        <td>Privacy &amp; noise</td><td>Handoff off (send)</td>
-        <td><code>com.apple.coreservices.useractivityd</code><br><code>ActivityAdvertisingAllowed</code></td>
-        <td><code>false</code></td></tr><tr data-search="privacy &amp; noise handoff off (receive) com.apple.coreservices.useractivityd activityreceivingallowed">
-        <td>Privacy &amp; noise</td><td>Handoff off (receive)</td>
-        <td><code>com.apple.coreservices.useractivityd</code><br><code>ActivityReceivingAllowed</code></td>
-        <td><code>false</code></td></tr><tr data-search="privacy &amp; noise photos doesn't open when a phone is plugged in com.apple.imagecapture disablehotplug">
-        <td>Privacy &amp; noise</td><td>Photos doesn't open when a phone is plugged in</td>
-        <td><code>com.apple.ImageCapture</code><br><code>disableHotPlug</code></td>
-        <td><code>true</code></td></tr><tr data-search="privacy &amp; noise no &quot;use this disk for time machine?&quot; prompts com.apple.timemachine donotoffernewdisksforbackup">
-        <td>Privacy &amp; noise</td><td>No &quot;use this disk for Time Machine?&quot; prompts</td>
-        <td><code>com.apple.TimeMachine</code><br><code>DoNotOfferNewDisksForBackup</code></td>
-        <td><code>true</code></td></tr></tbody></table></div>
-    <h3>By hand (no reliable key)</h3><ul><li>System Settings → Appearance → Liquid Glass: drag the slider to the most opaque setting</li><li>System Settings → Apple Intelligence &amp; Siri → turn off Apple Intelligence if unused (frees several GB)</li><li>System Settings → Notifications → turn off &quot;Summarize Notifications&quot;</li><li>System Settings → Menu Bar → untick the system items you never use</li><li>System Settings → Spotlight → untick categories you don't need; add code folders to Search Privacy</li><li>System Settings → General → Login Items &amp; Extensions → remove what you don't need</li></ul></section>
-<section id="dotfiles"><h2>Dotfiles</h2>
-    <p>Linked from <code>dotfiles/&lt;package&gt;</code> into <code>$HOME</code> with GNU stow. Real files in the way go to <code>~/.setup-backup/&lt;date&gt;/</code>.</p>
-    <dl class="defs"><dt><code>zsh</code></dt><dd>oh-my-zsh with the custom two-line <code>mahi</code> theme, fnm, fzf, z, autosuggestions, syntax highlighting</dd><dt><code>ghostty</code></dt><dd>Terminal: Cascadia Code, blur, Pokemon background, theme overlay</dd><dt><code>tmux</code></dt><dd>Prefix C-a, vim pane keys, native status bar (git, now playing, Claude usage), flowd autostart</dd><dt><code>nvim</code></dt><dd>LazyVim, oil, theme from <code>~/.config/theme</code></dd><dt><code>git</code></dt><dd><code>.gitconfig</code> (delta, sane defaults, identity in <code>~/.gitconfig.local</code>) and a global ignore</dd><dt><code>ssh</code></dt><dd><code>~/.ssh/config</code>: Keychain, GitHub host; work host in <code>config.local</code></dd><dt><code>lazygit</code></dt><dd>Config + theme overlay</dd><dt><code>fastfetch</code></dt><dd>System info layout</dd><dt><code>pi</code></dt><dd>The whole <code>~/.pi</code>: extensions, settings, themes, MCP servers</dd><dt><code>stow</code></dt><dd>Global ignore rules for stow (Perl regex)</dd></dl>
-    <h3 id="keybinds">Keybinds</h3><div class="grid"><div class="card"><h4>tmux (prefix C-a)</h4><dl class="keys"><dt><kbd>C-a r</kbd></dt><dd>Reload config</dd><dt><kbd>C-a - / C-a \</kbd></dt><dd>Split below / right (same directory)</dd><dt><kbd>C-a h j k l</kbd></dt><dd>Move between panes</dd><dt><kbd>C-a H J K L</kbd></dt><dd>Resize pane (repeatable)</dd><dt><kbd>C-a c</kbd></dt><dd>New window (same directory)</dd><dt><kbd>C-a n / p / Tab</kbd></dt><dd>Next / previous / last window</dd><dt><kbd>C-a &lt; / &gt;</kbd></dt><dd>Move window left / right</dd><dt><kbd>C-a v</kbd></dt><dd>Copy mode (v select, y copy to clipboard)</dd><dt><kbd>C-a m</kbd></dt><dd>Toggle mouse</dd><dt><kbd>C-a S / N / @</kbd></dt><dd>Choose / new / kill session</dd><dt><kbd>Alt-p</kbd></dt><dd>Popup shell in the current directory</dd><dt><kbd>Alt-o</kbd></dt><dd>Ask pi a quick question (popup)</dd><dt><kbd>Alt-n / Alt-l</kbd></dt><dd>Quick note / quick learning (popup)</dd></dl></div><div class="card"><h4>Ghostty</h4><dl class="keys"><dt><kbd>⌘`</kbd></dt><dd>Quick terminal (global)</dd><dt><kbd>⌘⇧,</kbd></dt><dd>Reload config</dd></dl></div><div class="card"><h4>zsh</h4><dl class="keys"><dt><kbd>Ctrl-R</kbd></dt><dd>Fuzzy history (fzf)</dd><dt><kbd>Ctrl-T / Alt-C</kbd></dt><dd>Fuzzy file / cd (fzf)</dd><dt><kbd>Esc Esc</kbd></dt><dd>Prefix the command with sudo</dd><dt><kbd>Alt-Q</kbd></dt><dd>New Pokemon background</dd><dt><kbd>z &lt;dir&gt;</kbd></dt><dd>Jump to a frequent directory</dd></dl></div><div class="card"><h4>Neovim (LazyVim)</h4><dl class="keys"><dt><kbd>-</kbd></dt><dd>Open the parent directory (oil)</dd><dt><kbd>Shift-J</kbd></dt><dd>Last buffer</dd><dt><kbd>Space Space</kbd></dt><dd>Find files</dd></dl></div><div class="card"><h4>macOS</h4><dl class="keys"><dt><kbd>⌘Space</kbd></dt><dd>Tinycast</dd><dt><kbd>Caps Lock</kbd></dt><dd>Control</dd><dt><kbd>fn ⌃ ←/→</kbd></dt><dd>Tile window left / right (built in)</dd></dl></div></div></section>
-<section id="private"><h2>Private values</h2>
-    <p>This repo is public. Personal values live in <code>~/.config/setthemacup/private.env</code>, asked for on the first run and never committed (template: <code>private.env.example</code>). Machine-only aliases go in <code>~/.config/zsh/local.zsh</code>.</p>
-    <dl class="defs"><dt><code>GIT_NAME</code></dt><dd>GitHub username</dd><dt><code>GIT_EMAIL</code></dt><dd>Personal git email</dd><dt><code>WORK_GIT_NAME</code></dt><dd>Work git name (empty = no work identity)</dd><dt><code>WORK_GIT_EMAIL</code></dt><dd>Work git email</dd><dt><code>WORK_DIR</code></dt><dd>Folder that holds work repos</dd><dt><code>WORK_SSH_HOST</code></dt><dd>Work GitHub SSH host alias</dd><dt><code>WORK_SSH_KEY</code></dt><dd>Work SSH key file name in ~/.ssh</dd><dt><code>NOTES_JOURNAL_DIR</code></dt><dd>Quick-notes folder</dd><dt><code>NOTES_PROJECT_DIR</code></dt><dd>Project notes vault (optional)</dd><dt><code>SMB_SHARES</code></dt><dd>SMB shares to auto-mount, &quot;name=smb://host&quot; space separated (optional)</dd><dt><code>FLOWD_JOURNAL_REMOTE</code></dt><dd>flowd journal repo, e.g. git@github.com:you/journal.git (optional)</dd><dt><code>FLOWD_MACHINE</code></dt><dd>flowd machine folder</dd></dl></section>
-<section id="usage"><h2>Re-running</h2><pre>setup — install and configure this Mac
-
-Usage: setup [options]
+<section id="packages" aria-labelledby="pkg-h">
+    <header class="sec-head"><p class="eyebrow">What gets installed</p><h2 id="pkg-h">Packages</h2>
+    <p class="lede">The lists live in <code>installer/data/*.json</code>. Each kind installs in one batched <code>brew install</code>; third-party taps are added first.</p></header>
+    <div class="pkg">
+    <h3>CLI tools <span class="count">19</span></h3><p class="note">Homebrew formulae</p>
+    <div class="cats"><div class="cat"><h4>Git</h4><dl><div><dt>git</dt><dd>Newer git than the one in Xcode CLT</dd></div><div><dt>gh</dt><dd>GitHub CLI — auth, PRs, SSH key upload</dd></div><div><dt>git-delta</dt><dd>Syntax-highlighted diffs (git pager)</dd></div><div><dt>lazygit</dt><dd>Git TUI (<code>lg</code>)</dd></div></dl></div><div class="cat"><h4>Editor</h4><dl><div><dt>neovim</dt><dd>Editor, LazyVim config (<code>v</code>)</dd></div><div><dt>tree-sitter-cli</dt><dd>Parser builds for nvim-treesitter</dd></div><div><dt>ripgrep</dt><dd>Fast grep, used by LazyVim pickers</dd></div><div><dt>fd</dt><dd>Fast find, used by LazyVim pickers</dd></div></dl></div><div class="cat"><h4>Terminal</h4><dl><div><dt>tmux</dt><dd>Terminal multiplexer (no plugins)</dd></div><div><dt>fzf</dt><dd>Fuzzy finder — Ctrl-R history, Ctrl-T files</dd></div><div><dt>stow</dt><dd>Links dotfiles into $HOME</dd></div><div><dt>fastfetch</dt><dd>System info</dd></div><div><dt>onefetch</dt><dd>Repo info (<code>of</code>)</dd></div><div><dt>nowplaying-cli</dt><dd>Now-playing widget in the tmux status bar</dd></div></dl></div><div class="cat"><h4>Dev</h4><dl><div><dt>lazydocker</dt><dd>Docker TUI (<code>ld</code>)</dd></div><div><dt>lazysql</dt><dd>SQL TUI — MySQL, PostgreSQL, SQLite, MSSQL</dd></div></dl></div><div class="cat"><h4>System</h4><dl><div><dt>terminal-notifier</dt><dd>Notifications from pi</dd></div><div><dt>mole</dt><dd>Disk analyzer + app uninstaller (<code>mo analyze</code>, <code>mo uninstall</code>) — run by hand</dd></div><div><dt>openfortivpn</dt><dd>FortiGate VPN with SAML/SSO (<code>vpn</code>)</dd></div></dl></div></div></div>
+    <div class="pkg">
+    <h3>Apps <span class="count">20</span></h3><p class="note">Homebrew casks, including fonts</p>
+    <div class="cats"><div class="cat"><h4>Terminal</h4><dl><div><dt>ghostty</dt><dd>Terminal</dd></div></dl></div><div class="cat"><h4>Browser</h4><dl><div><dt>brave-browser</dt><dd>Browser</dd></div></dl></div><div class="cat"><h4>Productivity</h4><dl><div><dt>tinycast<span class="tap">abue-ammar/tinycast</span></dt><dd>Launcher — clipboard history, window management, snippets</dd></div><div><dt>obsidian</dt><dd>Notes</dd></div><div><dt>alt-tab</dt><dd>Windows-style app switcher with previews</dd></div><div><dt>shottr</dt><dd>Screenshots with annotation and OCR</dd></div></dl></div><div class="cat"><h4>Chat</h4><dl><div><dt>slack</dt><dd>Work chat</dd></div><div><dt>whatsapp</dt><dd>Messaging</dd></div><div><dt>telegram</dt><dd>Messaging</dd></div></dl></div><div class="cat"><h4>Utilities</h4><dl><div><dt>localsend</dt><dd>AirDrop-style file sharing with any device</dd></div><div><dt>mos</dt><dd>Smooth scrolling for mice</dd></div><div><dt>doll</dt><dd>Menu bar notification badges</dd></div><div><dt>stats</dt><dd>CPU / memory / network in the menu bar</dd></div></dl></div><div class="cat"><h4>Network</h4><dl><div><dt>tailscale-app</dt><dd>Tailscale VPN (menu bar app)</dd></div></dl></div><div class="cat"><h4>Dev</h4><dl><div><dt>orbstack</dt><dd>Docker and Linux VMs</dd></div></dl></div><div class="cat"><h4>Media</h4><dl><div><dt>iina</dt><dd>Video player</dd></div><div><dt>transmission</dt><dd>Torrent client</dd></div><div><dt>tbis<span class="tap">mahi160/tbis</span></dt><dd>tbis — my app</dd></div></dl></div><div class="cat"><h4>Fonts</h4><dl><div><dt>font-cascadia-code-nf</dt><dd>Cascadia Code Nerd Font (Ghostty)</dd></div><div><dt>font-jetbrains-mono-nerd-font</dt><dd>JetBrains Mono Nerd Font</dd></div></dl></div></div></div>
+    <div class="pkg pkg-pair">
+      <div><h3>pnpm globals <span class="count">1</span></h3><p class="note">Always the latest version</p>
+        <dl class="flat"><div><dt>@earendil-works/pi-coding-agent</dt><dd>pi coding agent (always latest)</dd></div></dl></div>
+      <div><h3>Agent skills <span class="count">13</span></h3><p class="note">For pi, in <code>~/.agents/skills</code></p>
+        <dl class="flat"><div><dt>vercel-labs/skills</dt><dd><code>find-skills</code></dd></div><div><dt>Leonxlnx/taste-skill</dt><dd><code>design-taste-frontend</code></dd></div><div><dt>GoogleChrome/modern-web-guidance</dt><dd><code>modern-web-guidance</code></dd></div><div><dt>mattpocock/skills</dt><dd><code>grill-me</code> <code>to-spec</code> <code>to-tickets</code> <code>tdd</code> <code>diagnosing-bugs</code> <code>triage</code> <code>implement</code> <code>code-review</code> <code>improve-codebase-architecture</code> <code>setup-matt-pocock-skills</code></dd></div></dl></div>
+    </div>
+    <aside class="callout" id="sync">
+      <h3>The lists keep themselves current</h3>
+      <p>Every day at noon, <code>setup --sync</code> compares what's installed with the day before. Something you <code>brew install</code>, <code>pnpm add -g</code> or <code>npx skills add</code> by hand is appended under <strong>Inbox</strong> with its description. Something you uninstall drops out. A notification tells you what changed, and you commit when you're ready.</p>
+    </aside></section>
+<section id="macos" aria-labelledby="mac-h">
+    <header class="sec-head"><p class="eyebrow">System settings</p><h2 id="mac-h">macOS, the way it should feel</h2>
+    <p class="lede">106 settings. A run reads each one first and writes only those that drifted, then restarts just the apps that need it (Dock, Finder, SystemUIServer).</p></header>
+    <div class="filters"><label class="search" for="q"><span class="visually-hidden">Filter settings</span><input id="q" type="search" placeholder="Filter: dock, trackpad, finder…" autocomplete="off"></label>
+    <div class="chips" role="group" aria-label="Setting groups"><button type="button" class="chip" aria-pressed="true" data-g="">All 106</button><button type="button" class="chip" aria-pressed="false" data-g="dock">Dock</button><button type="button" class="chip" aria-pressed="false" data-g="hot-corners">Hot corners</button><button type="button" class="chip" aria-pressed="false" data-g="spaces-windows">Spaces &amp; windows</button><button type="button" class="chip" aria-pressed="false" data-g="finder">Finder</button><button type="button" class="chip" aria-pressed="false" data-g="dialogs">Dialogs</button><button type="button" class="chip" aria-pressed="false" data-g="keyboard">Keyboard</button><button type="button" class="chip" aria-pressed="false" data-g="trackpad">Trackpad</button><button type="button" class="chip" aria-pressed="false" data-g="screenshots">Screenshots</button><button type="button" class="chip" aria-pressed="false" data-g="menu-bar">Menu bar</button><button type="button" class="chip" aria-pressed="false" data-g="speed-appearance">Speed &amp; appearance</button><button type="button" class="chip" aria-pressed="false" data-g="privacy-noise">Privacy &amp; noise</button></div></div>
+    <div class="table-wrap"><table class="settings"><thead><tr><th scope="col">What it does</th><th scope="col">Command</th></tr></thead><tbody data-group="dock"><tr class="grp"><th colspan="2" scope="rowgroup">Dock <span class="count">13</span></th></tr><tr data-q="dock auto-hide the dock com.apple.dock autohide"><td>Auto-hide the Dock</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock autohide -bool true</code></td></tr><tr data-q="dock show the dock instantly com.apple.dock autohide-delay"><td>Show the Dock instantly</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock autohide-delay -float 0</code></td></tr><tr data-q="dock no dock slide animation com.apple.dock autohide-time-modifier"><td>No Dock slide animation</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock autohide-time-modifier -float 0</code></td></tr><tr data-q="dock no recent apps in the dock com.apple.dock show-recents"><td>No recent apps in the Dock</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock show-recents -bool false</code></td></tr><tr data-q="dock dock shows only open apps com.apple.dock static-only"><td>Dock shows only open apps</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock static-only -bool true</code></td></tr><tr data-q="dock small icons com.apple.dock tilesize"><td>Small icons</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock tilesize -int 42</code></td></tr><tr data-q="dock magnify on hover com.apple.dock magnification"><td>Magnify on hover</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock magnification -bool true</code></td></tr><tr data-q="dock magnified size com.apple.dock largesize"><td>Magnified size</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock largesize -int 54</code></td></tr><tr data-q="dock no dots under running apps com.apple.dock show-process-indicators"><td>No dots under running apps</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock show-process-indicators -bool false</code></td></tr><tr data-q="dock don't dim hidden apps com.apple.dock showhidden"><td>Don't dim hidden apps</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock showhidden -bool false</code></td></tr><tr data-q="dock minimize into the app icon com.apple.dock minimize-to-application"><td>Minimize into the app icon</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock minimize-to-application -bool true</code></td></tr><tr data-q="dock scale effect (faster than genie) com.apple.dock mineffect"><td>Scale effect (faster than genie)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock mineffect -string scale</code></td></tr><tr data-q="dock no bouncing on launch com.apple.dock launchanim"><td>No bouncing on launch</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock launchanim -bool false</code></td></tr></tbody><tbody data-group="hot-corners"><tr class="grp"><th colspan="2" scope="rowgroup">Hot corners <span class="count">8</span></th></tr><tr data-q="hot corners top-left corner: no action com.apple.dock wvous-tl-corner"><td>Top-left corner: no action</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-tl-corner -int 1</code></td></tr><tr data-q="hot corners top-left corner: no modifier com.apple.dock wvous-tl-modifier"><td>Top-left corner: no modifier</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-tl-modifier -int 0</code></td></tr><tr data-q="hot corners top-right corner: no action com.apple.dock wvous-tr-corner"><td>Top-right corner: no action</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-tr-corner -int 1</code></td></tr><tr data-q="hot corners top-right corner: no modifier com.apple.dock wvous-tr-modifier"><td>Top-right corner: no modifier</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-tr-modifier -int 0</code></td></tr><tr data-q="hot corners bottom-left corner: no action com.apple.dock wvous-bl-corner"><td>Bottom-left corner: no action</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-bl-corner -int 1</code></td></tr><tr data-q="hot corners bottom-left corner: no modifier com.apple.dock wvous-bl-modifier"><td>Bottom-left corner: no modifier</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-bl-modifier -int 0</code></td></tr><tr data-q="hot corners bottom-right corner: no action com.apple.dock wvous-br-corner"><td>Bottom-right corner: no action</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-br-corner -int 1</code></td></tr><tr data-q="hot corners bottom-right corner: no modifier com.apple.dock wvous-br-modifier"><td>Bottom-right corner: no modifier</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock wvous-br-modifier -int 0</code></td></tr></tbody><tbody data-group="spaces-windows"><tr class="grp"><th colspan="2" scope="rowgroup">Spaces &amp; windows <span class="count">12</span></th></tr><tr data-q="spaces &amp; windows don't reorder spaces by recent use com.apple.dock mru-spaces"><td>Don't reorder Spaces by recent use</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock mru-spaces -bool false</code></td></tr><tr data-q="spaces &amp; windows group windows by app in mission control com.apple.dock expose-group-apps"><td>Group windows by app in Mission Control</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock expose-group-apps -bool true</code></td></tr><tr data-q="spaces &amp; windows switching apps doesn't jump to another space com.apple.dock workspaces-auto-swoosh"><td>Switching apps doesn't jump to another Space</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock workspaces-auto-swoosh -bool false</code></td></tr><tr data-q="spaces &amp; windows dragging a window to the top tiles it instead of opening mission control com.apple.dock entermissioncontrolbytopwindowdrag"><td>Dragging a window to the top tiles it instead of opening Mission Control</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.dock enterMissionControlByTopWindowDrag -bool false</code></td></tr><tr data-q="spaces &amp; windows each display has its own spaces (after logout) com.apple.spaces spans-displays"><td>Each display has its own Spaces (after logout)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.spaces spans-displays -bool false</code></td></tr><tr data-q="spaces &amp; windows clicking the wallpaper doesn't push windows aside com.apple.windowmanager enablestandardclicktoshowdesktop"><td>Clicking the wallpaper doesn't push windows aside</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.WindowManager EnableStandardClickToShowDesktop -bool false</code></td></tr><tr data-q="spaces &amp; windows stage manager off com.apple.windowmanager globallyenabled"><td>Stage Manager off</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.WindowManager GloballyEnabled -bool false</code></td></tr><tr data-q="spaces &amp; windows no widgets on the desktop com.apple.windowmanager standardhidewidgets"><td>No widgets on the desktop</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.WindowManager StandardHideWidgets -bool true</code></td></tr><tr data-q="spaces &amp; windows no widgets in stage manager com.apple.windowmanager stagemanagerhidewidgets"><td>No widgets in Stage Manager</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.WindowManager StageManagerHideWidgets -bool true</code></td></tr><tr data-q="spaces &amp; windows gapless window tiling com.apple.windowmanager enabletiledwindowmargins"><td>Gapless window tiling</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.WindowManager EnableTiledWindowMargins -bool false</code></td></tr><tr data-q="spaces &amp; windows ask to keep changes when closing documents nsglobaldomain nsclosealwaysconfirmschanges"><td>Ask to keep changes when closing documents</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSCloseAlwaysConfirmsChanges -bool true</code></td></tr><tr data-q="spaces &amp; windows don't reopen windows when apps relaunch com.apple.systempreferences nsquitalwayskeepswindows"><td>Don't reopen windows when apps relaunch</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.systempreferences NSQuitAlwaysKeepsWindows -bool false</code></td></tr></tbody><tbody data-group="finder"><tr class="grp"><th colspan="2" scope="rowgroup">Finder <span class="count">19</span></th></tr><tr data-q="finder icon view by default com.apple.finder fxpreferredviewstyle"><td>Icon view by default</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder FXPreferredViewStyle -string icnv</code></td></tr><tr data-q="finder path bar com.apple.finder showpathbar"><td>Path bar</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowPathbar -bool true</code></td></tr><tr data-q="finder status bar com.apple.finder showstatusbar"><td>Status bar</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowStatusBar -bool true</code></td></tr><tr data-q="finder show hidden files com.apple.finder appleshowallfiles"><td>Show hidden files</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder AppleShowAllFiles -bool true</code></td></tr><tr data-q="finder new windows open home com.apple.finder newwindowtarget"><td>New windows open Home</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder NewWindowTarget -string PfHm</code></td></tr><tr data-q="finder search the current folder com.apple.finder fxdefaultsearchscope"><td>Search the current folder</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder FXDefaultSearchScope -string SCcf</code></td></tr><tr data-q="finder no warning when changing extensions com.apple.finder fxenableextensionchangewarning"><td>No warning when changing extensions</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder FXEnableExtensionChangeWarning -bool false</code></td></tr><tr data-q="finder folders on top in windows com.apple.finder _fxsortfoldersfirst"><td>Folders on top in windows</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder _FXSortFoldersFirst -bool true</code></td></tr><tr data-q="finder folders on top on the desktop com.apple.finder _fxsortfoldersfirstondesktop"><td>Folders on top on the desktop</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder _FXSortFoldersFirstOnDesktop -bool true</code></td></tr><tr data-q="finder empty trash items after 30 days com.apple.finder fxremoveoldtrashitems"><td>Empty Trash items after 30 days</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder FXRemoveOldTrashItems -bool true</code></td></tr><tr data-q="finder no confirm when emptying trash com.apple.finder warnonemptytrash"><td>No confirm when emptying Trash</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder WarnOnEmptyTrash -bool false</code></td></tr><tr data-q="finder no external drives on the desktop com.apple.finder showexternalharddrivesondesktop"><td>No external drives on the desktop</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowExternalHardDrivesOnDesktop -bool false</code></td></tr><tr data-q="finder no removable media on the desktop com.apple.finder showremovablemediaondesktop"><td>No removable media on the desktop</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowRemovableMediaOnDesktop -bool false</code></td></tr><tr data-q="finder no servers on the desktop com.apple.finder showmountedserversondesktop"><td>No servers on the desktop</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowMountedServersOnDesktop -bool false</code></td></tr><tr data-q="finder no tags in the sidebar com.apple.finder showrecenttags"><td>No tags in the sidebar</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder ShowRecentTags -bool false</code></td></tr><tr data-q="finder no finder animations com.apple.finder disableallanimations"><td>No Finder animations</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.finder DisableAllAnimations -bool true</code></td></tr><tr data-q="finder show all file extensions nsglobaldomain appleshowallextensions"><td>Show all file extensions</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain AppleShowAllExtensions -bool true</code></td></tr><tr data-q="finder no .ds_store on network shares com.apple.desktopservices dsdontwritenetworkstores"><td>No .DS_Store on network shares</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.desktopservices DSDontWriteNetworkStores -bool true</code></td></tr><tr data-q="finder no .ds_store on usb drives com.apple.desktopservices dsdontwriteusbstores"><td>No .DS_Store on USB drives</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.desktopservices DSDontWriteUSBStores -bool true</code></td></tr></tbody><tbody data-group="dialogs"><tr class="grp"><th colspan="2" scope="rowgroup">Dialogs <span class="count">6</span></th></tr><tr data-q="dialogs expanded save dialog nsglobaldomain nsnavpanelexpandedstateforsavemode"><td>Expanded save dialog</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true</code></td></tr><tr data-q="dialogs expanded save dialog nsglobaldomain nsnavpanelexpandedstateforsavemode2"><td>Expanded save dialog</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true</code></td></tr><tr data-q="dialogs expanded print dialog nsglobaldomain pmprintingexpandedstateforprint"><td>Expanded print dialog</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true</code></td></tr><tr data-q="dialogs expanded print dialog nsglobaldomain pmprintingexpandedstateforprint2"><td>Expanded print dialog</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true</code></td></tr><tr data-q="dialogs save to disk, not icloud nsglobaldomain nsdocumentsavenewdocumentstocloud"><td>Save to disk, not iCloud</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false</code></td></tr><tr data-q="dialogs close the printer app when done com.apple.print.printingprefs quit when finished"><td>Close the printer app when done</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.print.PrintingPrefs 'Quit When Finished' -bool true</code></td></tr></tbody><tbody data-group="keyboard"><tr class="grp"><th colspan="2" scope="rowgroup">Keyboard <span class="count">9</span></th></tr><tr data-q="keyboard key repeat instead of the accent popup nsglobaldomain applepressandholdenabled"><td>Key repeat instead of the accent popup</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain ApplePressAndHoldEnabled -bool false</code></td></tr><tr data-q="keyboard short delay before repeat nsglobaldomain initialkeyrepeat"><td>Short delay before repeat</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain InitialKeyRepeat -int 25</code></td></tr><tr data-q="keyboard fast key repeat nsglobaldomain keyrepeat"><td>Fast key repeat</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain KeyRepeat -int 2</code></td></tr><tr data-q="keyboard tab moves between all controls nsglobaldomain applekeyboarduimode"><td>Tab moves between all controls</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain AppleKeyboardUIMode -int 2</code></td></tr><tr data-q="keyboard no autocorrect nsglobaldomain nsautomaticspellingcorrectionenabled"><td>No autocorrect</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false</code></td></tr><tr data-q="keyboard no auto-capitalization nsglobaldomain nsautomaticcapitalizationenabled"><td>No auto-capitalization</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false</code></td></tr><tr data-q="keyboard no smart dashes nsglobaldomain nsautomaticdashsubstitutionenabled"><td>No smart dashes</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false</code></td></tr><tr data-q="keyboard no double-space period nsglobaldomain nsautomaticperiodsubstitutionenabled"><td>No double-space period</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false</code></td></tr><tr data-q="keyboard no smart quotes nsglobaldomain nsautomaticquotesubstitutionenabled"><td>No smart quotes</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false</code></td></tr></tbody><tbody data-group="trackpad"><tr class="grp"><th colspan="2" scope="rowgroup">Trackpad <span class="count">16</span></th></tr><tr data-q="trackpad tap to click com.apple.applemultitouchtrackpad clicking"><td>Tap to click</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad Clicking -bool true</code></td></tr><tr data-q="trackpad tap to click (bluetooth trackpad) com.apple.driver.applebluetoothmultitouch.trackpad clicking"><td>Tap to click (Bluetooth trackpad)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true</code></td></tr><tr data-q="trackpad tap to click (login screen) nsglobaldomain com.apple.mouse.tapbehavior"><td>Tap to click (login screen)</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain com.apple.mouse.tapBehavior -int 1</code></td></tr><tr data-q="trackpad tap to click (this mac) nsglobaldomain com.apple.mouse.tapbehavior"><td>Tap to click (this Mac)</td><td><code class="cmd"><span class="dim">defaults</span> -currentHost write -g com.apple.mouse.tapBehavior -int 1</code></td></tr><tr data-q="trackpad no three-finger drag com.apple.applemultitouchtrackpad trackpadthreefingerdrag"><td>No three-finger drag</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool false</code></td></tr><tr data-q="trackpad no three-finger drag (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad trackpadthreefingerdrag"><td>No three-finger drag (Bluetooth)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool false</code></td></tr><tr data-q="trackpad double-tap to drag com.apple.applemultitouchtrackpad dragging"><td>Double-tap to drag</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad Dragging -bool true</code></td></tr><tr data-q="trackpad drag ends when you lift com.apple.applemultitouchtrackpad draglock"><td>Drag ends when you lift</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad DragLock -bool false</code></td></tr><tr data-q="trackpad double-tap to drag (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad dragging"><td>Double-tap to drag (Bluetooth)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging -bool true</code></td></tr><tr data-q="trackpad drag ends when you lift (bluetooth) com.apple.driver.applebluetoothmultitouch.trackpad draglock"><td>Drag ends when you lift (Bluetooth)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.driver.AppleBluetoothMultitouch.trackpad DragLock -bool false</code></td></tr><tr data-q="trackpad two-finger right click com.apple.applemultitouchtrackpad trackpadrightclick"><td>Two-finger right click</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad TrackpadRightClick -bool true</code></td></tr><tr data-q="trackpad smart zoom com.apple.applemultitouchtrackpad trackpadtwofingerdoubletapgesture"><td>Smart zoom</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.AppleMultitouchTrackpad TrackpadTwoFingerDoubleTapGesture -int 1</code></td></tr><tr data-q="trackpad faster tracking nsglobaldomain com.apple.trackpad.scaling"><td>Faster tracking</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain com.apple.trackpad.scaling -float 2</code></td></tr><tr data-q="trackpad force click nsglobaldomain com.apple.trackpad.forceclick"><td>Force click</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain com.apple.trackpad.forceClick -bool true</code></td></tr><tr data-q="trackpad classic scroll direction nsglobaldomain com.apple.swipescrolldirection"><td>Classic scroll direction</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain com.apple.swipescrolldirection -bool false</code></td></tr><tr data-q="trackpad no swipe back/forward in browsers nsglobaldomain appleenableswipenavigatewithscrolls"><td>No swipe back/forward in browsers</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false</code></td></tr></tbody><tbody data-group="screenshots"><tr class="grp"><th colspan="2" scope="rowgroup">Screenshots <span class="count">4</span></th></tr><tr data-q="screenshots save to downloads com.apple.screencapture location"><td>Save to Downloads</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.screencapture location -string ~/Downloads</code></td></tr><tr data-q="screenshots png com.apple.screencapture type"><td>PNG</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.screencapture type -string png</code></td></tr><tr data-q="screenshots no window shadow com.apple.screencapture disable-shadow"><td>No window shadow</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.screencapture disable-shadow -bool true</code></td></tr><tr data-q="screenshots save instantly (no floating preview) com.apple.screencapture show-thumbnail"><td>Save instantly (no floating preview)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.screencapture show-thumbnail -bool false</code></td></tr></tbody><tbody data-group="menu-bar"><tr class="grp"><th colspan="2" scope="rowgroup">Menu bar <span class="count">4</span></th></tr><tr data-q="menu bar always show the menu bar nsglobaldomain _hihidemenubar"><td>Always show the menu bar</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain _HIHideMenuBar -bool false</code></td></tr><tr data-q="menu bar clock: &quot;tue 20 oct  15:30&quot; com.apple.menuextra.clock dateformat"><td>Clock: &quot;Tue 20 Oct  15:30&quot;</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.menuextra.clock DateFormat -string 'EEE d MMM  HH:mm'</code></td></tr><tr data-q="menu bar tighter menu bar icons (after logout) nsglobaldomain nsstatusitemspacing"><td>Tighter menu bar icons (after logout)</td><td><code class="cmd"><span class="dim">defaults</span> -currentHost write -g NSStatusItemSpacing -int 6</code></td></tr><tr data-q="menu bar tighter menu bar highlight (after logout) nsglobaldomain nsstatusitemselectionpadding"><td>Tighter menu bar highlight (after logout)</td><td><code class="cmd"><span class="dim">defaults</span> -currentHost write -g NSStatusItemSelectionPadding -int 6</code></td></tr></tbody><tbody data-group="speed-appearance"><tr class="grp"><th colspan="2" scope="rowgroup">Speed &amp; appearance <span class="count">6</span></th></tr><tr data-q="speed &amp; appearance no window open animations nsglobaldomain nsautomaticwindowanimationsenabled"><td>No window open animations</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false</code></td></tr><tr data-q="speed &amp; appearance instant sheet resize nsglobaldomain nswindowresizetime"><td>Instant sheet resize</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain NSWindowResizeTime -float 0.001</code></td></tr><tr data-q="speed &amp; appearance instant quick look nsglobaldomain qlpanelanimationduration"><td>Instant Quick Look</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain QLPanelAnimationDuration -float 0</code></td></tr><tr data-q="speed &amp; appearance windows don't tint to the wallpaper nsglobaldomain applereducedesktoptinting"><td>Windows don't tint to the wallpaper</td><td><code class="cmd"><span class="dim">defaults</span> write NSGlobalDomain AppleReduceDesktopTinting -bool true</code></td></tr><tr data-q="speed &amp; appearance reduce motion com.apple.universalaccess reducemotion"><td>Reduce motion <span class="tag tag-soft">needs Full Disk Access</span></td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.universalaccess reduceMotion -bool true</code></td></tr><tr data-q="speed &amp; appearance reduce transparency (opaque liquid glass) com.apple.universalaccess reducetransparency"><td>Reduce transparency (opaque Liquid Glass) <span class="tag tag-soft">needs Full Disk Access</span></td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.universalaccess reduceTransparency -bool true</code></td></tr></tbody><tbody data-group="privacy-noise"><tr class="grp"><th colspan="2" scope="rowgroup">Privacy &amp; noise <span class="count">9</span></th></tr><tr data-q="privacy &amp; noise siri off com.apple.assistant.support assistant enabled"><td>Siri off</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.assistant.support 'Assistant Enabled' -bool false</code></td></tr><tr data-q="privacy &amp; noise no siri in the menu bar com.apple.siri statusmenuvisible"><td>No Siri in the menu bar</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.Siri StatusMenuVisible -bool false</code></td></tr><tr data-q="privacy &amp; noise don't offer siri com.apple.siri userhasdeclinedenable"><td>Don't offer Siri</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.Siri UserHasDeclinedEnable -bool true</code></td></tr><tr data-q="privacy &amp; noise game center off com.apple.gamed disabled"><td>Game Center off</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.gamed Disabled -bool true</code></td></tr><tr data-q="privacy &amp; noise no crash report dialogs com.apple.crashreporter dialogtype"><td>No crash report dialogs</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.CrashReporter DialogType -string none</code></td></tr><tr data-q="privacy &amp; noise handoff off (send) com.apple.coreservices.useractivityd activityadvertisingallowed"><td>Handoff off (send)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false</code></td></tr><tr data-q="privacy &amp; noise handoff off (receive) com.apple.coreservices.useractivityd activityreceivingallowed"><td>Handoff off (receive)</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.coreservices.useractivityd ActivityReceivingAllowed -bool false</code></td></tr><tr data-q="privacy &amp; noise photos doesn't open when a phone is plugged in com.apple.imagecapture disablehotplug"><td>Photos doesn't open when a phone is plugged in</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.ImageCapture disableHotPlug -bool true</code></td></tr><tr data-q="privacy &amp; noise no &quot;use this disk for time machine?&quot; prompts com.apple.timemachine donotoffernewdisksforbackup"><td>No &quot;use this disk for Time Machine?&quot; prompts</td><td><code class="cmd"><span class="dim">defaults</span> write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true</code></td></tr></tbody></table>
+    <p class="empty" id="empty" hidden>No setting matches that filter.</p></div>
+    <div class="also"><div><h3>Also set</h3><ul>
+      <li>Caps Lock works as Control (a <code>hidutil</code> LaunchAgent, no Karabiner)</li>
+      <li>⌘Space is freed from Spotlight for Tinycast</li>
+      <li>No startup chime</li>
+      <li>Display scaling: the largest HiDPI mode of the built-in screen ("More Space")</li></ul></div>
+    <div><h3>Left for you</h3><p class="note">No reliable setting exists for these, so the run lists them at the end.</p><ul><li>Appearance → Liquid Glass: drag the slider to the most opaque setting</li><li>Apple Intelligence &amp; Siri → turn off Apple Intelligence if unused (frees several GB)</li><li>Notifications → turn off &quot;Summarize Notifications&quot;</li><li>Menu Bar → untick the system items you never use</li><li>Spotlight → untick categories you don't need; add code folders to Search Privacy</li><li>General → Login Items &amp; Extensions → remove what you don't need</li></ul></div></div>
+    </section>
+<section id="dotfiles" aria-labelledby="dot-h">
+    <header class="sec-head"><p class="eyebrow">Configuration</p><h2 id="dot-h">Dotfiles</h2>
+    <p class="lede">GNU stow links each folder in <code>dotfiles/</code> into your home folder. A real file in the way moves to <code>~/.setup-backup/&lt;date&gt;/</code> first; nothing is overwritten.</p></header>
+    <div class="table-wrap"><table class="dots"><thead><tr><th scope="col">Package</th><th scope="col">Lands at</th><th scope="col">What it sets up</th></tr></thead><tbody><tr><th scope="row"><code>zsh</code></th><td><code class="path">~/.zshrc · ~/.config/zsh</code></td><td>oh-my-zsh with the two-line <code>mahi</code> prompt, fnm, fzf history, <code>z</code>, autosuggestions, syntax highlighting</td></tr><tr><th scope="row"><code>ghostty</code></th><td><code class="path">~/.config/ghostty</code></td><td>Cascadia Code, background blur, a Pokemon in the corner, theme overlay</td></tr><tr><th scope="row"><code>tmux</code></th><td><code class="path">~/.config/tmux</code></td><td>Prefix C-a, vim pane keys, a native status bar (git, now playing, Claude usage), flowd autostart</td></tr><tr><th scope="row"><code>nvim</code></th><td><code class="path">~/.config/nvim</code></td><td>LazyVim with oil; the colorscheme follows <code>theme</code></td></tr><tr><th scope="row"><code>git</code></th><td><code class="path">~/.gitconfig</code></td><td>delta diffs and sane defaults; identity lives in <code>~/.gitconfig.local</code></td></tr><tr><th scope="row"><code>ssh</code></th><td><code class="path">~/.ssh/config</code></td><td>Keychain-backed keys and the GitHub host; work host in <code>config.local</code></td></tr><tr><th scope="row"><code>lazygit</code></th><td><code class="path">~/.config/lazygit</code></td><td>Config plus a theme overlay</td></tr><tr><th scope="row"><code>fastfetch</code></th><td><code class="path">~/.config/fastfetch</code></td><td>System info layout</td></tr><tr><th scope="row"><code>pi</code></th><td><code class="path">~/.pi</code></td><td>The whole agent directory: extensions, settings, themes, MCP servers</td></tr><tr><th scope="row"><code>stow</code></th><td><code class="path">~/.stow-global-ignore</code></td><td>What stow never links</td></tr></tbody></table></div>
+    <h3 id="keybinds" class="sub">Keybinds</h3>
+    <div class="keygrid"><div class="keys"><h4>tmux (prefix C-a)</h4><dl><div><dt><kbd>C-a r</kbd></dt><dd>Reload config</dd></div><div><dt><kbd>C-a -</kbd><span class="sep">/</span><kbd>C-a \</kbd></dt><dd>Split below / right (same directory)</dd></div><div><dt><kbd>C-a h j k l</kbd></dt><dd>Move between panes</dd></div><div><dt><kbd>C-a H J K L</kbd></dt><dd>Resize pane (repeatable)</dd></div><div><dt><kbd>C-a c</kbd></dt><dd>New window (same directory)</dd></div><div><dt><kbd>C-a n</kbd><span class="sep">/</span><kbd>p</kbd><span class="sep">/</span><kbd>Tab</kbd></dt><dd>Next / previous / last window</dd></div><div><dt><kbd>C-a &lt;</kbd><span class="sep">/</span><kbd>&gt;</kbd></dt><dd>Move window left / right</dd></div><div><dt><kbd>C-a v</kbd></dt><dd>Copy mode (v select, y copy to clipboard)</dd></div><div><dt><kbd>C-a m</kbd></dt><dd>Toggle mouse</dd></div><div><dt><kbd>C-a S</kbd><span class="sep">/</span><kbd>N</kbd><span class="sep">/</span><kbd>@</kbd></dt><dd>Choose / new / kill session</dd></div><div><dt><kbd>Alt-p</kbd></dt><dd>Popup shell in the current directory</dd></div><div><dt><kbd>Alt-o</kbd></dt><dd>Ask pi a quick question (popup)</dd></div><div><dt><kbd>Alt-n</kbd><span class="sep">/</span><kbd>Alt-l</kbd></dt><dd>Quick note / quick learning (popup)</dd></div></dl></div><div class="keys"><h4>Ghostty</h4><dl><div><dt><kbd>⌘`</kbd></dt><dd>Quick terminal (global)</dd></div><div><dt><kbd>⌘⇧,</kbd></dt><dd>Reload config</dd></div></dl></div><div class="keys"><h4>zsh</h4><dl><div><dt><kbd>Ctrl-R</kbd></dt><dd>Fuzzy history (fzf)</dd></div><div><dt><kbd>Ctrl-T</kbd><span class="sep">/</span><kbd>Alt-C</kbd></dt><dd>Fuzzy file / cd (fzf)</dd></div><div><dt><kbd>Esc Esc</kbd></dt><dd>Prefix the command with sudo</dd></div><div><dt><kbd>Alt-Q</kbd></dt><dd>New Pokemon background</dd></div><div><dt><kbd>z &lt;dir&gt;</kbd></dt><dd>Jump to a frequent directory</dd></div></dl></div><div class="keys"><h4>Neovim (LazyVim)</h4><dl><div><dt><kbd>-</kbd></dt><dd>Open the parent directory (oil)</dd></div><div><dt><kbd>Shift-J</kbd></dt><dd>Last buffer</dd></div><div><dt><kbd>Space Space</kbd></dt><dd>Find files</dd></div></dl></div><div class="keys"><h4>macOS</h4><dl><div><dt><kbd>⌘Space</kbd></dt><dd>Tinycast</dd></div><div><dt><kbd>Caps Lock</kbd></dt><dd>Control</dd></div><div><dt><kbd>fn ⌃ ←/→</kbd></dt><dd>Tile window left / right (built in)</dd></div></dl></div></div></section>
+<section id="private" aria-labelledby="priv-h">
+    <header class="sec-head"><p class="eyebrow">Kept out of the repo</p><h2 id="priv-h">Private values</h2>
+    <p class="lede">This repo is public. Git identity, work folder, notes vaults, SMB shares and private repos live in <code>~/.config/setthemacup/private.env</code>. The first run asks for them; the file is never committed. Machine-only shell aliases go in <code>~/.config/zsh/local.zsh</code>.</p></header>
+    <div class="table-wrap"><table class="vars"><tbody><tr><th scope="row"><code>GIT_NAME</code></th><td>GitHub username <span class="tag tag-soft">required</span></td></tr><tr><th scope="row"><code>GIT_EMAIL</code></th><td>Personal git email <span class="tag tag-soft">required</span></td></tr><tr><th scope="row"><code>WORK_GIT_NAME</code></th><td>Work git name (empty = no work identity)</td></tr><tr><th scope="row"><code>WORK_GIT_EMAIL</code></th><td>Work git email</td></tr><tr><th scope="row"><code>WORK_DIR</code></th><td>Folder that holds work repos</td></tr><tr><th scope="row"><code>WORK_SSH_HOST</code></th><td>Work GitHub SSH host alias</td></tr><tr><th scope="row"><code>WORK_SSH_KEY</code></th><td>Work SSH key file name in ~/.ssh</td></tr><tr><th scope="row"><code>NOTES_JOURNAL_DIR</code></th><td>Quick-notes folder</td></tr><tr><th scope="row"><code>NOTES_PROJECT_DIR</code></th><td>Project notes vault (optional)</td></tr><tr><th scope="row"><code>SMB_SHARES</code></th><td>SMB shares to auto-mount, &quot;name=smb://host&quot; space separated (optional)</td></tr><tr><th scope="row"><code>FLOWD_JOURNAL_REMOTE</code></th><td>flowd journal repo, e.g. git@github.com:you/journal.git (optional)</td></tr><tr><th scope="row"><code>FLOWD_MACHINE</code></th><td>flowd machine folder</td></tr></tbody></table></div></section>
+<section id="usage" aria-labelledby="use-h">
+    <header class="sec-head"><p class="eyebrow">Afterwards</p><h2 id="use-h">Running it again</h2>
+    <p class="lede"><code>setup</code> is on your PATH once the first run finishes. The end of every run shows a short list of things only a person can do (sign-ins, permissions, a restart), also saved to <code>~/.setup/logs/next-steps.md</code>.</p></header>
+    <pre class="code">Usage: setup [options]
 
   -y, --yes          run everything, no checklist or prompts
   -n, --dry-run      show what would run; change nothing
@@ -457,12 +344,43 @@ Usage: setup [options]
       --skip a,b     run everything except these
   -h, --help         this help
 
-Steps: homebrew, cli, dotfiles, git, nvim, ai, extras, flowd, apps, macos</pre>
-    <p>After the run, a checklist of manual steps is shown and saved to <code>~/.setup/logs/next-steps.md</code>.</p></section>
-</main>
-<footer>Generated from the installer's data by <code>pnpm run docs</code> · <a href="https://github.com/mahi160/setthemacup">github.com/mahi160/setthemacup</a></footer>
+Steps: homebrew, cli, dotfiles, git, nvim, ai, extras, flowd, apps, macos</pre></section>
+  </main>
+</div>
+<footer><div class="wrap"><span>Generated from the installer's own data with <code>pnpm run docs</code>.</span><a href="https://github.com/mahi160/setthemacup">github.com/mahi160/setthemacup</a></div></footer>
 <script>
-const f=document.getElementById('filter');f&&f.addEventListener('input',()=>{const q=f.value.trim().toLowerCase();for(const r of document.querySelectorAll('#defaults tbody tr'))r.hidden=q&&!r.dataset.search.includes(q)});
-const b=document.getElementById('copy');b&&b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.cmd);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)}catch{}});</script>
+(() => {
+  const copy = document.getElementById('copy');
+  copy?.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(copy.dataset.cmd); copy.textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents(document.getElementById('cmd')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); copy.textContent = 'Press ⌘C'; }
+    setTimeout(() => (copy.textContent = 'Copy'), 1800);
+  });
+
+  // Settings: text filter + group chips
+  const q = document.getElementById('q'), chips = [...document.querySelectorAll('.chip')], empty = document.getElementById('empty');
+  let group = '';
+  const apply = () => {
+    const term = q.value.trim().toLowerCase(); let shown = 0;
+    for (const tb of document.querySelectorAll('.settings tbody')) {
+      let n = 0;
+      for (const tr of tb.querySelectorAll('tr[data-q]')) {
+        const ok = (!group || tb.dataset.group === group) && (!term || tr.dataset.q.includes(term));
+        tr.hidden = !ok; if (ok) n++;
+      }
+      tb.hidden = n === 0; shown += n;
+    }
+    empty.hidden = shown > 0;
+  };
+  q.addEventListener('input', apply);
+  for (const c of chips) c.addEventListener('click', () => { group = c.dataset.g; chips.forEach((x) => x.setAttribute('aria-pressed', String(x === c))); apply(); });
+
+  // Contents rail follows the reader
+  const links = new Map([...document.querySelectorAll('.toc a')].map((a) => [a.getAttribute('href').slice(1), a]));
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { links.forEach((a) => a.removeAttribute('aria-current')); links.get(e.target.id)?.setAttribute('aria-current', 'true'); }
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('main > section').forEach((s) => io.observe(s));
+})();</script>
 </body>
 </html>
