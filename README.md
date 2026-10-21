@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 **You answer everything in the first few minutes, then it runs on its own.**
 
 1. **`bootstrap.sh`** asks for your Mac password once, installs Xcode Command Line Tools silently, clones this repo (→ `~/.setup`), and installs fnm, Node.js LTS and pnpm.
-2. **Questions:** the checklist (everything selected), "restart when done?", then a GitHub login in the browser (private settings + SSH key upload) and passphrases for any new SSH keys.
+2. **Questions:** the checklist (everything selected), "restart when done?", then a GitHub login in Brave, installed first so nothing opens Safari (private settings + SSH key upload) and passphrases for any new SSH keys.
 3. **Unattended:** everything below. Sudo prompts mid-run (a `.pkg` app) are answered with the password from step 1, which is kept in a private temp file and deleted when the run ends.
 
 | Step | What |
