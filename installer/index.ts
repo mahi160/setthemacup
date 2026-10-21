@@ -9,7 +9,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { styleText } from 'node:util';
-import { brewEnv, ensureFormulae, hasBrew } from './lib/brew.ts';
+import { brewEnv, ensureFormulae, hasBrew, install } from './lib/brew.ts';
 import { Logger } from './lib/log.ts';
 import { PRIVATE_ENV, loadPrivateEnv } from './lib/private.ts';
 import { adoptSecretFile, checkSudoPassword, storeSecret } from './lib/secrets.ts';
@@ -105,6 +105,13 @@ async function acquireSudo(): Promise<void> {
     refreshing = true;
     spawn('sudo', ['-A', '-v'], { stdio: 'ignore' }).on('close', () => (refreshing = false));
   }, 50_000).unref();
+}
+
+/** GitHub logins (gh auth login --web) open in Brave, never Safari: install it before the questions. */
+const BRAVE = '/Applications/Brave Browser.app';
+async function loginBrowser(ctx: Ctx): Promise<void> {
+  if (!existsSync(BRAVE)) await install(ctx, 'cask', ['brave-browser'], 'Install Brave for the GitHub login');
+  if (existsSync(BRAVE) || ctx.dryRun) process.env.GH_BROWSER = "open -a 'Brave Browser'";
 }
 
 interface Outcome {
@@ -256,7 +263,10 @@ async function main(): Promise<void> {
   const asking = plan.filter((st) => st.prepare);
   const skipRun = new Set<string>();
   if (asking.length) {
-    if (hasBrew()) await ensureFormulae(ctx, ['gh', 'git']);
+    if (hasBrew()) {
+      await ensureFormulae(ctx, ['gh', 'git']);
+      await loginBrowser(ctx);
+    }
     p.log.step(bold('Questions'));
     log.section('Questions');
     for (const step of asking) {
