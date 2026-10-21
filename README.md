@@ -20,11 +20,12 @@ curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.
 | Homebrew | Always runs |
 | CLI tools | git, gh, neovim, tmux, fzf, lazygit, delta, ripgrep, fd, … plus pnpm globals (pi) |
 | Dotfiles + theme | oh-my-zsh, then zsh, git, ghostty, tmux, nvim, lazygit, fastfetch and pi configs via GNU stow |
+| Private settings | Restores your private values from your private GitHub repo (or asks once) |
 | Git + SSH | Identity (personal + work via `includeIf`), SSH keys with Keychain passphrase, optional upload to GitHub |
 | Neovim | LazyVim plugins |
 | AI skills | Agent skills for pi |
 | Extras | Helper commands, Swift tools, SMB auto-mount, daily list sync, weekly cleanup |
-| flowd | Coding-time tracker + journal restore |
+| flowd | Coding-time tracker, journal + database restore, daily database backup |
 | GUI apps | Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … |
 | macOS settings | 100+ defaults, Caps Lock → Control, ⌘Space for Tinycast, display scaling |
 
@@ -47,7 +48,13 @@ A daily job runs `setup --sync`: install something by hand (`brew install`, `pnp
 
 ## Private values
 
-This repo is public. Git identity, work folder, notes vaults, SMB shares and private repos live in `~/.config/setthemacup/private.env` — the installer asks for them on the first run ([template](private.env.example)). Machine-only shell aliases go in `~/.config/zsh/local.zsh`.
+This repo is public. Everything personal (git identity, work folder, notes vaults, SMB shares, VPN gateways, machine-only aliases) lives in a **private** repo, `<you>/setthemacup-private`, cloned to `~/.config/setthemacup`:
+
+- **New Mac:** run the one-liner. After CLI tools, the *Private settings* step logs in with `gh` and clones that repo. Nothing to type.
+- **Very first time:** there's no such repo yet, so it asks each value once ([what it asks](private.env.example)) and creates the private repo from your answers.
+- **Changes:** edit files in `~/.config/setthemacup`; the daily sync commits and pushes them.
+
+The flowd database is backed up daily to a private release on your journal repo and restored from there on a new Mac.
 
 ## Layout
 

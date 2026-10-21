@@ -179,6 +179,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 <span class="t-bar">│</span>
 <span class="t-act">◆</span>  Choose what to set up <span class="t-dim">(Homebrew always runs)</span>
 <span class="t-bar">│</span>  <span class="t-on">◼</span> CLI tools         <span class="t-dim">git, neovim, tmux, fzf, lazygit, gh, …</span>
+<span class="t-bar">│</span>  <span class="t-on">◼</span> Private settings  <span class="t-dim">Restore private.env, VPN gateways and l…</span>
 <span class="t-bar">│</span>  <span class="t-on">◼</span> Dotfiles + theme  <span class="t-dim">oh-my-zsh, then link zsh, git, ghostty,…</span>
 <span class="t-bar">│</span>  <span class="t-on">◼</span> Git + SSH         <span class="t-dim">Git identity</span>
 <span class="t-bar">│</span>  <span class="t-on">◼</span> Neovim            <span class="t-dim">LazyVim plugins synced headlessly</span>
@@ -194,7 +195,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
   <nav class="toc" aria-label="Contents"><p>On this page</p><ol><li><a href="#run">The run</a></li><li><a href="#packages">Packages</a></li><li><a href="#macos">macOS settings</a></li><li><a href="#dotfiles">Dotfiles & keys</a></li><li><a href="#private">Private values</a></li><li><a href="#usage">Running it again</a></li></ol></nav>
   <main>
 <section id="run" aria-labelledby="run-h">
-    <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">Ten steps, in this order</h2>
+    <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">Eleven steps, in this order</h2>
     <p class="lede">Homebrew always runs. Everything else is a checkbox, all on by default. Each step first checks what's already done, so running it again only fills the gaps.</p></header>
     <ol class="steps">
       <li class="step" id="step-homebrew">
@@ -215,8 +216,17 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
           
         </div>
       </li>
-      <li class="step" id="step-dotfiles">
+      <li class="step" id="step-private">
         <div class="step-n" aria-hidden="true">03</div>
+        <div class="step-body">
+          <h3>Private settings <code class="step-id">--only private</code></h3>
+          <p class="step-sum">Restore private.env, VPN gateways and local aliases from your private GitHub repo</p>
+          <ul><li>Logs in with gh, then clones &lt;you&gt;/setthemacup-private (private) to ~/.config/setthemacup over HTTPS</li><li>No such repo yet: asks for each value once, then creates the private repo from your answers</li><li>Already cloned: pulls the latest</li><li>Links local.zsh into ~/.config/zsh; the daily sync commits and pushes any changes</li></ul>
+          <p class="needs">Pulls in <span><code>gh</code> <code>git</code></span></p>
+        </div>
+      </li>
+      <li class="step" id="step-dotfiles">
+        <div class="step-n" aria-hidden="true">04</div>
         <div class="step-body">
           <h3>Dotfiles + theme <code class="step-id">--only dotfiles</code></h3>
           <p class="step-sum">oh-my-zsh, then link zsh, git, ghostty, tmux, nvim, lazygit, fastfetch, pi configs</p>
@@ -225,7 +235,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-git">
-        <div class="step-n" aria-hidden="true">04</div>
+        <div class="step-n" aria-hidden="true">05</div>
         <div class="step-body">
           <h3>Git + SSH <code class="step-id">--only git</code></h3>
           <p class="step-sum">Git identity (personal + work via includeIf), SSH keys, optional upload to GitHub</p>
@@ -234,7 +244,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-nvim">
-        <div class="step-n" aria-hidden="true">05</div>
+        <div class="step-n" aria-hidden="true">06</div>
         <div class="step-body">
           <h3>Neovim <code class="step-id">--only nvim</code></h3>
           <p class="step-sum">LazyVim plugins synced headlessly</p>
@@ -243,7 +253,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-ai">
-        <div class="step-n" aria-hidden="true">06</div>
+        <div class="step-n" aria-hidden="true">07</div>
         <div class="step-body">
           <h3>AI skills <code class="step-id">--only ai</code></h3>
           <p class="step-sum">Agent skills for pi (pi itself is a pnpm global under CLI tools)</p>
@@ -252,7 +262,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-extras">
-        <div class="step-n" aria-hidden="true">07</div>
+        <div class="step-n" aria-hidden="true">08</div>
         <div class="step-body">
           <h3>Extras <code class="step-id">--only extras</code></h3>
           <p class="step-sum">Helper commands, Swift tools, Pokemon background, SMB auto-mount, weekly cleanup jobs</p>
@@ -261,16 +271,16 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-flowd">
-        <div class="step-n" aria-hidden="true">08</div>
+        <div class="step-n" aria-hidden="true">09</div>
         <div class="step-body">
           <h3>flowd <code class="step-id">--only flowd</code></h3>
           <p class="step-sum">Coding-time tracker: install fw, restore the journal, AI summaries with Haiku</p>
-          <ul><li>Installs <code>fw</code> from github.com/mahi160/flowd releases into ~/.local/bin (no sudo)</li><li>Clones the journal repo (FLOWD_JOURNAL_REMOTE in private.env) to ~/.local/share/flowd/journal</li><li>Restores flowd.db from ~/flowd-backup.zip if the journal has none (never overwrites)</li><li>Writes ~/.config/flowd/config.yaml with <code>ai_command: pi -p --model anthropic/claude-haiku-5-5:low</code></li><li>tmux.conf starts the daemon (<code>fw start</code>) whenever tmux starts</li></ul>
+          <ul><li>Installs <code>fw</code> from github.com/mahi160/flowd releases into ~/.local/bin (no sudo)</li><li>Clones the journal repo (FLOWD_JOURNAL_REMOTE in private.env) to ~/.local/share/flowd/journal</li><li>Restores flowd.db from the journal repo's private <code>db-backup</code> release (fallback: ~/flowd-backup.zip); never overwrites</li><li>Backs the database up daily (<code>flowd-backup</code>: sqlite snapshot, gzip, replaces the release asset — no git history growth)</li><li>Writes ~/.config/flowd/config.yaml with <code>ai_command: pi -p --model anthropic/claude-haiku-5-5:low</code></li><li>tmux.conf starts the daemon (<code>fw start</code>) whenever tmux starts</li></ul>
           <p class="needs">Pulls in <span><code>tmux</code> <code>git</code></span></p>
         </div>
       </li>
       <li class="step" id="step-apps">
-        <div class="step-n" aria-hidden="true">09</div>
+        <div class="step-n" aria-hidden="true">10</div>
         <div class="step-body">
           <h3>GUI apps <code class="step-id">--only apps</code></h3>
           <p class="step-sum">Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … (Homebrew casks)</p>
@@ -279,7 +289,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         </div>
       </li>
       <li class="step" id="step-macos">
-        <div class="step-n" aria-hidden="true">10</div>
+        <div class="step-n" aria-hidden="true">11</div>
         <div class="step-body">
           <h3>macOS settings <code class="step-id">--only macos</code></h3>
           <p class="step-sum">106 system defaults (Dock, Finder, keyboard, trackpad, …), Caps Lock → Control, display scaling</p>
@@ -328,7 +338,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
     <div class="keygrid"><div class="keys"><h4>tmux (prefix C-a)</h4><dl><div><dt><kbd>C-a r</kbd></dt><dd>Reload config</dd></div><div><dt><kbd>C-a -</kbd><span class="sep">/</span><kbd>C-a \</kbd></dt><dd>Split below / right (same directory)</dd></div><div><dt><kbd>C-a h j k l</kbd></dt><dd>Move between panes</dd></div><div><dt><kbd>C-a H J K L</kbd></dt><dd>Resize pane (repeatable)</dd></div><div><dt><kbd>C-a c</kbd></dt><dd>New window (same directory)</dd></div><div><dt><kbd>C-a n</kbd><span class="sep">/</span><kbd>p</kbd><span class="sep">/</span><kbd>Tab</kbd></dt><dd>Next / previous / last window</dd></div><div><dt><kbd>C-a &lt;</kbd><span class="sep">/</span><kbd>&gt;</kbd></dt><dd>Move window left / right</dd></div><div><dt><kbd>C-a v</kbd></dt><dd>Copy mode (v select, y copy to clipboard)</dd></div><div><dt><kbd>C-a m</kbd></dt><dd>Toggle mouse</dd></div><div><dt><kbd>C-a S</kbd><span class="sep">/</span><kbd>N</kbd><span class="sep">/</span><kbd>@</kbd></dt><dd>Choose / new / kill session</dd></div><div><dt><kbd>Alt-p</kbd></dt><dd>Popup shell in the current directory</dd></div><div><dt><kbd>Alt-o</kbd></dt><dd>Ask pi a quick question (popup)</dd></div><div><dt><kbd>Alt-n</kbd><span class="sep">/</span><kbd>Alt-l</kbd></dt><dd>Quick note / quick learning (popup)</dd></div></dl></div><div class="keys"><h4>Ghostty</h4><dl><div><dt><kbd>⌘`</kbd></dt><dd>Quick terminal (global)</dd></div><div><dt><kbd>⌘⇧,</kbd></dt><dd>Reload config</dd></div></dl></div><div class="keys"><h4>zsh</h4><dl><div><dt><kbd>Ctrl-R</kbd></dt><dd>Fuzzy history (fzf)</dd></div><div><dt><kbd>Ctrl-T</kbd><span class="sep">/</span><kbd>Alt-C</kbd></dt><dd>Fuzzy file / cd (fzf)</dd></div><div><dt><kbd>Esc Esc</kbd></dt><dd>Prefix the command with sudo</dd></div><div><dt><kbd>Alt-Q</kbd></dt><dd>New Pokemon background</dd></div><div><dt><kbd>z &lt;dir&gt;</kbd></dt><dd>Jump to a frequent directory</dd></div></dl></div><div class="keys"><h4>Neovim (LazyVim)</h4><dl><div><dt><kbd>-</kbd></dt><dd>Open the parent directory (oil)</dd></div><div><dt><kbd>Shift-J</kbd></dt><dd>Last buffer</dd></div><div><dt><kbd>Space Space</kbd></dt><dd>Find files</dd></div></dl></div><div class="keys"><h4>macOS</h4><dl><div><dt><kbd>⌘Space</kbd></dt><dd>Tinycast</dd></div><div><dt><kbd>Caps Lock</kbd></dt><dd>Control</dd></div><div><dt><kbd>fn ⌃ ←/→</kbd></dt><dd>Tile window left / right (built in)</dd></div></dl></div></div></section>
 <section id="private" aria-labelledby="priv-h">
     <header class="sec-head"><p class="eyebrow">Kept out of the repo</p><h2 id="priv-h">Private values</h2>
-    <p class="lede">This repo is public. Git identity, work folder, notes vaults, SMB shares and private repos live in <code>~/.config/setthemacup/private.env</code>. The first run asks for them; the file is never committed. Machine-only shell aliases go in <code>~/.config/zsh/local.zsh</code>.</p></header>
+    <p class="lede">This repo is public. Git identity, work folder, notes vaults, SMB shares, VPN gateways and machine-only aliases live in a separate <strong>private</strong> GitHub repo, <code>&lt;you&gt;/setthemacup-private</code>, cloned to <code>~/.config/setthemacup</code>. On a new Mac the Private settings step logs in with <code>gh</code> and clones it, so there's nothing to type. The very first time, it asks each value below once and creates that repo for you. The daily sync pushes any edits.</p></header>
     <div class="table-wrap"><table class="vars"><tbody><tr><th scope="row"><code>GIT_NAME</code></th><td>GitHub username <span class="tag tag-soft">required</span></td></tr><tr><th scope="row"><code>GIT_EMAIL</code></th><td>Personal git email <span class="tag tag-soft">required</span></td></tr><tr><th scope="row"><code>WORK_GIT_NAME</code></th><td>Work git name (empty = no work identity)</td></tr><tr><th scope="row"><code>WORK_GIT_EMAIL</code></th><td>Work git email</td></tr><tr><th scope="row"><code>WORK_DIR</code></th><td>Folder that holds work repos</td></tr><tr><th scope="row"><code>WORK_SSH_HOST</code></th><td>Work GitHub SSH host alias</td></tr><tr><th scope="row"><code>WORK_SSH_KEY</code></th><td>Work SSH key file name in ~/.ssh</td></tr><tr><th scope="row"><code>NOTES_JOURNAL_DIR</code></th><td>Quick-notes folder</td></tr><tr><th scope="row"><code>NOTES_PROJECT_DIR</code></th><td>Project notes vault (optional)</td></tr><tr><th scope="row"><code>SMB_SHARES</code></th><td>SMB shares to auto-mount, &quot;name=smb://host&quot; space separated (optional)</td></tr><tr><th scope="row"><code>FLOWD_JOURNAL_REMOTE</code></th><td>flowd journal repo, e.g. git@github.com:you/journal.git (optional)</td></tr><tr><th scope="row"><code>FLOWD_MACHINE</code></th><td>flowd machine folder</td></tr></tbody></table></div></section>
 <section id="usage" aria-labelledby="use-h">
     <header class="sec-head"><p class="eyebrow">Afterwards</p><h2 id="use-h">Running it again</h2>
@@ -344,7 +354,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
       --skip a,b     run everything except these
   -h, --help         this help
 
-Steps: homebrew, cli, dotfiles, git, nvim, ai, extras, flowd, apps, macos</pre></section>
+Steps: homebrew, cli, private, dotfiles, git, nvim, ai, extras, flowd, apps, macos</pre></section>
   </main>
 </div>
 <footer><div class="wrap"><span>Generated from the installer's own data with <code>pnpm run docs</code>.</span><a href="https://github.com/mahi160/setthemacup">github.com/mahi160/setthemacup</a></div></footer>

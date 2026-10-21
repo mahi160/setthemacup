@@ -15,6 +15,7 @@ import { HELP } from './plan.ts';
 import { steps } from './steps/index.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
+const WORDS: Record<number, string> = { 9: 'Nine', 10: 'Ten', 11: 'Eleven', 12: 'Twelve', 13: 'Thirteen' };
 const ONE_LINER = 'curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash';
 const GITHUB = 'https://github.com/mahi160/setthemacup';
 
@@ -75,7 +76,7 @@ function stepsSection(): string {
     )
     .join('');
   return `<section id="run" aria-labelledby="run-h">
-    <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">Ten steps, in this order</h2>
+    <header class="sec-head"><p class="eyebrow">The run</p><h2 id="run-h">${WORDS[steps.length] ?? steps.length} steps, in this order</h2>
     <p class="lede">Homebrew always runs. Everything else is a checkbox, all on by default. Each step first checks what's already done, so running it again only fills the gaps.</p></header>
     <ol class="steps">${items}</ol></section>`;
 }
@@ -174,7 +175,7 @@ function dotfilesSection(): string {
 function privateSection(): string {
   return `<section id="private" aria-labelledby="priv-h">
     <header class="sec-head"><p class="eyebrow">Kept out of the repo</p><h2 id="priv-h">Private values</h2>
-    <p class="lede">This repo is public. Git identity, work folder, notes vaults, SMB shares and private repos live in <code>~/.config/setthemacup/private.env</code>. The first run asks for them; the file is never committed. Machine-only shell aliases go in <code>~/.config/zsh/local.zsh</code>.</p></header>
+    <p class="lede">This repo is public. Git identity, work folder, notes vaults, SMB shares, VPN gateways and machine-only aliases live in a separate <strong>private</strong> GitHub repo, <code>&lt;you&gt;/setthemacup-private</code>, cloned to <code>~/.config/setthemacup</code>. On a new Mac the Private settings step logs in with <code>gh</code> and clones it, so there's nothing to type. The very first time, it asks each value below once and creates that repo for you. The daily sync pushes any edits.</p></header>
     <div class="table-wrap"><table class="vars"><tbody>${FIELDS.map((f) => `<tr><th scope="row"><code>${f.key}</code></th><td>${esc(f.message)}${f.required ? ' <span class="tag tag-soft">required</span>' : ''}</td></tr>`).join('')}</tbody></table></div></section>`;
 }
 

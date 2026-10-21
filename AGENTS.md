@@ -58,12 +58,13 @@ Run order is `installer/steps/index.ts`. Homebrew always runs; the rest are chec
 |---|---|---|
 | `homebrew` | Homebrew | install brew, `brew shellenv` in `.zprofile`, fix `share/` perms (required — failure aborts) |
 | `cli` | CLI tools | formulae from `data/apps.json` (one batched install) + pnpm globals from `data/pnpm.json` (pi, always latest) |
+| `private` | Private settings | gh login, clone `<login>/setthemacup-private` → `~/.config/setthemacup` over HTTPS (or ask once + create it), link `local.zsh` |
 | `dotfiles` | Dotfiles + theme | oh-my-zsh + plugins, stow packages (conflicts → `~/.setup-backup/<date>/`), theme links |
 | `git` | Git + SSH | `~/.gitconfig.local` (identity + work `includeIf`), stow ssh, keys with passphrase, optional `gh` upload |
 | `nvim` | Neovim | LazyVim headless sync + clean |
 | `ai` | AI skills | skills from `data/skills.json` (`--agent pi` → `~/.agents/skills`) |
 | `extras` | Extras | link `bin/*`, compile Swift, Pokemon bg, pi icon, SMB + scheduled LaunchAgents (`com.setthemacup.*`: daily sync, weekly cleanup) |
-| `flowd` | flowd | install `fw`, clone journal, restore db from `~/flowd-backup.zip`, generated config |
+| `flowd` | flowd | install `fw`, clone journal, restore db from the journal repo's private `db-backup` release (fallback `~/flowd-backup.zip`), daily `bin/flowd-backup` LaunchAgent, generated config |
 | `apps` | GUI apps | casks from `data/apps.json` (taps first) |
 | `macos` | macOS settings | `data/defaults.ts` (only drifted values written), ⌘Space, Caps→Ctrl, chime, display |
 
@@ -230,7 +231,7 @@ pnpm test && pnpm typecheck
 - **No TPM** — tmux is fully native; status bar uses `~/.local/bin/` scripts
 - **No shell setup scripts** — setup logic lives in `installer/` (TypeScript); `bootstrap.sh` is the only shell entry point
 - **No hardcoded `/Users/mahi`** anywhere
-- **No private data in the repo** (it is public): emails, names, work hosts/repos/URLs, LAN IPs, notes vault names, private repo names. They go in `~/.config/setthemacup/private.env` (template: `private.env.example`), loaded by the installer and `.zshenv`. Machine-local aliases go in `~/.config/zsh/local.zsh`
+- **No private data in the repo** (it is public): emails, names, work hosts/repos/URLs, LAN IPs, notes vault names, private repo names. They go in the private repo `<login>/setthemacup-private`, cloned to `~/.config/setthemacup` (`private.env`, `vpn-gateways`, `local.zsh` → `~/.config/zsh/local.zsh`, `work-mcp.json`). Template: `private.env.example`. The daily sync commits and pushes it
 - **No `prefix2 none`** in tmux — invalid key, silently errors
 - **No `escape-time 0`** in tmux — use 10ms minimum
 - **No `*.ext` in stow ignore** — use Perl regex `.*\.ext$`
