@@ -177,11 +177,11 @@ cd installer && pnpm test && pnpm typecheck
 
 - Config: `~/.pi/agent/` (whole directory stowed from `dotfiles/pi/`)
 - Packages are declared in `settings.json` under `"packages"` — pi auto-installs missing ones on startup (the installer only installs pi itself)
-- `"npmCommand": ["pnpm"]` makes pi install and look up those packages with pnpm (into `~/.pi/agent/npm/`)
+- `"npmCommand": ["pnpm", "--config.node-linker=hoisted"]` makes pi install and look up those packages with pnpm (into `~/.pi/agent/npm/`). Keep `hoisted`: pi's jiti loader resolves deps from the symlinked package path, so pnpm's isolated layout breaks transitive deps (e.g. pi-web-access → p-limit)
 - **Pin npm packages to an exact version** (`npm:pkg@1.2.3`). Unpinned `npm:` floats, and provider-overriding extensions see your OAuth token
 - MCP servers live in `mcp.json` and use pi's built-in MCP support. Do not install `pi-mcp-adapter`: it replaces the built-in support
 - Anthropic Claude Pro/Max OAuth compat comes from pi itself (Claude Code headers and tool-name casing in pi-ai) plus the local `extensions/pi-claude`, which renames non-Claude-Code tools to `mcp__pi__<name>` on the wire and maps calls back. Set `PI_CLAUDE_CODE_USE_DISABLE_TOOL_RENAME=1` to send the original names
-- `extensions/pi-permissions` never prompts: writes are allowed inside cwd, `~/.pi`, and temp dirs; everything else is read-only; secret paths are always blocked
+- `extensions/pi-permissions`: writes are allowed inside cwd, `~/.pi`, and temp dirs; writes elsewhere ask for confirmation (subagent dialogs relay to the parent; blocked when there is no UI, e.g. `pi -p`); secret paths are always blocked
 - `extensions/pi-orca` (on by default, `/orca` toggles) adds a `delegate` tool: the Opus orchestrator hands subtasks to fixed roles (`scout`/`tester` on Haiku, `coder`/`reviewer` on Sonnet). It shares the RPC child runner `extensions/lib/child-pi.ts` with pi-spawn; that folder has no `index.ts`, so pi never loads it as an extension. Children get `PI_CHILD=1`, which disables pi-orca inside them
 - `extensions/pi-recap` shows a short Haiku-written recap when you return to an idle session (terminal focus regained after 3+ min away; first keypress after 3+ min idle when the terminal sends no focus events). It never uses the session's model. `/recap` recaps now; `/recap off|on` persists in the gitignored `~/.pi/agent/recap.json`
 - Local extensions import only host-provided modules (`@earendil-works/*`, `typebox`), so they need no `package.json` or `node_modules`

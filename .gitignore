@@ -33,6 +33,7 @@ dotfiles/pi/.pi/agent/trust.json
 **/.pi/agent/mcp-auth.json
 
 # pi-managed caches
+**/.pi/agent/tmp/
 **/.pi/agent/models-store.json
 **/.pi/agent/web-search-cache/
 

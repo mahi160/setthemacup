@@ -13,7 +13,10 @@
   "collapseChangelog": true,
   "quietStartup": true,
   "defaultProjectTrust": "ask",
-  "npmCommand": ["pnpm"],
+  "npmCommand": [
+    "pnpm",
+    "--config.node-linker=hoisted"
+  ],
   "warnings": {
     "anthropicExtraUsage": false
   },
@@ -29,14 +32,15 @@
     "reserveTokens": 40000,
     "keepRecentTokens": 30000,
     "modelOverrides": {
-      "anthropic/claude-opus-5-5": { "reserveTokens": 800000 }
+      "anthropic/claude-opus-5-5": {
+        "reserveTokens": 600000
+      }
     }
   },
   "packages": [
     "npm:pi-web-access@0.33.0",
     "npm:@upstash/context7-pi@0.1.2",
-    "npm:pi-fzf-files@0.2.0",
-    "npm:@gotgenes/pi-anthropic-auth@2.0.1"
+    "npm:pi-fzf-files@0.2.0"
   ],
   "extensions": [
     "extensions/pi-claude/index.ts",
@@ -51,7 +55,7 @@
     "extensions/pi-title/index.ts",
     "extensions/pi-tmux-images/index.ts"
   ],
-  "lastChangelogVersion": "1.3.0",
+  "lastChangelogVersion": "1.4.0",
   "modelThinkingLevels": {
     "anthropic/claude-haiku-4-5": "high",
     "anthropic/claude-sonnet-5-5": "high",

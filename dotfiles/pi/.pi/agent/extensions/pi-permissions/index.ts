@@ -1,11 +1,11 @@
 /**
  * Minimal permission gate, built only on the public ExtensionAPI (pi.on("tool_call")).
  *
- * Policy (no prompts, so nothing ever waits on a dialog):
+ * Policy:
  * - Secure paths (keys, credentials, .env, …): always blocked, read or write.
  * - Reads: allowed anywhere.
  * - Writes (write / edit / mutating bash): allowed inside cwd, ~/.pi, and temp dirs;
- *   blocked everywhere else (read-only).
+ *   elsewhere ask for confirmation (subagents relay the dialog); blocked when there is no UI.
  */
 
 import { existsSync, realpathSync } from "node:fs";
@@ -127,12 +127,15 @@ function extractPathTokens(command: string): string[] {
 
 type Decision = { block: true; reason: string } | undefined;
 
-function blockWrite(target: string): Decision {
-	return { block: true, reason: `Read-only outside cwd, ~/.pi and temp dirs: ${target}` };
+async function askWrite(target: string, detail: string, ctx: ExtensionContext): Promise<Decision> {
+	const reason = `Write outside cwd, ~/.pi and temp dirs: ${target}`;
+	if (!ctx.hasUI) return { block: true, reason: `${reason} (no UI to confirm)` };
+	const ok = await ctx.ui.confirm("Allow write outside project?", `${target}\n\n${detail}`);
+	return ok ? undefined : { block: true, reason: `${reason} (denied by user)` };
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.on("tool_call", (event: ToolCallEvent, ctx: ExtensionContext): Decision => {
+	pi.on("tool_call", async (event: ToolCallEvent, ctx: ExtensionContext): Promise<Decision> => {
 		const input = event.input as { path?: unknown; command?: unknown };
 
 		if (READ_TOOLS.has(event.toolName)) {
@@ -145,7 +148,7 @@ export default function (pi: ExtensionAPI) {
 			if (typeof input.path !== "string") return undefined;
 			const resolved = resolvePath(input.path, ctx.cwd);
 			if (isSecurePath(resolved)) return { block: true, reason: `Refusing access to secure path: ${resolved}` };
-			return isWritable(resolved, ctx.cwd) ? undefined : blockWrite(resolved);
+			return isWritable(resolved, ctx.cwd) ? undefined : askWrite(resolved, `${event.toolName} ${resolved}`, ctx);
 		}
 
 		if (event.toolName === "bash" && typeof input.command === "string") {
@@ -157,7 +160,7 @@ export default function (pi: ExtensionAPI) {
 
 			// ponytail: parses direct verbs only; writes via bash -c, scripts, git -C, npm --prefix pass unchecked
 			const outsideHit = extractWriteTargets(command, ctx.cwd).find((p) => !isWritable(p, ctx.cwd));
-			return outsideHit ? blockWrite(outsideHit) : undefined;
+			return outsideHit ? askWrite(outsideHit, command, ctx) : undefined;
 		}
 
 		return undefined;
