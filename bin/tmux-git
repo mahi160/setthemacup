@@ -49,7 +49,7 @@ gitstatus=$(timeout 2 git -C "$path" status --porcelain 2>/dev/null)
 modified=$(printf '%s\n' "$gitstatus" | grep -v '^??' | grep -c '.' 2>/dev/null || echo 0)
 untracked=$(printf '%s\n' "$gitstatus" | grep -c '^??' 2>/dev/null || echo 0)
 
-size=$(timeout 1 du -sh "$path" 2>/dev/null | awk '{print $1}')
+size=$(timeout 1 du -sh -I node_modules -I dist -I build -I .next -I .turbo -I .cache -I coverage -I target -I .venv "$path" 2>/dev/null | awk '{print $1}')
 
 out="${B}⎇ $branch${X}"
 [ -n "$ahead" ]        && [ "$ahead" -gt 0 ]    && out="$out ${G}↑${ahead}${X}"
