@@ -203,6 +203,7 @@ cd installer && pnpm test && pnpm typecheck
 
 ### git
 - `~/.gitconfig` is stowed from `dotfiles/git/` and holds **no identity**. It includes `~/.gitconfig.local`, generated from `private.env` with `[user]` and an `includeIf "gitdir:$WORK_DIR/"` → `~/.gitconfig.work`
+- `gh`: the active account is personal. Under `$WORK_DIR`, `.zshrc` exports `GH_TOKEN` for `WORK_GH_USER` (a chpwd hook), and leaving the folder unsets it
 - Delta uses `syntax-theme = ansi`, so diffs follow the terminal theme
 - `~/.ssh/config` is stowed; it includes `~/.ssh/config.local` (generated work host alias)
 - Global ignore: `~/.gitignore_global` (stowed from `dotfiles/git/`)

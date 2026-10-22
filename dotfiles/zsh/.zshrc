@@ -65,6 +65,22 @@ _pokemon_bg_widget() {
 zle -N _pokemon_bg_widget
 bindkey '\eq' _pokemon_bg_widget
 
+# gh: $WORK_GH_USER under $WORK_DIR, the active gh account (personal) elsewhere
+if [[ -n ${WORK_GH_USER:-} && -n ${WORK_DIR:-} ]]; then
+  _gh_work_account() {
+    if [[ $PWD/ == ${WORK_DIR%/}/* ]]; then
+      [[ -n ${_GH_WORK:-} ]] && return
+      local token; token=$(gh auth token -u "$WORK_GH_USER" 2>/dev/null) || return
+      export GH_TOKEN=$token; _GH_WORK=1
+    elif [[ -n ${_GH_WORK:-} ]]; then
+      unset GH_TOKEN _GH_WORK
+    fi
+  }
+  autoload -Uz add-zsh-hook
+  add-zsh-hook chpwd _gh_work_account
+  _gh_work_account
+fi
+
 # ─── Environment ──────────────────────────────────────────────────────────────
 # pi — extended Anthropic prompt cache (1h instead of 5min)
 export PI_CACHE_RETENTION=long

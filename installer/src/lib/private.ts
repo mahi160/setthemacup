@@ -23,6 +23,7 @@ export const FIELDS: Field[] = [
   { key: 'WORK_GIT_NAME', message: 'Work git name (empty = no work identity)' },
   { key: 'WORK_GIT_EMAIL', message: 'Work git email' },
   { key: 'WORK_DIR', message: 'Folder that holds work repos', initial: '$HOME/Documents/Coding/Work' },
+  { key: 'WORK_GH_USER', message: 'Work GitHub login, used by gh under the work folder (optional)' },
   { key: 'WORK_SSH_HOST', message: 'Work GitHub SSH host alias', initial: 'work.github.com' },
   { key: 'WORK_SSH_KEY', message: 'Work SSH key file name in ~/.ssh', initial: 'work_ed25519' },
   { key: 'NOTES_JOURNAL_DIR', message: 'Quick-notes folder', initial: '$HOME/Documents/Notes/QuickNotes' },
