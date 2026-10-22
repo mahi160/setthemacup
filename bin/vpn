@@ -9,222 +9,255 @@
 #
 # Gateways: ~/.config/setthemacup/vpn-gateways (private repo), one per line:
 #   <name> <host:port> [routes=<cidr>,...] [domains=<domain>,...]
-# routes= makes it a split tunnel: only those networks use the VPN (gateway routes ignored);
-# domains= sends lookups for those domains to the VPN's DNS.
-# DNS: openfortivpn only writes /etc/resolv.conf, which macOS ignores, so once the tunnel
-# is up this script registers the VPN's DNS with configd (scutil) and removes it on
-# disconnect. Check with `scutil --dns`.
+# routes=  split tunnel: only these networks use the VPN (gateway routes ignored)
+# domains= extra domains to resolve through the VPN's DNS
+#
+# How it works:
+#   1. You pick a gateway; sudo starts this same script as root in the background (`--run`).
+#   2. The root side runs `openfortivpn --saml-login`, which waits for the SSO callback
+#      on 127.0.0.1:8020. You open the gateway's SAML page; after login it redirects there.
+#   3. When the log says "Tunnel is up", the root side adds split routes and DNS, then
+#      prints "vpn: ready". openfortivpn only writes /etc/resolv.conf, which macOS ignores,
+#      so DNS goes to configd with scutil (check with `scutil --dns`).
+#   4. `vpn stop` sends TERM to the root side; it forwards it to openfortivpn, which logs
+#      out. On exit the root side restores DNS.
+# Runtime files (log, name, pid) live in $TMPDIR/setthemacup-vpn.
 
 set -euo pipefail
 
 DNS_KEY="State:/Network/Service/setthemacup-vpn/DNS"
 BACKUP_KEY="State:/Network/setthemacup-vpn/SetupDNS"
-# Root-owned runner state (pid, dns, primary); the log stays in the user's $TMPDIR
-STATE="/var/run/setthemacup-vpn"
 
-# ── Root runner: vpn --run <log> <openfortivpn> <gateway> <routes> <domains> ──
-# Started detached via `sudo -b`; stdout/stderr go to <log>.
-if [[ ${1:-} == --run ]]; then
-  log="$2" ofv="$3" gateway="$4" routes="$5" domains="$6"
-  primary=""
-  mkdir -p -m 755 "$STATE"
+# ppp interface from the openfortivpn log
+tunnel_if() {
+  local i
+  i="$(sed -nE 's/.*Interface (ppp[0-9]+) is UP.*/\1/p' "$1" | head -1)"
+  echo "${i:-ppp0}"
+}
 
-  # "Got addresses: [ip], ns [a, b], ns_suffix [x;y]" → VPN DNS for macOS
-  dns_up() {
-    local got ns="" suffix="" n
-    got="$(grep -m1 'Got addresses:' "$log" || true)"
-    for n in $(sed -nE 's/.*ns \[([^]]*)\].*/\1/p' <<<"$got" | tr ',' ' '); do
-      if [[ $n != 0.0.0.0 ]]; then ns+="$n "; fi
-    done
-    # ns_suffix is absent when the gateway sends none
-    for n in $(sed -nE 's/.*ns_suffix \[([^]]*)\].*/\1/p' <<<"$got" | tr ';,' '  '); do
-      if [[ $n != "(null)" ]]; then suffix+="$n "; fi
-    done
-    suffix+="$domains"
-    [[ -n $ns ]] || { echo "vpn: no DNS servers in openfortivpn output; DNS unchanged"; return; }
+# ── Root side: vpn --run <dir> <openfortivpn> <gateway> <routes> <domains> ──
+# sudo's secure_path may pick /bin/bash 3.2: keep this part 3.2-safe (no empty arrays).
 
-    touch "$STATE/dns"
-    # Split tunnel: only the VPN's domains go to its DNS
-    if [[ -n $suffix ]]; then
-      scutil <<EOF
+# "Got addresses: [ip], ns [a, b], ns_suffix [x;y]" → items of ns / ns_suffix
+log_list() {
+  grep -m1 'Got addresses:' "$LOG" | sed -nE "s/.*$1 \[([^]]*)\].*/\1/p" | tr ',;' '  '
+}
+
+add_routes() {
+  [[ -n $ROUTES ]] || return 0
+  local ifname r
+  ifname="$(tunnel_if "$LOG")"
+  for r in $ROUTES; do
+    route -q -n add -net "$r" -interface "$ifname" || echo "vpn: route $r failed"
+  done
+  echo "vpn: split tunnel via VPN: $ROUTES"
+}
+
+# Split tunnel: macOS asks the VPN's DNS only for these domains
+dns_split() {
+  scutil <<EOF
 d.init
-d.add ServerAddresses * $ns
-d.add SearchDomains * $suffix
-d.add SupplementalMatchDomains * $suffix
+d.add ServerAddresses * $1
+d.add SearchDomains * $2
+d.add SupplementalMatchDomains * $2
 set $DNS_KEY
 EOF
-    fi
+}
 
-    # Full tunnel (default route on ppp): every lookup goes to the VPN's DNS.
-    # Override via Setup: (beats DHCP State: values, survives lease renewals); restore on exit
-    if route -n get default 2>/dev/null | grep -q 'interface: ppp'; then
-      primary="$(scutil <<<"show State:/Network/Global/IPv4" | awk '/PrimaryService/{print $3}')"
-      if [[ -n $primary ]]; then
-        printf '%s' "$primary" >"$STATE/primary"
-        scutil <<EOF
+# Full tunnel: every lookup goes to the VPN's DNS. Setup: beats DHCP values and survives
+# lease renewals; the old Setup: DNS (manual DNS, if any) is backed up for dns_down
+dns_full() {
+  PRIMARY="$(scutil <<<"show State:/Network/Global/IPv4" | awk '/PrimaryService/{print $3}')"
+  [[ -n $PRIMARY ]] || { echo "vpn: no primary network service; DNS unchanged"; return 1; }
+  scutil <<EOF
 d.init
-get Setup:/Network/Service/$primary/DNS
+get Setup:/Network/Service/$PRIMARY/DNS
 set $BACKUP_KEY
 d.init
-d.add ServerAddresses * $ns
-${suffix:+d.add SearchDomains * $suffix}
-set Setup:/Network/Service/$primary/DNS
+d.add ServerAddresses * $1
+${2:+d.add SearchDomains * $2}
+set Setup:/Network/Service/$PRIMARY/DNS
 EOF
-      fi
-    elif [[ -z $suffix ]]; then
-      echo "vpn: split tunnel without DNS suffix; DNS unchanged"
-      return
-    fi
-    echo "vpn: DNS → ${ns}${suffix:+(search: $suffix)}"
-  }
+}
 
-  dns_down() {
-    [[ -e $STATE/dns ]] || return 0
-    scutil <<<"remove $DNS_KEY" 2>/dev/null || true
-    [[ -n $primary ]] || return 0
-    # Empty backup = no manual DNS before; removing Setup: falls back to DHCP DNS
-    if scutil <<<"show $BACKUP_KEY" | grep -q ServerAddresses; then
-      scutil <<EOF || true
-d.init
+dns_up() {
+  local ns="" suffix="" n
+  for n in $(log_list ns); do [[ $n == 0.0.0.0 ]] || ns+="$n "; done
+  for n in $(log_list ns_suffix); do [[ $n == "(null)" ]] || suffix+="$n "; done
+  suffix+="$DOMAINS"
+  [[ -n $ns ]] || { echo "vpn: no DNS servers in openfortivpn output; DNS unchanged"; return 0; }
+
+  if route -n get default 2>/dev/null | grep -q 'interface: ppp'; then
+    dns_full "$ns" "$suffix" || return 0
+  elif [[ -n $suffix ]]; then
+    dns_split "$ns" "$suffix"
+  else
+    echo "vpn: split tunnel without DNS suffix; DNS unchanged"
+    return 0
+  fi
+  echo "vpn: DNS → ${ns}${suffix:+(search: $suffix)}"
+}
+
+dns_down() {
+  scutil <<<"remove $DNS_KEY" >/dev/null 2>&1 || true
+  [[ -n $PRIMARY ]] || return 0
+  # Empty backup = no manual DNS before; removing Setup: falls back to DHCP DNS
+  if scutil <<<"show $BACKUP_KEY" | grep -q ServerAddresses; then
+    scutil <<<"d.init
 get $BACKUP_KEY
-set Setup:/Network/Service/$primary/DNS
-remove $BACKUP_KEY
-EOF
-    else
-      scutil <<<"remove Setup:/Network/Service/$primary/DNS" || true
-      scutil <<<"remove $BACKUP_KEY" || true
-    fi
-  }
+set Setup:/Network/Service/$PRIMARY/DNS" || true
+  else
+    scutil <<<"remove Setup:/Network/Service/$PRIMARY/DNS" || true
+  fi
+  scutil <<<"remove $BACKUP_KEY" || true
+}
 
-  ofpid="" watcher=""
-  cleanup() {
-    set +e
-    kill $watcher 2>/dev/null
-    primary="$(cat "$STATE/primary" 2>/dev/null)"
-    dns_down
-    rm -f "$STATE/pid" "$STATE/dns" "$STATE/primary"
-    echo "vpn: disconnected"
-  }
-  trap cleanup EXIT
+ofv_alive() { kill -0 "$OFPID" 2>/dev/null; }
+
+root_cleanup() {
+  set +e
+  dns_down
+  rm -f "$DIR/pid"
+  echo "vpn: disconnected"
+}
+
+root_main() {
+  DIR=$1 OFV=$2 GATEWAY=$3 ROUTES=$4 DOMAINS=$5
+  LOG="$DIR/log" OFPID="" PRIMARY=""
+  trap root_cleanup EXIT
   # `vpn stop` sends TERM here; forward it so openfortivpn logs out cleanly
-  trap '[[ -z $ofpid ]] || kill -TERM "$ofpid" 2>/dev/null' TERM INT
+  trap 'kill -TERM "$OFPID" 2>/dev/null || true' TERM INT
 
-  split=()
-  [[ -z $routes ]] || split=(--set-routes=0)
-  # sudo's secure_path may pick /bin/bash 3.2: empty "${a[@]}" trips set -u there
-  "$ofv" "$gateway" --saml-login ${split[@]+"${split[@]}"} </dev/null &
-  ofpid=$!
+  # 1. Start openfortivpn; split tunnels skip the gateway's routes
+  local flags="--saml-login"
+  [[ -z $ROUTES ]] || flags+=" --set-routes=0"
+  "$OFV" "$GATEWAY" $flags </dev/null &
+  OFPID=$!
   # Published only now, so a stop signal always has openfortivpn to forward to
-  echo $$ >"$STATE/pid"
+  echo $$ >"$DIR/pid"
 
-  # Wait for the tunnel, then routes + DNS. Subshell, so state is shared via $STATE files.
-  (
-    until grep -q 'Tunnel is up' "$log" 2>/dev/null; do sleep 1; done
-    if [[ -n $routes ]]; then
-      ifname="$(sed -nE 's/.*Interface (ppp[0-9]+) is UP.*/\1/p' "$log" | head -1)"
-      for r in $routes; do
-        route -q -n add -net "$r" -interface "${ifname:-ppp0}" || echo "vpn: route $r failed"
-      done
-      echo "vpn: split tunnel via VPN: $routes"
-    fi
-    dns_up || echo "vpn: DNS setup failed"
-    echo "vpn: ready"
-  ) &
-  watcher=$!
+  # 2. Wait for the browser login to bring the tunnel up
+  until grep -q 'Tunnel is up' "$LOG"; do
+    ofv_alive || exit 0
+    sleep 1
+  done
 
-  # A trapped signal interrupts the first wait; the second collects openfortivpn's exit
-  while kill -0 "$ofpid" 2>/dev/null; do wait "$ofpid" || true; done
-  exit 0
-fi
+  # 3. Routes + DNS
+  add_routes
+  dns_up || echo "vpn: DNS setup failed"
+  echo "vpn: ready"
+
+  # 4. Stay until openfortivpn exits; a trapped signal interrupts wait, so loop
+  while ofv_alive; do wait "$OFPID" || true; done
+}
 
 # ── User side ──
-run="${TMPDIR:-/tmp}"
-run="${run%/}/setthemacup-vpn"
+DIR="${TMPDIR:-/tmp}"
+DIR="${DIR%/}/setthemacup-vpn"
+GATEWAYS="$HOME/.config/setthemacup/vpn-gateways"
 
 running() {
-  [[ -s $STATE/pid ]] && ps -p "$(cat "$STATE/pid")" -o command= 2>/dev/null | grep -q -- '--run'
+  [[ -s $DIR/pid ]] && ps -p "$(cat "$DIR/pid")" -o command= 2>/dev/null | grep -q -- '--run'
+}
+
+fail() {
+  echo "vpn: $1:" >&2
+  tail -n 15 "$DIR/log" >&2
+  exit 1
 }
 
 status() {
-  if ! running; then echo "vpn: disconnected"; return 1; fi
-  local pid ifname ip
-  pid="$(cat "$STATE/pid")"
-  if ! grep -q 'Tunnel is up' "$run/log"; then
-    echo "vpn: $(cat "$run/name") connecting (waiting for browser login)"
+  running || { echo "vpn: disconnected"; return 1; }
+  local name ifname ip
+  name="$(cat "$DIR/name")"
+  if ! grep -q 'Tunnel is up' "$DIR/log"; then
+    echo "vpn: $name connecting (waiting for browser login)"
     return 0
   fi
-  ifname="$(sed -nE 's/.*Interface (ppp[0-9]+) is UP.*/\1/p' "$run/log" | head -1)"
-  ip="$(ifconfig "${ifname:-ppp0}" 2>/dev/null | awk '/inet /{print $2}')"
-  echo "vpn: $(cat "$run/name") connected, up $(ps -p "$pid" -o etime= | tr -d ' ')"
-  echo "  interface: ${ifname:-ppp0} ${ip:-?}"
-  grep -E '^vpn: (split|DNS|no DNS)' "$run/log" | sed 's/^vpn: /  /' || true
+  ifname="$(tunnel_if "$DIR/log")"
+  ip="$(ifconfig "$ifname" 2>/dev/null | awk '/inet /{print $2}')"
+  echo "vpn: $name connected, up $(ps -p "$(cat "$DIR/pid")" -o etime= | tr -d ' ')"
+  echo "  interface: $ifname ${ip:-?}"
+  grep -E '^vpn: (split|DNS|no DNS)' "$DIR/log" | sed 's/^vpn: /  /' || true
 }
 
 stop() {
   running || { echo "vpn: not connected"; return 0; }
-  local pid
-  pid="$(cat "$STATE/pid" 2>/dev/null)" || { echo "vpn: disconnected"; return 0; }
-  sudo kill -TERM "$pid"
+  sudo kill -TERM "$(cat "$DIR/pid")"
   for _ in {1..30}; do
     running || { echo "vpn: disconnected"; return 0; }
     sleep 0.5
   done
-  echo "vpn: still stopping; see $run/log" >&2
+  echo "vpn: still stopping; see $DIR/log" >&2
   return 1
 }
 
-case "${1:-}" in
-  status) status; exit ;;
-  stop) stop; exit ;;
-esac
+# Sets NAME GATEWAY ROUTES DOMAINS from the gateways file (by name, or fzf)
+pick() {
+  local entries line opts opt
+  [[ -f $GATEWAYS ]] || { echo "No gateways file: $GATEWAYS" >&2; exit 1; }
+  entries="$(grep -vE '^[[:space:]]*(#|$)' "$GATEWAYS")"
+  if [[ -n ${1:-} ]]; then
+    line="$(awk -v n="$1" 'tolower($1) == tolower(n)' <<<"$entries")"
+  else
+    line="$(fzf --prompt='vpn> ' --height=~10 --reverse <<<"$entries" || true)"
+  fi
+  [[ -n $line ]] || { echo "No gateway selected." >&2; exit 1; }
 
-if running; then
+  read -r NAME GATEWAY opts <<<"$line"
+  ROUTES="" DOMAINS=""
+  for opt in $opts; do
+    case $opt in
+      routes=*) ROUTES="${opt#routes=}" ;;
+      domains=*) DOMAINS="${opt#domains=}" ;;
+    esac
+  done
+  ROUTES="${ROUTES//,/ }" DOMAINS="${DOMAINS//,/ }"
+}
+
+connect() {
+  local ofv self
+  ofv="$(command -v openfortivpn)" || { echo "openfortivpn not installed (brew install openfortivpn)" >&2; exit 1; }
+  pick "$@"
+
+  # 1. sudo password first, so its prompt doesn't race the browser
+  sudo -v
+  mkdir -p "$DIR"
+  echo "$NAME ($GATEWAY)" >"$DIR/name"
+
+  # 2. Start the root side detached; its output is the log
+  self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+  sudo -b nohup "$self" --run "$DIR" "$ofv" "$GATEWAY" "$ROUTES" "$DOMAINS" \
+    </dev/null >"$DIR/log" 2>&1
+  echo "Connecting to $NAME ($GATEWAY). Finish the login in your browser; Ctrl-C cancels."
+  for _ in {1..100}; do running && break; sleep 0.1; done
+  running || fail "failed to start"
+  trap 'echo; stop || true; exit 130' INT
+
+  # 3. SSO in the browser; the gateway redirects back to openfortivpn on 127.0.0.1:8020
+  sleep 2
+  open "https://$GATEWAY/remote/saml/start?redirect=1"
+
+  # 4. Wait for routes + DNS
+  until grep -q '^vpn: ready' "$DIR/log"; do
+    running || fail "connection failed"
+    sleep 1
+  done
+  trap - INT
   status
-  echo "Run 'vpn stop' first." >&2
-  exit 1
-fi
+  echo "Runs in the background. 'vpn status' shows it; 'vpn stop' disconnects."
+}
 
-# Lives in the private settings repo (~/.config/setthemacup); old location as fallback
-GATEWAYS="${VPN_GATEWAYS:-$HOME/.config/setthemacup/vpn-gateways}"
-[[ -f "$GATEWAYS" ]] || GATEWAYS="$HOME/.config/vpn/gateways"
-
-[[ -f "$GATEWAYS" ]] || { echo "No gateways file: $GATEWAYS" >&2; exit 1; }
-ofv="$(command -v openfortivpn)" || { echo "openfortivpn not installed (brew install openfortivpn)" >&2; exit 1; }
-
-entries="$(grep -vE '^\s*(#|$)' "$GATEWAYS")"
-if [[ -n "${1:-}" ]]; then
-  line="$(awk -v n="$1" 'tolower($1) == tolower(n)' <<<"$entries")"
-else
-  line="$(fzf --prompt='vpn> ' --height=~10 --reverse <<<"$entries")"
-fi
-[[ -n "$line" ]] || { echo "No gateway selected." >&2; exit 1; }
-
-name="$(awk '{print $1}' <<<"$line")"
-gateway="$(awk '{print $2}' <<<"$line")"
-routes="$(grep -oE 'routes=[^ ]+' <<<"$line" | cut -d= -f2 | tr ',' ' ' || true)"
-domains="$(grep -oE 'domains=[^ ]+' <<<"$line" | cut -d= -f2 | tr ',' ' ' || true)"
-
-# Ask for sudo first so the password prompt doesn't race the browser
-sudo -v
-mkdir -p "$run"
-printf '%s (%s)\n' "$name" "$gateway" >"$run/name"
-self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-sudo -b nohup "$self" --run "$run/log" "$ofv" "$gateway" "$routes" "$domains" \
-  </dev/null >"$run/log" 2>&1
-
-echo "Connecting to ${name} (${gateway}). Finish the login in your browser; Ctrl-C cancels."
-for _ in {1..100}; do running && break; sleep 0.1; done
-running || { echo "vpn: failed to start:" >&2; tail -n 15 "$run/log" >&2; exit 1; }
-trap 'echo; stop || true; exit 130' INT
-
-# openfortivpn listens on 127.0.0.1:8020; the gateway redirects there after SSO
-sleep 2
-open "https://${gateway}/remote/saml/start?redirect=1"
-
-until grep -q '^vpn: ready' "$run/log"; do
-  running || { echo "vpn: connection failed:" >&2; tail -n 15 "$run/log" >&2; exit 1; }
-  sleep 1
-done
-trap - INT
-status
-echo "Runs in the background. 'vpn status' shows it; 'vpn stop' disconnects."
+case "${1:-}" in
+  --run) shift; root_main "$@" ;;
+  status) status ;;
+  stop) stop ;;
+  *)
+    if running; then
+      status
+      echo "Run 'vpn stop' first." >&2
+      exit 1
+    fi
+    connect "$@"
+    ;;
+esac
