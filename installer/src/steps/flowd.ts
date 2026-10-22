@@ -15,6 +15,11 @@ const configPath = (ctx: Ctx) => join(ctx.home, '.config/flowd/config.yaml');
 const machine = (ctx: Ctx) => ctx.env.FLOWD_MACHINE || 'macbook';
 /** owner/repo of the journal remote, for its private db-backup release */
 const journalRepo = (ctx: Ctx) => (ctx.env.FLOWD_JOURNAL_REMOTE ?? '').replace(/^(git@github\.com:|https:\/\/github\.com\/)/, '').replace(/\.git$/, '');
+/** HTTPS via gh: SSH to github.com may pick a work key without access to the private journal */
+const journalUrl = (ctx: Ctx) => {
+  const remote = ctx.env.FLOWD_JOURNAL_REMOTE ?? '';
+  return /^(git@github\.com:|https:\/\/github\.com\/)/.test(remote) ? `https://github.com/${journalRepo(ctx)}.git` : remote;
+};
 
 const backupJob = (ctx: Ctx): launchd.Agent => ({
   name: 'flowd-backup',
@@ -28,7 +33,7 @@ poll_interval_sec: 3
 focus_block_min: 30
 idle_threshold_sec: 120
 repo_path: ${journal(ctx).replace(ctx.home, '~')}
-git_remote: ${ctx.env.FLOWD_JOURNAL_REMOTE ?? ''}
+git_remote: ${journalUrl(ctx)}
 branch: main
 machine_name: ${machine(ctx)}
 ai_enabled: true
@@ -73,9 +78,11 @@ export const flowd: Step = {
 
     await ctx.task('Journal repo', async () => {
       if (exists(join(journal(ctx), '.git'))) return 'cloned';
-      const remote = ctx.env.FLOWD_JOURNAL_REMOTE;
+      const remote = journalUrl(ctx);
       if (!remote) return 'skipped — set FLOWD_JOURNAL_REMOTE in private.env';
-      await ctx.sh.run('git', ['clone', '--quiet', remote, journal(ctx)]);
+      await ctx.sh.run('git', ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential', 'clone', '--quiet', remote, journal(ctx)]);
+      // fw and flowd-backup push later, through gh as well
+      await ctx.sh.run('git', ['config', 'credential.helper', '!gh auth git-credential'], { cwd: journal(ctx) });
     });
 
     await ctx.task('Restore database', async (progress) => {
