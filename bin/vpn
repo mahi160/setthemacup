@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # vpn — connect to a FortiGate VPN with SAML/SSO via openfortivpn, in the background.
+# Runs on macOS and on Linux with systemd-resolved (Ubuntu).
 #
 # Usage:
 #   vpn            pick a gateway with fzf
@@ -18,12 +19,16 @@
 #      on 127.0.0.1:8020. You open the gateway's SAML page; after login it redirects there.
 #   3. When the log says "Tunnel is up", the root side adds split routes and DNS, then
 #      prints "vpn: ready". openfortivpn only writes /etc/resolv.conf, which macOS ignores,
-#      so DNS goes to configd with scutil (check with `scutil --dns`).
+#      so DNS goes to configd with scutil (check with `scutil --dns`). On Linux,
+#      openfortivpn runs with --no-dns and DNS goes to the ppp link with resolvectl
+#      (check with `resolvectl status`); resolved drops it when the link goes down.
 #   4. `vpn stop` sends TERM to the root side; it forwards it to openfortivpn, which logs
 #      out. On exit the root side restores DNS.
 # Runtime files (log, name, pid) live in $TMPDIR/setthemacup-vpn.
 
 set -euo pipefail
+
+OS="$(uname -s)"
 
 DNS_KEY="State:/Network/Service/setthemacup-vpn/DNS"
 BACKUP_KEY="State:/Network/setthemacup-vpn/SetupDNS"
@@ -48,7 +53,11 @@ add_routes() {
   local ifname r
   ifname="$(tunnel_if "$LOG")"
   for r in $ROUTES; do
-    route -q -n add -net "$r" -interface "$ifname" || echo "vpn: route $r failed"
+    if [[ $OS == Linux ]]; then
+      ip route add "$r" dev "$ifname" || echo "vpn: route $r failed"
+    else
+      route -q -n add -net "$r" -interface "$ifname" || echo "vpn: route $r failed"
+    fi
   done
   echo "vpn: split tunnel via VPN: $ROUTES"
 }
@@ -80,25 +89,53 @@ set Setup:/Network/Service/$PRIMARY/DNS
 EOF
 }
 
+# Linux: per-link DNS in systemd-resolved; full tunnel ($3=1) routes every lookup there
+dns_resolved() {
+  local ifname
+  ifname="$(tunnel_if "$LOG")"
+  resolvectl dns "$ifname" $1
+  if [[ $3 == 1 ]]; then
+    resolvectl domain "$ifname" '~.' $2
+    resolvectl default-route "$ifname" yes
+  else
+    resolvectl domain "$ifname" $2
+    resolvectl default-route "$ifname" no
+  fi
+}
+
+full_tunnel() {
+  if [[ $OS == Linux ]]; then
+    ip route get 1.1.1.1 2>/dev/null | grep -q 'dev ppp'
+  else
+    route -n get default 2>/dev/null | grep -q 'interface: ppp'
+  fi
+}
+
 dns_up() {
-  local ns="" suffix="" n
+  local ns="" suffix="" n full=0
   for n in $(log_list ns); do [[ $n == 0.0.0.0 ]] || ns+="$n "; done
   for n in $(log_list ns_suffix); do [[ $n == "(null)" ]] || suffix+="$n "; done
   suffix+="$DOMAINS"
   [[ -n $ns ]] || { echo "vpn: no DNS servers in openfortivpn output; DNS unchanged"; return 0; }
 
-  if route -n get default 2>/dev/null | grep -q 'interface: ppp'; then
-    dns_full "$ns" "$suffix" || return 0
-  elif [[ -n $suffix ]]; then
-    dns_split "$ns" "$suffix"
-  else
+  if full_tunnel; then full=1; fi
+  if [[ $full == 0 && -z $suffix ]]; then
     echo "vpn: split tunnel without DNS suffix; DNS unchanged"
     return 0
+  fi
+
+  if [[ $OS == Linux ]]; then
+    dns_resolved "$ns" "$suffix" "$full"
+  elif [[ $full == 1 ]]; then
+    dns_full "$ns" "$suffix" || return 0
+  else
+    dns_split "$ns" "$suffix"
   fi
   echo "vpn: DNS → ${ns}${suffix:+(search: $suffix)}"
 }
 
 dns_down() {
+  [[ $OS == Darwin ]] || return 0
   scutil <<<"remove $DNS_KEY" >/dev/null 2>&1 || true
   [[ -n $PRIMARY ]] || return 0
   # Empty backup = no manual DNS before; removing Setup: falls back to DHCP DNS
@@ -131,6 +168,7 @@ root_main() {
   # 1. Start openfortivpn; split tunnels skip the gateway's routes
   local flags="--saml-login"
   [[ -z $ROUTES ]] || flags+=" --set-routes=0"
+  [[ $OS != Linux ]] || flags+=" --no-dns"
   "$OFV" "$GATEWAY" $flags </dev/null &
   OFPID=$!
   # Published only now, so a stop signal always has openfortivpn to forward to
@@ -175,7 +213,11 @@ status() {
     return 0
   fi
   ifname="$(tunnel_if "$DIR/log")"
-  ip="$(ifconfig "$ifname" 2>/dev/null | awk '/inet /{print $2}')"
+  if [[ $OS == Linux ]]; then
+    ip="$(ip -4 -o addr show dev "$ifname" 2>/dev/null | awk '{print $4}' || true)"
+  else
+    ip="$(ifconfig "$ifname" 2>/dev/null | awk '/inet /{print $2}' || true)"
+  fi
   echo "vpn: $name connected, up $(ps -p "$(cat "$DIR/pid")" -o etime= | tr -d ' ')"
   echo "  interface: $ifname ${ip:-?}"
   grep -E '^vpn: (split|DNS|no DNS)' "$DIR/log" | sed 's/^vpn: /  /' || true
@@ -217,7 +259,7 @@ pick() {
 
 connect() {
   local ofv self
-  ofv="$(command -v openfortivpn)" || { echo "openfortivpn not installed (brew install openfortivpn)" >&2; exit 1; }
+  ofv="$(command -v openfortivpn)" || { echo "openfortivpn not installed (macOS: brew install openfortivpn)" >&2; exit 1; }
   pick "$@"
 
   # 1. sudo password first, so its prompt doesn't race the browser
@@ -236,7 +278,8 @@ connect() {
 
   # 3. SSO in the browser; the gateway redirects back to openfortivpn on 127.0.0.1:8020
   sleep 2
-  open "https://$GATEWAY/remote/saml/start?redirect=1"
+  local url="https://$GATEWAY/remote/saml/start?redirect=1"
+  if [[ $OS == Linux ]]; then xdg-open "$url" >/dev/null 2>&1 || echo "Open: $url"; else open "$url"; fi
 
   # 4. Wait for routes + DNS
   until grep -q '^vpn: ready' "$DIR/log"; do
