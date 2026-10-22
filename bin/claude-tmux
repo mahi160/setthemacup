@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """
 Claude usage widget for tmux status bar — palette follows ~/.config/theme, 5-min cache.
-Reads credentials from macOS Keychain (stored by setup.py).
+Uses pi's Claude Pro/Max OAuth login (~/.pi/agent/auth.json, key "anthropic"), so no setup.
 
 Usage in tmux.conf:
   set -g status-right '#(~/.local/bin/claude-tmux)'
   # status-interval 5 is fine — output is cached to /tmp/.claude-status-cache
 """
 
+from __future__ import annotations  # macOS python3 is 3.9: no `str | None` at runtime
+
 import json
 import os
-import subprocess
 import time
 import urllib.error
 import urllib.request
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-SERVICE    = "claude-usage-widget"
+AUTH_FILE  = os.path.expanduser("~/.pi/agent/auth.json")
+USAGE_URL  = "https://api.anthropic.com/api/oauth/usage"
 CACHE_FILE = "/tmp/.claude-status-cache"
 CACHE_TTL  = 300  # seconds — actual API calls at most once per 5 min
 
@@ -106,39 +108,44 @@ def render(five_h: float, seven_d: float) -> str:
 
 # ── Keychain ──────────────────────────────────────────────────────────────────
 
-def keychain_get(account: str) -> str:
-    r = subprocess.run(
-        ["security", "find-generic-password", "-s", SERVICE, "-a", account, "-w"],
-        capture_output=True, text=True,
-    )
-    return r.stdout.strip() if r.returncode == 0 else ""
+def pi_token() -> str | None:
+    """pi's Anthropic OAuth access token; None if missing or expired."""
+    try:
+        with open(AUTH_FILE) as f:
+            cred = json.load(f).get("anthropic") or {}
+    except (OSError, ValueError):
+        return None
+    if cred.get("type") != "oauth" or cred.get("expires", 0) <= time.time() * 1000:
+        return None
+    return cred.get("access")
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
 
 def fetch() -> str:
-    session_key = keychain_get("session_key")
-    org_uuid    = keychain_get("org_uuid")
-
-    if not session_key or not org_uuid:
-        return fg(C_RED, "✦ ⚠ no creds")
+    # ponytail: never refreshes token (would rotate pi's refresh token); pi refreshes it on use
+    token = pi_token()
+    if not token:
+        return fg(C_RED, "✦ ⚠ pi login")
 
     try:
         req = urllib.request.Request(
-            f"https://claude.ai/api/organizations/{org_uuid}/usage",
+            USAGE_URL,
             headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                "Cookie": f"sessionKey={session_key}",
+                "Authorization": f"Bearer {token}",
+                "anthropic-beta": "oauth-2025-04-20",
             },
         )
         with urllib.request.urlopen(req, timeout=5) as r:
             data = json.loads(r.read())
     except urllib.error.HTTPError as e:
         return fg(C_RED, f"✦ ⚠ {e.code}")
-    except Exception:
+    except urllib.error.URLError:
         return fg(C_RED, "✦ ⚠ offline")
+    except Exception as e:
+        return fg(C_RED, f"✦ ⚠ {type(e).__name__}")
 
-    five_h  = data.get("five_hour", {}).get("utilization", 0.0)
-    seven_d = data.get("seven_day", {}).get("utilization", 0.0)
+    five_h  = (data.get("five_hour") or {}).get("utilization") or 0.0
+    seven_d = (data.get("seven_day") or {}).get("utilization") or 0.0
     return render(five_h, seven_d)
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
