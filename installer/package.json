@@ -8,10 +8,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "setup": "node installer/index.ts",
-    "docs": "node installer/docs.ts",
+    "setup": "node src/index.ts",
+    "docs": "node src/docs.ts",
     "typecheck": "tsc",
-    "test": "node --test 'installer/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@clack/prompts": "1.8.1"

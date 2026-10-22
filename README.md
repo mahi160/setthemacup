@@ -63,14 +63,15 @@ The flowd database is backed up daily to a private release on your journal repo 
 
 ```
 bootstrap.sh          entry point
-installer/            the installer: steps/, lib/, data/ (apps.json, pnpm.json, skills.json, macOS defaults, keybinds)
+installer/            the installer package (package.json, node_modules)
+  src/                steps/, lib/, data/ (apps.json, pnpm.json, skills.json, macOS defaults, keybinds)
+  swift/              Swift tools compiled on install
 bin/                  helper commands, linked into ~/.local/bin
-src/swift/            Swift tools compiled on install
 dotfiles/             configs, stowed into $HOME
 docs/                 the generated details page, ADRs, tickets
 ```
 
-Change packages in `installer/data/apps.json` (or let the sync do it) and macOS settings in `installer/data/defaults.ts`, then `pnpm run docs` to refresh the page.
+Change packages in `installer/src/data/apps.json` (or let the sync do it) and macOS settings in `installer/src/data/defaults.ts`, then `pnpm run docs` (from `installer/`) to refresh the page.
 
 ## Commands it adds
 

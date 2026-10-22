@@ -44,7 +44,7 @@ const jobs = (ctx: Ctx): launchd.Agent[] => [
   {
     name: 'sync',
     // Daily: fold manual installs/removals into the manifests, then notify
-    program: [join(ctx.home, '.local/share/fnm/aliases/default/bin/node'), join(ctx.repo, 'installer/index.ts'), '--sync'],
+    program: [join(ctx.home, '.local/share/fnm/aliases/default/bin/node'), join(ctx.repo, 'installer/src/index.ts'), '--sync'],
     daily: { hour: 12 },
     log: '/tmp/setthemacup-sync.log',
   },
@@ -67,7 +67,7 @@ export const extras: Step = {
   summary: 'Helper commands, Swift tools, Pokemon background, SMB auto-mount, weekly cleanup jobs',
   details: [
     'Links every file in bin/ into ~/.local/bin (dev, note, vpn, theme, pokemon-bg, setup, tmux widgets, …)',
-    'Compiles src/swift/*.swift into ~/.local/bin when the source changed',
+    'Compiles installer/swift/*.swift into ~/.local/bin when the source changed',
     'Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon',
     'One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)',
     'Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)',

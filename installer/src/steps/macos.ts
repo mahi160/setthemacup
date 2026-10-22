@@ -29,7 +29,7 @@ export const macos: Step = {
   title: 'macOS settings',
   summary: `${defaults.length} system defaults (Dock, Finder, keyboard, trackpad, …), Caps Lock → Control, display scaling`,
   details: [
-    `Applies the defaults table in installer/data/defaults.ts (${groups().join(', ')}); only drifted values are written`,
+    `Applies the defaults table in installer/src/data/defaults.ts (${groups().join(', ')}); only drifted values are written`,
     'Restarts only the affected apps (Dock, Finder, SystemUIServer)',
     'Frees ⌘Space from Spotlight for Tinycast',
     'Caps Lock → Control via a hidutil LaunchAgent (no Karabiner)',

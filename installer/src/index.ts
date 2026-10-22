@@ -19,7 +19,7 @@ import { HELP, parse, select, type Args } from './plan.ts';
 import { steps } from './steps/index.ts';
 import type { Ctx, State, Status, Step } from './types.ts';
 
-const REPO = resolve(import.meta.dirname, '..');
+const REPO = resolve(import.meta.dirname, '../..');
 const HOME = homedir();
 const DOCS_URL = 'https://mahi160.github.io/setthemacup/';
 
@@ -40,7 +40,7 @@ function setupPath(): void {
   process.env.SETTHEMACUP = REPO;
   // sudo prompts from child processes (cask .pkg installers) become a native dialog
   // instead of a terminal prompt hidden behind the spinner
-  process.env.SUDO_ASKPASS = join(REPO, 'installer/lib/askpass');
+  process.env.SUDO_ASKPASS = join(REPO, 'installer/src/lib/askpass');
   process.env.PNPM_HOME ??= join(HOME, 'Library/pnpm');
   const dirs = [join(HOME, '.local/bin'), join(process.env.PNPM_HOME, 'bin'), join(HOME, '.local/share/fnm/aliases/default/bin'), join(HOME, '.local/share/fnm'), dirname(process.execPath)];
   const path = (process.env.PATH ?? '/usr/bin:/bin').split(':');

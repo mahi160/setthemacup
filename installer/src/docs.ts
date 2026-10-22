@@ -14,7 +14,7 @@ import { FIELDS } from './lib/private.ts';
 import { HELP } from './plan.ts';
 import { steps } from './steps/index.ts';
 
-const REPO = resolve(import.meta.dirname, '..');
+const REPO = resolve(import.meta.dirname, '../..');
 const WORDS: Record<number, string> = { 9: 'Nine', 10: 'Ten', 11: 'Eleven', 12: 'Twelve', 13: 'Thirteen' };
 const ONE_LINER = 'curl -fsSL https://raw.githubusercontent.com/mahi160/setthemacup/main/bootstrap.sh | bash';
 const GITHUB = 'https://github.com/mahi160/setthemacup';
@@ -103,7 +103,7 @@ function packagesSection(): string {
     .join('');
   return `<section id="packages" aria-labelledby="pkg-h">
     <header class="sec-head"><p class="eyebrow">What gets installed</p><h2 id="pkg-h">Packages</h2>
-    <p class="lede">The lists live in <code>installer/data/*.json</code>. Each kind installs in one batched <code>brew install</code>; third-party taps are added first.</p></header>
+    <p class="lede">The lists live in <code>installer/src/data/*.json</code>. Each kind installs in one batched <code>brew install</code>; third-party taps are added first.</p></header>
     ${packageGroup('formula', 'CLI tools', 'Homebrew formulae')}
     ${packageGroup('cask', 'Apps', 'Homebrew casks, including fonts')}
     <div class="pkg pkg-pair">

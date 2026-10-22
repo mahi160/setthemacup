@@ -212,7 +212,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <div class="step-body">
           <h3>CLI tools <code class="step-id">--only cli</code></h3>
           <p class="step-sum">git, neovim, tmux, fzf, lazygit, gh, … (Homebrew formulae) + pnpm globals (pi)</p>
-          <ul><li>Installs 19 formulae from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Git: git, gh, git-delta, lazygit</li><li>Editor: neovim, tree-sitter-cli, ripgrep, fd</li><li>Terminal: tmux, fzf, stow, fastfetch, onefetch, nowplaying-cli</li><li>Dev: lazydocker, lazysql</li><li>System: terminal-notifier, mole, openfortivpn</li><li>pnpm globals (latest, <code>pnpm add -g</code>): @earendil-works/pi-coding-agent</li></ul>
+          <ul><li>Installs 19 formulae from installer/src/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Git: git, gh, git-delta, lazygit</li><li>Editor: neovim, tree-sitter-cli, ripgrep, fd</li><li>Terminal: tmux, fzf, stow, fastfetch, onefetch, nowplaying-cli</li><li>Dev: lazydocker, lazysql</li><li>System: terminal-notifier, mole, openfortivpn</li><li>pnpm globals (latest, <code>pnpm add -g</code>): @earendil-works/pi-coding-agent</li></ul>
           
         </div>
       </li>
@@ -266,7 +266,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <div class="step-body">
           <h3>Extras <code class="step-id">--only extras</code></h3>
           <p class="step-sum">Helper commands, Swift tools, Pokemon background, SMB auto-mount, weekly cleanup jobs</p>
-          <ul><li>Links every file in bin/ into ~/.local/bin (dev, note, vpn, theme, pokemon-bg, setup, tmux widgets, …)</li><li>Compiles src/swift/*.swift into ~/.local/bin when the source changed</li><li>Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon</li><li>One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)</li><li>Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)</li><li>Daily <code>setup --sync</code>: anything you brew install, pnpm add -g or skills add by hand lands in the manifest (category Inbox); removals drop out; you get a notification and commit when ready</li></ul>
+          <ul><li>Links every file in bin/ into ~/.local/bin (dev, note, vpn, theme, pokemon-bg, setup, tmux widgets, …)</li><li>Compiles installer/swift/*.swift into ~/.local/bin when the source changed</li><li>Downloads a starter Pokemon for the Ghostty background and builds the pi notification icon</li><li>One LaunchAgent per SMB share in private.env (mounts on login via Finder + Keychain)</li><li>Weekly LaunchAgents: pi-prune, fnm multishell cleanup, brew/pnpm cache cleanup (replaces crontab)</li><li>Daily <code>setup --sync</code>: anything you brew install, pnpm add -g or skills add by hand lands in the manifest (category Inbox); removals drop out; you get a notification and commit when ready</li></ul>
           
         </div>
       </li>
@@ -284,7 +284,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <div class="step-body">
           <h3>GUI apps <code class="step-id">--only apps</code></h3>
           <p class="step-sum">Ghostty, Brave, Tinycast, Slack, OrbStack, fonts, … (Homebrew casks)</p>
-          <ul><li>Installs 20 casks from installer/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Terminal: ghostty</li><li>Browser: brave-browser</li><li>Productivity: tinycast, obsidian, alt-tab, shottr</li><li>Chat: slack, whatsapp, telegram</li><li>Utilities: localsend, mos, doll, stats</li><li>Network: tailscale-app</li><li>Dev: orbstack</li><li>Media: iina, transmission, tbis</li><li>Fonts: font-cascadia-code-nf, font-jetbrains-mono-nerd-font</li></ul>
+          <ul><li>Installs 20 casks from installer/src/data/apps.json in one batched <code>brew install</code></li><li>Taps third-party taps first; retries one by one if the batch fails</li><li>Terminal: ghostty</li><li>Browser: brave-browser</li><li>Productivity: tinycast, obsidian, alt-tab, shottr</li><li>Chat: slack, whatsapp, telegram</li><li>Utilities: localsend, mos, doll, stats</li><li>Network: tailscale-app</li><li>Dev: orbstack</li><li>Media: iina, transmission, tbis</li><li>Fonts: font-cascadia-code-nf, font-jetbrains-mono-nerd-font</li></ul>
           
         </div>
       </li>
@@ -293,13 +293,13 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <div class="step-body">
           <h3>macOS settings <code class="step-id">--only macos</code></h3>
           <p class="step-sum">106 system defaults (Dock, Finder, keyboard, trackpad, …), Caps Lock → Control, display scaling</p>
-          <ul><li>Applies the defaults table in installer/data/defaults.ts (Dock, Hot corners, Spaces &amp; windows, Finder, Dialogs, Keyboard, Trackpad, Screenshots, Menu bar, Speed &amp; appearance, Privacy &amp; noise); only drifted values are written</li><li>Restarts only the affected apps (Dock, Finder, SystemUIServer)</li><li>Frees ⌘Space from Spotlight for Tinycast</li><li>Caps Lock → Control via a hidutil LaunchAgent (no Karabiner)</li><li>No startup chime (nvram, needs sudo)</li><li>Display scaling &quot;More Space&quot;: the largest HiDPI mode of the built-in display</li></ul>
+          <ul><li>Applies the defaults table in installer/src/data/defaults.ts (Dock, Hot corners, Spaces &amp; windows, Finder, Dialogs, Keyboard, Trackpad, Screenshots, Menu bar, Speed &amp; appearance, Privacy &amp; noise); only drifted values are written</li><li>Restarts only the affected apps (Dock, Finder, SystemUIServer)</li><li>Frees ⌘Space from Spotlight for Tinycast</li><li>Caps Lock → Control via a hidutil LaunchAgent (no Karabiner)</li><li>No startup chime (nvram, needs sudo)</li><li>Display scaling &quot;More Space&quot;: the largest HiDPI mode of the built-in display</li></ul>
           
         </div>
       </li></ol></section>
 <section id="packages" aria-labelledby="pkg-h">
     <header class="sec-head"><p class="eyebrow">What gets installed</p><h2 id="pkg-h">Packages</h2>
-    <p class="lede">The lists live in <code>installer/data/*.json</code>. Each kind installs in one batched <code>brew install</code>; third-party taps are added first.</p></header>
+    <p class="lede">The lists live in <code>installer/src/data/*.json</code>. Each kind installs in one batched <code>brew install</code>; third-party taps are added first.</p></header>
     <div class="pkg">
     <h3>CLI tools <span class="count">19</span></h3><p class="note">Homebrew formulae</p>
     <div class="cats"><div class="cat"><h4>Git</h4><dl><div><dt>git</dt><dd>Newer git than the one in Xcode CLT</dd></div><div><dt>gh</dt><dd>GitHub CLI — auth, PRs, SSH key upload</dd></div><div><dt>git-delta</dt><dd>Syntax-highlighted diffs (git pager)</dd></div><div><dt>lazygit</dt><dd>Git TUI (<code>lg</code>)</dd></div></dl></div><div class="cat"><h4>Editor</h4><dl><div><dt>neovim</dt><dd>Editor, LazyVim config (<code>v</code>)</dd></div><div><dt>tree-sitter-cli</dt><dd>Parser builds for nvim-treesitter</dd></div><div><dt>ripgrep</dt><dd>Fast grep, used by LazyVim pickers</dd></div><div><dt>fd</dt><dd>Fast find, used by LazyVim pickers</dd></div></dl></div><div class="cat"><h4>Terminal</h4><dl><div><dt>tmux</dt><dd>Terminal multiplexer (no plugins)</dd></div><div><dt>fzf</dt><dd>Fuzzy finder — Ctrl-R history, Ctrl-T files</dd></div><div><dt>stow</dt><dd>Links dotfiles into $HOME</dd></div><div><dt>fastfetch</dt><dd>System info</dd></div><div><dt>onefetch</dt><dd>Repo info (<code>of</code>)</dd></div><div><dt>nowplaying-cli</dt><dd>Now-playing widget in the tmux status bar</dd></div></dl></div><div class="cat"><h4>Dev</h4><dl><div><dt>lazydocker</dt><dd>Docker TUI (<code>ld</code>)</dd></div><div><dt>lazysql</dt><dd>SQL TUI — MySQL, PostgreSQL, SQLite, MSSQL</dd></div></dl></div><div class="cat"><h4>System</h4><dl><div><dt>terminal-notifier</dt><dd>Notifications from pi</dd></div><div><dt>mole</dt><dd>Disk analyzer + app uninstaller (<code>mo analyze</code>, <code>mo uninstall</code>) — run by hand</dd></div><div><dt>openfortivpn</dt><dd>FortiGate VPN with SAML/SSO (<code>vpn</code>)</dd></div></dl></div></div></div>

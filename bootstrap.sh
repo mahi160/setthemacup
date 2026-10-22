@@ -49,7 +49,7 @@ fi
 
 # ─── 2. Password, once ───────────────────────────────────────────────────────
 # Kept in a 0600 file in a private temp folder for this run only; the installer reuses
-# it for every sudo prompt (via installer/lib/askpass) and deletes it when it ends.
+# it for every sudo prompt (via installer/src/lib/askpass) and deletes it when it ends.
 if has_tty; then
   secret_dir="$(mktemp -d)"; chmod 700 "$secret_dir"
   trap 'rm -rf "$secret_dir"' EXIT
@@ -129,7 +129,7 @@ fi
 ok "pnpm $(pnpm -v)"
 
 # ─── 6. Hand off to the installer ────────────────────────────────────────────
-(cd "$REPO_DIR" && pnpm install --frozen-lockfile --prod --silent)
+(cd "$REPO_DIR/installer" && pnpm install --frozen-lockfile --prod --silent)
 ok "Installer ready"
 echo
 
@@ -137,7 +137,7 @@ echo
 # password folder and deletes it when it finishes
 trap - EXIT
 if has_tty; then
-  exec node "$REPO_DIR/installer/index.ts" "$@" <"$TTY"
+  exec node "$REPO_DIR/installer/src/index.ts" "$@" <"$TTY"
 else
-  exec node "$REPO_DIR/installer/index.ts" "$@"
+  exec node "$REPO_DIR/installer/src/index.ts" "$@"
 fi

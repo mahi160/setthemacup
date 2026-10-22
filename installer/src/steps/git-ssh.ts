@@ -104,7 +104,7 @@ async function createKey(ctx: Ctx, key: Key): Promise<void> {
     // ssh-add reads the passphrase through lib/askpass instead of a terminal prompt
     await ctx.sh.run('ssh-add', ['--apple-use-keychain', key.file], {
       env: {
-        SSH_ASKPASS: join(ctx.repo, 'installer/lib/askpass'),
+        SSH_ASKPASS: join(ctx.repo, 'installer/src/lib/askpass'),
         SSH_ASKPASS_REQUIRE: 'force',
         SETTHEMACUP_SECRET_FILE: storeSecret(`ssh-${key.label}`, passphrase),
       },

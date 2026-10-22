@@ -22,7 +22,7 @@ function packages(id: string, title: string, kind: AppKind, summary: string): St
     title,
     summary,
     details: [
-      `Installs ${list.length} ${kind === 'cask' ? 'casks' : 'formulae'} from installer/data/apps.json in one batched \`brew install\``,
+      `Installs ${list.length} ${kind === 'cask' ? 'casks' : 'formulae'} from installer/src/data/apps.json in one batched \`brew install\``,
       'Taps third-party taps first; retries one by one if the batch fails',
       ...[...new Set(apps.filter((a) => a.kind === kind).map((a) => a.category))].map(
         (c) => `${c}: ${apps.filter((a) => a.kind === kind && a.category === c).map((a) => brew.shortName(a.name)).join(', ')}`,
