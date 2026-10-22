@@ -8,6 +8,8 @@ import type { Ctx, Step } from '../types.ts';
 /** Private settings live in their own private GitHub repo, cloned here */
 export const PRIVATE_DIR = dirname(PRIVATE_ENV);
 export const PRIVATE_REPO_NAME = 'setthemacup-private';
+/** Read by bin/vpn; one gateway per line */
+export const VPN_GATEWAYS = join(PRIVATE_DIR, 'vpn-gateways');
 
 /** Files in the private repo that are linked to where tools read them */
 const LINKS: [string, string][] = [['local.zsh', '.config/zsh/local.zsh']];
@@ -65,7 +67,7 @@ export const privateSettings: Step = {
   async check(ctx) {
     if (!exists(PRIVATE_ENV)) return { state: 'missing', detail: 'no private.env' };
     if (!exists(join(PRIVATE_DIR, '.git'))) return { state: 'partial', detail: 'private.env not backed by a repo' };
-    return { state: 'done', detail: 'cloned' };
+    return { state: 'done', detail: exists(VPN_GATEWAYS) ? 'cloned' : 'cloned, no vpn-gateways' };
   },
 
   /** Question phase: GitHub login, then clone the private repo (or ask once and create it). */

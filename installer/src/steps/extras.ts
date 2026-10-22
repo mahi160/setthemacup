@@ -5,6 +5,7 @@ import { exists, isSymlinkTo, link, remove } from '../lib/fs.ts';
 import * as launchd from '../lib/launchd.ts';
 import { SWIFT_BINS, compile, isStale } from '../lib/swift.ts';
 import type { Ctx, Step } from '../types.ts';
+import { VPN_GATEWAYS } from './private.ts';
 
 const helpers = (ctx: Ctx) => readdirSync(join(ctx.repo, 'bin')).filter((f) => !f.startsWith('.'));
 const localBin = (ctx: Ctx, name: string) => join(ctx.home, '.local/bin', name);
@@ -147,7 +148,9 @@ export const extras: Step = {
 
   nextSteps: (ctx) => [
     ...(shares(ctx).length ? ['SMB: the first mount asks for the password — tick "Remember in Keychain"'] : []),
-    'VPN: `vpn` → pick a gateway → finish SSO in the browser; then check `scutil --dns`',
+    exists(VPN_GATEWAYS)
+      ? 'VPN: `vpn` → pick a gateway → finish SSO in the browser; then check `scutil --dns`'
+      : 'VPN: add gateways to ~/.config/setthemacup/vpn-gateways (`<name> <host:port> [routes=<cidr>,…] [domains=<domain>,…]`), then run `vpn`',
   ],
 };
 
