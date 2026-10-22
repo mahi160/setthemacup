@@ -120,7 +120,7 @@ cd installer && pnpm test && pnpm typecheck
 ## zsh
 
 - **oh-my-zsh**, cloned to `~/.oh-my-zsh` (untracked). `ZSH_CUSTOM=~/.config/zsh`.
-- Tracked: `dotfiles/zsh/.config/zsh/themes/mahi.zsh-theme`, a two-line prompt that replaces starship. It uses ANSI colors only and OMZ's async git prompt; keep the literal `$(git_prompt_info)` / `$(git_prompt_status)` in `PROMPT`.
+- Tracked: `dotfiles/zsh/.config/zsh/themes/mahi.zsh-theme`, a two-line port of the old starship prompt (user@ip, repo-truncated dir, branch, `[status]`, language versions, package version, duration on the right). It uses ANSI colors only. Git runs async through OMZ's `_omz_register_handler` (`_mahi_git_async`, one `git status --porcelain=v2`); languages are detected on `cd` only.
 - External plugins (zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions) are cloned into `~/.config/zsh/plugins/` and gitignored. The zsh package is stowed with `--no-folding` so those clones never land in the repo.
 - Bundled plugins: git, brew, fnm (autostart, use-on-cd), fzf (Ctrl-R history), z, gh, sudo, copypath, extract, colored-man-pages. zsh-syntax-highlighting stays last.
 - zsh-completions goes on `fpath` before OMZ loads, not in `plugins=()`. OMZ owns `compinit`.
