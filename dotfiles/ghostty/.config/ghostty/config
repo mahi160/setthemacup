@@ -1,12 +1,12 @@
 # theme: symlink to theme.d/<name>, managed by bin/theme
 config-file = ?theme
 
-# font-family = JetBrainsMono Nerd Font
+font-family = JetBrainsMono Nerd Font
 # font-family = Monaspace Argon NF
 # font-family = Monaspace Krypton NF
 # font-family = Maple Mono NF
 # font-family = JetBrains Mono
- font-family = Cascadia Code NF
+# font-family = Cascadia Code NF
 # font-family = MonaspiceRn Nerd Font Propo  # => === >=
 # font-family = BlexMono Nerd Font Mono
 # font-family = VictorMono Nerd Font Propo

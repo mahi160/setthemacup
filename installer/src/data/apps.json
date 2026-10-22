@@ -39,7 +39,7 @@
     {"name":"iina","category":"Media","desc":"Video player"},
     {"name":"transmission","category":"Media","desc":"Torrent client"},
     {"name":"mahi160/tbis/tbis","category":"Media","desc":"tbis — my app"},
-    {"name":"font-cascadia-code-nf","category":"Fonts","desc":"Cascadia Code Nerd Font (Ghostty)"},
-    {"name":"font-jetbrains-mono-nerd-font","category":"Fonts","desc":"JetBrains Mono Nerd Font"}
+    {"name":"font-cascadia-code-nf","category":"Fonts","desc":"Cascadia Code Nerd Font"},
+    {"name":"font-jetbrains-mono-nerd-font","category":"Fonts","desc":"JetBrains Mono Nerd Font (Ghostty)"}
   ]
 }

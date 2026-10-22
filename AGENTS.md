@@ -146,7 +146,7 @@ cd installer && pnpm test && pnpm typecheck
 ## ghostty
 
 - Terminal: Ghostty 1.3.1, Metal renderer (macOS)
-- Font: `Cascadia Code NF` (`font-cascadia-code-nf` cask); JetBrains Mono Nerd Font is also installed
+- Font: `JetBrainsMono Nerd Font` (`font-jetbrains-mono-nerd-font` cask); Cascadia Code NF is also installed
 - Background image: `~/Pictures/pokemon_bg/current.png`. `pokemon-bg` (Alt+Q) only repoints that symlink and reloads Ghostty — it never edits the tracked config
 - `background-blur = 240` (single key — not `background-blur = true` + separate radius)
 - `macos-option-as-alt = true` enables Alt key for tmux/zsh bindings

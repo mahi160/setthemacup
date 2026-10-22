@@ -29,7 +29,7 @@ const shellArg = (s: string) => (/^[\w@%+=:,./~-]+$/.test(s) ? s : `'${s.replace
 
 const DOTFILES: [string, string, string][] = [
   ['zsh', '~/.zshrc · ~/.config/zsh', 'oh-my-zsh with the two-line <code>mahi</code> prompt, fnm, fzf history, <code>z</code>, autosuggestions, syntax highlighting'],
-  ['ghostty', '~/.config/ghostty', 'Cascadia Code, background blur, a Pokemon in the corner, theme overlay'],
+  ['ghostty', '~/.config/ghostty', 'JetBrains Mono, background blur, a Pokemon in the corner, theme overlay'],
   ['tmux', '~/.config/tmux', 'Prefix C-a, vim pane keys, a native status bar (git, now playing, Claude usage), flowd autostart'],
   ['nvim', '~/.config/nvim', 'LazyVim with oil; the colorscheme follows <code>theme</code>'],
   ['git', '~/.gitconfig', 'delta diffs and sane defaults; identity lives in <code>~/.gitconfig.local</code>'],
